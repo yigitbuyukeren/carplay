@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -55,16 +56,13 @@ fun MediaCard(
     onOpenNowPlaying: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tint = remember(state.art) {
-        state.art?.let { bmp ->
-            Palette.from(bmp).generate().getDarkMutedColor(0xFF1C1C1E.toInt())
-        }?.let { Color(it) } ?: MotoColors.Card
-    }
+    val palette = LocalMotoPalette.current
+    val tint = remember(state.art, palette) { mediaTint(state.art, palette) }
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(28.dp))
-            .background(Brush.verticalGradient(listOf(tint, Color(0xFF0E0E10))))
-            .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(28.dp))
+            .background(Brush.verticalGradient(listOf(tint, palette.mediaBase)))
+            .border(1.dp, palette.border, RoundedCornerShape(28.dp))
     ) {
         when {
             !state.hasAccess -> Prompt(stringResource(R.string.media_grant_prompt), stringResource(R.string.grant_access), onGrantAccess)
@@ -82,19 +80,19 @@ fun MediaCard(
                     if (art != null) {
                         Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     } else {
-                        Icon(Icons.Rounded.MusicNote, null, tint = MotoColors.Gray, modifier = Modifier.size(44.dp))
+                        Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(44.dp))
                     }
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         state.title.ifBlank { stringResource(R.string.unknown_track) },
-                        fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                        fontSize = 22.sp, fontWeight = FontWeight.Bold, color = palette.text,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         state.artist,
-                        fontSize = 16.sp, color = Color(0xB3FFFFFF),
+                        fontSize = 16.sp, color = palette.textSecondary,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                     Row(
@@ -123,11 +121,11 @@ private fun ControlButton(icon: ImageVector, size: Int, filled: Boolean = false,
         modifier = Modifier
             .size(size.dp)
             .clip(CircleShape)
-            .background(if (filled) Color.White else Color.Transparent)
+            .background(if (filled) LocalMotoPalette.current.strong else Color.Transparent)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, tint = if (filled) Color.Black else Color.White, modifier = Modifier.size((size * 0.62f).dp))
+        Icon(icon, null, tint = if (filled) LocalMotoPalette.current.onStrong else LocalMotoPalette.current.text, modifier = Modifier.size((size * 0.62f).dp))
     }
 }
 
@@ -138,8 +136,17 @@ private fun Prompt(text: String, button: String, onClick: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text, fontSize = 18.sp, color = Color(0xB3FFFFFF))
+        Text(text, fontSize = 18.sp, color = LocalMotoPalette.current.textSecondary)
         Spacer(Modifier.size(12.dp))
         PillButton(button, MotoColors.Blue, onClick)
     }
+}
+
+/** Album-art tint for the media cards: a dark swatch at night, a light one by day. */
+internal fun mediaTint(art: android.graphics.Bitmap?, palette: MotoPalette): Color {
+    val fallback = palette.card
+    val bmp = art ?: return fallback
+    val swatch = Palette.from(bmp).generate()
+    val rgb = if (palette.isDay) swatch.getLightMutedColor(fallback.toArgb()) else swatch.getDarkMutedColor(fallback.toArgb())
+    return Color(rgb)
 }

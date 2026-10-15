@@ -1,6 +1,8 @@
 package dev.ygtlab.carplay
 
 import android.os.Bundle
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,13 +22,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
-            MotoTheme { DashboardScreen(viewModel) }
+            val isDay by viewModel.theme.isDay.collectAsStateWithLifecycle()
+            MotoTheme(isDay) { DashboardScreen(viewModel) }
         }
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.onPause()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

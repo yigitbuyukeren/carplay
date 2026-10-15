@@ -36,6 +36,7 @@ fun SpeedCard(gps: GpsUi, modifier: Modifier = Modifier) {
         animationSpec = spring(stiffness = 120f),
         label = "speed",
     )
+    val trackColor = LocalMotoPalette.current.track
     Box(modifier = modifier.card(), contentAlignment = Alignment.Center) {
         Canvas(
             modifier = Modifier.fillMaxHeight().aspectRatio(1f).padding(20.dp)
@@ -50,7 +51,7 @@ fun SpeedCard(gps: GpsUi, modifier: Modifier = Modifier) {
                 else -> lerp(MotoColors.Orange, MotoColors.Red, ((fraction - 0.65f) / 0.25f).coerceAtMost(1f))
             }
             rotate(150f) {
-                drawArc(Color(0x22FFFFFF), 0f, 240f, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+                drawArc(trackColor, 0f, 240f, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
                 if (fraction > 0.004f) {
                     drawArc(progressColor, 0f, 240f * fraction, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
                 }
@@ -61,9 +62,9 @@ fun SpeedCard(gps: GpsUi, modifier: Modifier = Modifier) {
                 gps.speedKmh.toString(),
                 fontSize = 92.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = LocalMotoPalette.current.text,
             )
-            Text(stringResource(R.string.speed_unit), fontSize = 22.sp, color = MotoColors.Gray, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.speed_unit), fontSize = 22.sp, color = LocalMotoPalette.current.muted, fontWeight = FontWeight.Medium)
             if (!gps.hasFix) {
                 Text(stringResource(R.string.gps_waiting), fontSize = 16.sp, color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
             }
