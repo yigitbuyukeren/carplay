@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.data.SpeedLimitMath
 import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -31,7 +32,7 @@ import dev.ygtlab.carplay.R
 private const val MAX_SPEED = 200f
 
 @Composable
-fun SpeedCard(gps: GpsUi, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+fun SpeedCard(gps: GpsUi, limit: Int?, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     val fraction by animateFloatAsState(
         targetValue = (gps.speedKmh / MAX_SPEED).coerceIn(0f, 1f),
         animationSpec = spring(stiffness = 120f),
@@ -63,12 +64,13 @@ fun SpeedCard(gps: GpsUi, modifier: Modifier = Modifier, onClick: () -> Unit = {
                 gps.speedKmh.toString(),
                 fontSize = 92.sp,
                 fontWeight = FontWeight.Bold,
-                color = LocalMotoPalette.current.text,
+                color = if (SpeedLimitMath.isOver(gps.speedKmh, limit)) MotoColors.Red else LocalMotoPalette.current.text,
             )
             Text(stringResource(R.string.speed_unit), fontSize = 22.sp, color = LocalMotoPalette.current.muted, fontWeight = FontWeight.Medium)
             if (!gps.hasFix) {
                 Text(stringResource(R.string.gps_waiting), fontSize = 16.sp, color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
             }
         }
+        if (limit != null) SpeedLimitSign(limit, Modifier.align(Alignment.TopEnd).padding(16.dp), size = 76.dp)
     }
 }

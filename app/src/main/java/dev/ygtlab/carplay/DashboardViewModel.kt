@@ -1,5 +1,8 @@
 package dev.ygtlab.carplay
 
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import dev.ygtlab.carplay.data.SpeedLimitController
 import dev.ygtlab.carplay.data.TripStore
 import dev.ygtlab.carplay.data.TripRecorder
 import android.app.Application
@@ -19,6 +22,8 @@ import dev.ygtlab.carplay.service.IncomingMessage
 import dev.ygtlab.carplay.service.MessageBridge
 import dev.ygtlab.carplay.util.Prefs
 import dev.ygtlab.carplay.util.simplifyMessage
+import kotlinx.coroutines.flow.Flow
+import dev.ygtlab.carplay.data.NavUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,12 +45,28 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     val messages: StateFlow<IncomingMessage?> = MessageBridge.latest
     val readMessagesAloud = MutableStateFlow(Prefs.readMessagesAloud(app))
-    private val messageVoice = Voice(app)
+    private val announcer = Voice(app)
 
     val callerName: StateFlow<String?> = CallBridge.callerName
 
     val locationState: StateFlow<LocationState> = location.state
     val nav = NavigationController(app, viewModelScope, location.state)
+
+    val speedLimitEnabled = MutableStateFlow(Prefs.speedLimit(app))
+    private val guiding: Flow<Boolean> = nav.ui.map { ui: NavUi -> ui.navigating }.distinctUntilChanged()
+    private val limitActive: StateFlow<Boolean> =
+        combine(speedLimitEnabled, guiding) { on: Boolean, navigating: Boolean -> on && navigating }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val speedLimit = SpeedLimitController(viewModelScope, location.state, limitActive) { limit ->
+        if (call.state.value.phase == CallPhase.IDLE) {
+            announcer.speak(app.getString(R.string.speed_limit_warning, limit))
+        }
+    }
+
+    fun setSpeedLimitEnabled(enabled: Boolean) {
+        Prefs.setSpeedLimit(getApplication(), enabled)
+        speedLimitEnabled.value = enabled
+    }
 
     val recordTrips = MutableStateFlow(Prefs.recordTrips(app))
     val trips = TripRecorder(TripStore(app), viewModelScope, location.state, recordTrips)
@@ -97,7 +118,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         val ctx = getApplication<Application>()
         val body = simplifyMessage(message.text, ctx.getString(R.string.message_link))
         val sender = message.sender.trim()
-        messageVoice.speak(if (sender.isEmpty()) body else ctx.getString(R.string.message_speak_fmt, sender, body))
+        announcer.speak(if (sender.isEmpty()) body else ctx.getString(R.string.message_speak_fmt, sender, body))
     }
 
     fun onPause() {
@@ -105,7 +126,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
-        messageVoice.shutdown()
+        announcer.shutdown()
         theme.stop()
         nav.shutdown()
         location.stop()

@@ -48,6 +48,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val callerName by vm.callerName.collectAsStateWithLifecycle()
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
+    val speedLimitOn by vm.speedLimitEnabled.collectAsStateWithLifecycle()
+    val speedLimit by vm.speedLimit.limit.collectAsStateWithLifecycle()
     val recordTrips by vm.recordTrips.collectAsStateWithLifecycle()
     var showTrips by remember { mutableStateOf(false) }
     val message by vm.messages.collectAsStateWithLifecycle()
@@ -119,6 +121,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         nav = vm.nav,
                         locationState = vm.locationState,
                         speedKmh = gps.speedKmh,
+                        speedLimit = speedLimit,
                         isDay = isDay,
                         onClose = { showMap = false },
                         modifier = Modifier.weight(1f).fillMaxSize(),
@@ -128,7 +131,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        SpeedCard(gps, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
+                        SpeedCard(gps, speedLimit, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
                         Column(
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -152,6 +155,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     items = settingItems,
                     overlayEnabled = overlayEnabled,
                     onOverlayToggle = { enabled -> overlayEnabled = toggleOverlay(context, enabled) },
+                    speedLimit = speedLimitOn,
+                    onSpeedLimit = vm::setSpeedLimitEnabled,
                     recordTrips = recordTrips,
                     onRecordTrips = vm::setRecordTrips,
                     autoRead = autoRead,

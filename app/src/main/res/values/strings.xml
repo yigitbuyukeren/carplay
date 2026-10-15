@@ -79,4 +79,7 @@
     <string name="trip_gpx_name">MotoDash %1$s</string>
     <string name="record_trips_title">Yolculukları kaydet</string>
     <string name="record_trips_desc">Sürüşler otomatik kaydedilir ve yalnızca bu telefonda saklanır.</string>
+    <string name="speed_limit_title">Hız limiti göstergesi</string>
+    <string name="speed_limit_desc">Navigasyon sırasında yolun hız limitini gösterir, aşınca uyarır. Konumun OpenStreetMap (Valhalla) sunucusuna gönderilir.</string>
+    <string name="speed_limit_warning">Hız limiti %1$d, yavaşla</string>
 </resources>

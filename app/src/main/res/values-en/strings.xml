@@ -79,4 +79,7 @@
     <string name="trip_gpx_name">MotoDash %1$s</string>
     <string name="record_trips_title">Record trips</string>
     <string name="record_trips_desc">Rides are recorded automatically and stay on this phone.</string>
+    <string name="speed_limit_title">Speed limit display</string>
+    <string name="speed_limit_desc">Shows the road\'s speed limit during navigation and warns when you go over. Your position is sent to the OpenStreetMap (Valhalla) server.</string>
+    <string name="speed_limit_warning">Speed limit %1$d, slow down</string>
 </resources>
