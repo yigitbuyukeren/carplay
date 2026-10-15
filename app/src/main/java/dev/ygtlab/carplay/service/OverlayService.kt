@@ -1,0 +1,146 @@
+package dev.ygtlab.carplay.service
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.provider.Settings
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.widget.LinearLayout
+import android.widget.TextView
+import dev.ygtlab.carplay.MainActivity
+import dev.ygtlab.carplay.data.LocationRepository
+import dev.ygtlab.carplay.util.SpeedUtil
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/** Slim speed/clock strip drawn over other apps (e.g. fullscreen Maps). */
+class OverlayService : Service() {
+    private lateinit var windowManager: WindowManager
+    private lateinit var location: LocationRepository
+    private var bar: View? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var speedView: TextView
+    private lateinit var clockView: TextView
+
+    private val tick = object : Runnable {
+        override fun run() {
+            val loc = location.state.value
+            val fresh = System.currentTimeMillis() - loc.fixAtMs < 5000
+            speedView.text = "${if (fresh) loc.speedKmh else 0} km/sa"
+            clockView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+            handler.postDelayed(this, 1000)
+        }
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!Settings.canDrawOverlays(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        startForegroundCompat()
+        if (bar == null) addBar()
+        location.start()
+        handler.removeCallbacks(tick)
+        handler.post(tick)
+        return START_STICKY
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        windowManager = getSystemService(WindowManager::class.java)
+        location = LocationRepository(this)
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(tick)
+        location.stop()
+        bar?.let { windowManager.removeView(it) }
+        bar = null
+        super.onDestroy()
+    }
+
+    private fun startForegroundCompat() {
+        val channelId = "overlay"
+        getSystemService(NotificationManager::class.java)
+            .createNotificationChannel(NotificationChannel(channelId, "Hız şeridi", NotificationManager.IMPORTANCE_LOW))
+        val open = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = Notification.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setContentTitle("MotoDash")
+            .setContentText("Hız şeridi açık")
+            .setContentIntent(open)
+            .setOngoing(true)
+            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        } else {
+            startForeground(1, notification)
+        }
+    }
+
+    private fun addBar() {
+        val density = resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+
+        speedView = TextView(this).apply {
+            setTextColor(Color.WHITE); textSize = 24f; setTypeface(typeface, android.graphics.Typeface.BOLD)
+        }
+        clockView = TextView(this).apply {
+            setTextColor(0xFF8E8E93.toInt()); textSize = 20f; setPadding(dp(18), 0, 0, 0)
+        }
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(8))
+            background = GradientDrawable().apply {
+                setColor(0xE6000000.toInt()); cornerRadius = dp(26).toFloat()
+            }
+            addView(speedView)
+            addView(clockView)
+            setOnClickListener {
+                startActivity(Intent(this@OverlayService, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = dp(8)
+        }
+        windowManager.addView(layout, params)
+        bar = layout
+    }
+
+    companion object {
+        fun start(context: Context) {
+            context.startForegroundService(Intent(context, OverlayService::class.java))
+        }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, OverlayService::class.java))
+        }
+    }
+}
