@@ -96,15 +96,13 @@ fun NowPlayingScreen(
         }
     }
 
-    val tint = remember(state.art) {
-        state.art?.let { Palette.from(it).generate().getDarkMutedColor(0xFF1C1C1E.toInt()) }
-            ?.let { Color(it) } ?: MotoColors.Card
-    }
+    val palette = LocalMotoPalette.current
+    val tint = remember(state.art, palette) { mediaTint(state.art, palette) }
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(28.dp))
-            .background(Brush.verticalGradient(listOf(tint, Color(0xFF0E0E10))))
-            .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(28.dp))
+            .background(Brush.verticalGradient(listOf(tint, palette.mediaBase)))
+            .border(1.dp, palette.border, RoundedCornerShape(28.dp))
     ) {
         if (!state.hasAccess) {
             Empty(stringResource(R.string.media_grant_prompt), stringResource(R.string.grant_access), onGrantAccess)
@@ -126,7 +124,7 @@ fun NowPlayingScreen(
                 if (art != null) {
                     Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 } else {
-                    Icon(Icons.Rounded.MusicNote, null, tint = MotoColors.Gray, modifier = Modifier.size(72.dp))
+                    Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(72.dp))
                 }
             }
             Spacer(Modifier.width(24.dp))
@@ -137,18 +135,18 @@ fun NowPlayingScreen(
                 Column {
                     Text(
                         if (state.hasSession) state.title.ifBlank { stringResource(R.string.unknown_track) } else stringResource(R.string.media_not_playing),
-                        fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                        fontSize = 28.sp, fontWeight = FontWeight.Bold, color = palette.text,
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
                     if (state.artist.isNotBlank()) {
                         Text(
                             state.artist,
-                            fontSize = 19.sp, color = Color(0xB3FFFFFF),
+                            fontSize = 19.sp, color = palette.textSecondary,
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                     }
                     if (status.isNotBlank()) {
-                        Text(status, fontSize = 16.sp, color = MotoColors.Cyan, modifier = Modifier.padding(top = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(status, fontSize = 16.sp, color = MotoColors.Blue, modifier = Modifier.padding(top = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 if (state.hasSession) Progress(state)
@@ -161,10 +159,10 @@ fun NowPlayingScreen(
                     RoundButton(Icons.Rounded.SkipPrevious, 64, Color.Transparent, enabled = state.hasSession) { media.previous() }
                     RoundButton(
                         if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        84, Color.White, dark = true, enabled = state.hasSession, onClick = media::togglePlay,
+                        84, palette.strong, dark = true, enabled = state.hasSession, onClick = media::togglePlay,
                     )
                     RoundButton(Icons.Rounded.SkipNext, 64, Color.Transparent, enabled = state.hasSession) { media.next() }
-                    RoundButton(Icons.AutoMirrored.Rounded.OpenInNew, 64, Color(0x33FFFFFF), onClick = onOpenMusicApp)
+                    RoundButton(Icons.AutoMirrored.Rounded.OpenInNew, 64, palette.track, onClick = onOpenMusicApp)
                 }
             }
         }
@@ -185,12 +183,12 @@ private fun Progress(state: MediaState) {
     val clamped = if (state.durationMs > 0) position.coerceIn(0, state.durationMs) else position.coerceAtLeast(0)
     val fraction = if (state.durationMs > 0) clamped.toFloat() / state.durationMs else 0f
     Column {
-        Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Color(0x33FFFFFF))) {
-            Box(modifier = Modifier.fillMaxWidth(fraction).fillMaxHeight().background(Color.White))
+        Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(LocalMotoPalette.current.track)) {
+            Box(modifier = Modifier.fillMaxWidth(fraction).fillMaxHeight().background(LocalMotoPalette.current.text))
         }
         Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(clock(clamped), fontSize = 14.sp, color = Color(0x99FFFFFF))
-            if (state.durationMs > 0) Text(clock(state.durationMs), fontSize = 14.sp, color = Color(0x99FFFFFF))
+            Text(clock(clamped), fontSize = 14.sp, color = LocalMotoPalette.current.textTertiary)
+            if (state.durationMs > 0) Text(clock(state.durationMs), fontSize = 14.sp, color = LocalMotoPalette.current.textTertiary)
         }
     }
 }
@@ -219,7 +217,7 @@ private fun RoundButton(
     ) {
         Icon(
             icon, null,
-            tint = (if (dark) Color.Black else Color.White).copy(alpha = if (enabled) 1f else 0.35f),
+            tint = (if (dark) LocalMotoPalette.current.onStrong else LocalMotoPalette.current.text).copy(alpha = if (enabled) 1f else 0.35f),
             modifier = Modifier.size((size * 0.55f).dp),
         )
     }
@@ -232,7 +230,7 @@ private fun Empty(text: String, button: String, onClick: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text, fontSize = 18.sp, color = Color(0xB3FFFFFF))
+        Text(text, fontSize = 18.sp, color = LocalMotoPalette.current.textSecondary)
         Spacer(Modifier.size(12.dp))
         PillButton(button, MotoColors.Blue, onClick)
     }

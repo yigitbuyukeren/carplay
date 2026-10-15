@@ -55,4 +55,9 @@
     <string name="rerouting_voice">Rota yeniden hesaplanıyor</string>
     <string name="unit_hour">sa</string>
     <string name="unit_minute">dk</string>
+    <string name="theme_title">Tema</string>
+    <string name="theme_desc">Otomatik ortam ışığına göre gündüz/gece</string>
+    <string name="theme_auto">Otomatik</string>
+    <string name="theme_day">Gündüz</string>
+    <string name="theme_night">Gece</string>
 </resources>

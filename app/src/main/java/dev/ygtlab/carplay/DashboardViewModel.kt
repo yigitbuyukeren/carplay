@@ -9,6 +9,7 @@ import dev.ygtlab.carplay.data.LocationRepository
 import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.NavigationController
 import dev.ygtlab.carplay.data.MediaRepository
+import dev.ygtlab.carplay.data.ThemeController
 import dev.ygtlab.carplay.service.CallBridge
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     val battery = BatteryRepository(app)
     val media = MediaRepository(app)
     val call = CallRepository(app)
+    val theme = ThemeController(app)
 
     val callerName: StateFlow<String?> = CallBridge.callerName
 
@@ -50,11 +52,17 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         location.start()
         battery.start()
         media.start()
+        theme.start()
         call.start()
         resumeTick.value++
     }
 
+    fun onPause() {
+        theme.stop()
+    }
+
     override fun onCleared() {
+        theme.stop()
         nav.shutdown()
         location.stop()
     }

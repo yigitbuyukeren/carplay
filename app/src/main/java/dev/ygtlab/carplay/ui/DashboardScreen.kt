@@ -46,6 +46,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val callerName by vm.callerName.collectAsStateWithLifecycle()
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
+    val themeMode by vm.theme.mode.collectAsStateWithLifecycle()
+    val isDay by vm.theme.isDay.collectAsStateWithLifecycle()
     var showMap by remember { mutableStateOf(false) }
     var showNowPlaying by remember { mutableStateOf(false) }
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
@@ -83,7 +85,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
         showNowPlaying = false
     }
 
-    Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(WallpaperBrush)) {
+    Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.wallpaper)) {
         Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(modifier = Modifier.fillMaxSize().padding(end = 16.dp, top = 8.dp, bottom = 12.dp)) {
                 Dock(
@@ -106,6 +108,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         nav = vm.nav,
                         locationState = vm.locationState,
                         speedKmh = gps.speedKmh,
+                        isDay = isDay,
                         onClose = { showMap = false },
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )
@@ -138,6 +141,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     items = settingItems,
                     overlayEnabled = overlayEnabled,
                     onOverlayToggle = { enabled -> overlayEnabled = toggleOverlay(context, enabled) },
+                    themeMode = themeMode,
+                    onThemeMode = vm.theme::setMode,
                     onClose = { showSettings = false },
                 )
             }

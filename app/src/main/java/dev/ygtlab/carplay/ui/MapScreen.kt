@@ -91,7 +91,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private const val STYLE_URL = "https://tiles.openfreemap.org/styles/dark"
+private fun styleUrl(isDay: Boolean) =
+    "https://tiles.openfreemap.org/styles/" + if (isDay) "bright" else "dark"
 private const val SRC_ROUTE = "route"
 private const val SRC_DEST = "dest"
 private const val SRC_ME = "me"
@@ -101,6 +102,7 @@ fun MapScreen(
     nav: NavigationController,
     locationState: StateFlow<LocationState>,
     speedKmh: Int,
+    isDay: Boolean,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -137,6 +139,16 @@ fun MapScreen(
                 destroyed = true
                 mapView.onPause(); mapView.onStop(); mapView.onDestroy()
             }
+        }
+    }
+
+    // (Re)load the style when the map is ready or the day/night theme flips; layers are re-added on each load.
+    LaunchedEffect(map, isDay) {
+        val m = map ?: return@LaunchedEffect
+        styleReady = false
+        m.setStyle(Style.Builder().fromUri(styleUrl(isDay))) { style ->
+            addMapLayers(style)
+            styleReady = true
         }
     }
 
@@ -207,10 +219,6 @@ fun MapScreen(
                     mv.getMapAsync { m ->
                         map = m
                         m.uiSettings.isRotateGesturesEnabled = true
-                        m.setStyle(Style.Builder().fromUri(STYLE_URL)) { style ->
-                            addMapLayers(style)
-                            styleReady = true
-                        }
                         m.addOnMapLongClickListener { latLng ->
                             nav.selectPlace(Place(context.getString(R.string.selected_place), "", GeoPoint(latLng.latitude, latLng.longitude)))
                             true

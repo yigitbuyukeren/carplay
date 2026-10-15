@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.data.ThemeMode
 import androidx.compose.ui.res.stringResource
 import dev.ygtlab.carplay.R
 import android.Manifest
@@ -68,34 +69,37 @@ fun SettingsScreen(
     items: List<SettingItem>,
     overlayEnabled: Boolean,
     onOverlayToggle: (Boolean) -> Unit,
+    themeMode: ThemeMode,
+    onThemeMode: (ThemeMode) -> Unit,
     onClose: () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xF7000000)).clickable(enabled = false) {}) {
+    Box(modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.scrim).clickable(enabled = false) {}) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.settings_title), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(stringResource(R.string.settings_title), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = LocalMotoPalette.current.text)
                 Box(
                     modifier = Modifier.size(64.dp).clip(CircleShape).background(MotoColors.CardHigh).clickable(onClick = onClose),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(32.dp)) }
+                ) { Icon(Icons.Rounded.Close, null, tint = LocalMotoPalette.current.text, modifier = Modifier.size(32.dp)) }
             }
             LazyColumn(
                 modifier = Modifier.padding(top = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(items) { item -> SettingRow(item) }
+                item { ThemeRow(themeMode, onThemeMode) }
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.overlay_title), fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
-                            Text(stringResource(R.string.overlay_desc), fontSize = 15.sp, color = MotoColors.Gray)
+                            Text(stringResource(R.string.overlay_title), fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.overlay_desc), fontSize = 15.sp, color = LocalMotoPalette.current.muted)
                         }
                         Switch(checked = overlayEnabled, onCheckedChange = onOverlayToggle)
                     }
@@ -112,13 +116,40 @@ private fun SettingRow(item: SettingItem) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(item.title, fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
-            Text(item.description, fontSize = 15.sp, color = MotoColors.Gray)
+            Text(item.title, fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
+            Text(item.description, fontSize = 15.sp, color = LocalMotoPalette.current.muted)
         }
         if (item.granted) {
             Icon(Icons.Rounded.CheckCircle, null, tint = MotoColors.Green, modifier = Modifier.size(36.dp))
         } else {
             PillButton(item.action, MotoColors.Blue, item.onClick)
+        }
+    }
+}
+
+@Composable
+private fun ThemeRow(mode: ThemeMode, onSelect: (ThemeMode) -> Unit) {
+    val palette = LocalMotoPalette.current
+    Column(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(stringResource(R.string.theme_title), fontSize = 20.sp, color = palette.text, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.theme_desc), fontSize = 15.sp, color = palette.muted)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf(
+                ThemeMode.AUTO to R.string.theme_auto,
+                ThemeMode.DAY to R.string.theme_day,
+                ThemeMode.NIGHT to R.string.theme_night,
+            ).forEach { (m, label) ->
+                PillButton(
+                    stringResource(label),
+                    if (m == mode) MotoColors.Blue else palette.cardHigh,
+                    { onSelect(m) },
+                    Modifier.weight(1f),
+                    textColor = if (m == mode) Color.White else palette.text,
+                )
+            }
         }
     }
 }

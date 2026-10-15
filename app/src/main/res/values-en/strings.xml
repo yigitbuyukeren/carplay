@@ -55,4 +55,9 @@
     <string name="rerouting_voice">Recalculating route</string>
     <string name="unit_hour">h</string>
     <string name="unit_minute">min</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_desc">Automatic switches day/night by ambient light</string>
+    <string name="theme_auto">Auto</string>
+    <string name="theme_day">Day</string>
+    <string name="theme_night">Night</string>
 </resources>
