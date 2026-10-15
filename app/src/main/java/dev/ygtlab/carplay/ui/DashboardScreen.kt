@@ -46,6 +46,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
     var showMap by remember { mutableStateOf(false) }
+    var showNowPlaying by remember { mutableStateOf(false) }
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
     var showSettings by remember { mutableStateOf(!locationGranted(context)) }
     var overlayEnabled by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
@@ -76,19 +77,30 @@ fun DashboardScreen(vm: DashboardViewModel) {
         )
     }
 
-    BackHandler(enabled = showMap) { showMap = false }
+    BackHandler(enabled = showMap || showNowPlaying) {
+        showMap = false
+        showNowPlaying = false
+    }
 
     Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(WallpaperBrush)) {
         Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(modifier = Modifier.fillMaxSize().padding(end = 16.dp, top = 8.dp, bottom = 12.dp)) {
                 Dock(
                     battery = battery,
-                    onNavigation = { showMap = !showMap; showSettings = false },
-                    onMusic = { context.openMusicApp(mediaState.packageName) },
+                    onNavigation = { showMap = !showMap; showNowPlaying = false; showSettings = false },
+                    onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showSettings = false },
                     onPhone = { context.openDialer() },
                     onSettings = { showSettings = true },
                 )
-                if (showMap) {
+                if (showNowPlaying) {
+                    NowPlayingScreen(
+                        state = mediaState,
+                        media = vm.media,
+                        onOpenMusicApp = { context.openMusicApp(mediaState.packageName) },
+                        onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
+                        modifier = Modifier.weight(1f).fillMaxSize(),
+                    )
+                } else if (showMap) {
                     MapScreen(
                         nav = vm.nav,
                         locationState = vm.locationState,
@@ -112,6 +124,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                                 media = vm.media,
                                 onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
                                 onOpenMusicApp = { context.openMusicApp(null) },
+                                onOpenNowPlaying = { showNowPlaying = true },
                                 modifier = Modifier.weight(1f).fillMaxSize(),
                             )
                         }
