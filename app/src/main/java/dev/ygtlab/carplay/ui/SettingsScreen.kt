@@ -69,6 +69,8 @@ fun SettingsScreen(
     items: List<SettingItem>,
     overlayEnabled: Boolean,
     onOverlayToggle: (Boolean) -> Unit,
+    recordTrips: Boolean,
+    onRecordTrips: (Boolean) -> Unit,
     autoRead: Boolean,
     onAutoRead: (Boolean) -> Unit,
     themeMode: ThemeMode,
@@ -103,6 +105,18 @@ fun SettingsScreen(
                             Text(stringResource(R.string.msg_auto_desc), fontSize = 15.sp, color = LocalMotoPalette.current.muted)
                         }
                         Switch(checked = autoRead, onCheckedChange = onAutoRead)
+                    }
+                }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.record_trips_title), fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.record_trips_desc), fontSize = 15.sp, color = LocalMotoPalette.current.muted)
+                        }
+                        Switch(checked = recordTrips, onCheckedChange = onRecordTrips)
                     }
                 }
                 item { ThemeRow(themeMode, onThemeMode) }

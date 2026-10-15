@@ -66,4 +66,17 @@
     <string name="message_speak_fmt">%1$s wrote: %2$s</string>
     <string name="msg_auto_title">Read messages aloud</string>
     <string name="msg_auto_desc">Reads incoming messages automatically. When off, the card shows a Read button.</string>
+    <string name="trips_title">Trip history</string>
+    <string name="trips_desc">Distance, time, average and top speed; share as GPX</string>
+    <string name="trips_empty">No trips yet. Recording starts automatically when you ride faster than 8 km/h.</string>
+    <string name="trip_recording">Recording</string>
+    <string name="stat_distance">Distance</string>
+    <string name="stat_duration">Duration</string>
+    <string name="stat_avg">Average speed</string>
+    <string name="stat_max">Top speed</string>
+    <string name="trip_share_gpx">Share GPX</string>
+    <string name="trip_delete">Delete</string>
+    <string name="trip_gpx_name">MotoDash %1$s</string>
+    <string name="record_trips_title">Record trips</string>
+    <string name="record_trips_desc">Rides are recorded automatically and stay on this phone.</string>
 </resources>

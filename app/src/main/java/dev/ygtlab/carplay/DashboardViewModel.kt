@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay
 
+import dev.ygtlab.carplay.data.TripStore
+import dev.ygtlab.carplay.data.TripRecorder
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,6 +46,14 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     val locationState: StateFlow<LocationState> = location.state
     val nav = NavigationController(app, viewModelScope, location.state)
+
+    val recordTrips = MutableStateFlow(Prefs.recordTrips(app))
+    val trips = TripRecorder(TripStore(app), viewModelScope, location.state, recordTrips)
+
+    fun setRecordTrips(enabled: Boolean) {
+        Prefs.setRecordTrips(getApplication(), enabled)
+        recordTrips.value = enabled
+    }
 
     /** Bumped on every onResume so permission-dependent UI re-checks its state. */
     val resumeTick = MutableStateFlow(0)

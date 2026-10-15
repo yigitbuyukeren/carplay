@@ -66,4 +66,17 @@
     <string name="message_speak_fmt">%1$s yazdı: %2$s</string>
     <string name="msg_auto_title">Mesajları sesli oku</string>
     <string name="msg_auto_desc">Gelen mesajı otomatik okur. Kapalıyken kartta Oku düğmesi çıkar.</string>
+    <string name="trips_title">Yolculuk geçmişi</string>
+    <string name="trips_desc">Mesafe, süre, ortalama ve en yüksek hız; GPX olarak paylaş</string>
+    <string name="trips_empty">Henüz kayıtlı yolculuk yok. 8 km/sa üzerinde sürmeye başlayınca otomatik kaydedilir.</string>
+    <string name="trip_recording">Kayıt sürüyor</string>
+    <string name="stat_distance">Mesafe</string>
+    <string name="stat_duration">Süre</string>
+    <string name="stat_avg">Ortalama hız</string>
+    <string name="stat_max">En yüksek hız</string>
+    <string name="trip_share_gpx">GPX paylaş</string>
+    <string name="trip_delete">Sil</string>
+    <string name="trip_gpx_name">MotoDash %1$s</string>
+    <string name="record_trips_title">Yolculukları kaydet</string>
+    <string name="record_trips_desc">Sürüşler otomatik kaydedilir ve yalnızca bu telefonda saklanır.</string>
 </resources>

@@ -48,6 +48,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val callerName by vm.callerName.collectAsStateWithLifecycle()
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
+    val recordTrips by vm.recordTrips.collectAsStateWithLifecycle()
+    var showTrips by remember { mutableStateOf(false) }
     val message by vm.messages.collectAsStateWithLifecycle()
     val autoRead by vm.readMessagesAloud.collectAsStateWithLifecycle()
     var dismissedMessageId by remember { mutableLongStateOf(0L) }
@@ -66,6 +68,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
     // Re-evaluated whenever the activity resumes (e.g. coming back from a system settings page).
     val settingItems = remember(resume) {
         listOf(
+            SettingItem(context.getString(R.string.trips_title), context.getString(R.string.trips_desc), false, context.getString(R.string.action_open)) {
+                showTrips = true
+            },
             SettingItem(context.getString(R.string.perm_location), context.getString(R.string.perm_location_desc), locationGranted(context), context.getString(R.string.action_allow)) {
                 permissionLauncher.launch(runtimePermissions())
             },
@@ -85,7 +90,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
         )
     }
 
-    BackHandler(enabled = showMap || showNowPlaying) {
+    BackHandler(enabled = showMap || showNowPlaying || showTrips) {
+        showTrips = false
         showMap = false
         showNowPlaying = false
     }
@@ -122,7 +128,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        SpeedCard(gps, modifier = Modifier.weight(1f).fillMaxSize())
+                        SpeedCard(gps, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
                         Column(
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -146,12 +152,18 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     items = settingItems,
                     overlayEnabled = overlayEnabled,
                     onOverlayToggle = { enabled -> overlayEnabled = toggleOverlay(context, enabled) },
+                    recordTrips = recordTrips,
+                    onRecordTrips = vm::setRecordTrips,
                     autoRead = autoRead,
                     onAutoRead = vm::setReadMessagesAloud,
                     themeMode = themeMode,
                     onThemeMode = vm.theme::setMode,
                     onClose = { showSettings = false },
                 )
+            }
+
+            if (showTrips) {
+                TripsScreen(trips = vm.trips, onClose = { showTrips = false })
             }
 
             val shownMessage = message?.takeIf { it.id != dismissedMessageId && callState.phase == CallPhase.IDLE }
