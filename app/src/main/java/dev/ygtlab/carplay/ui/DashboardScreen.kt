@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.R
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -58,20 +59,20 @@ fun DashboardScreen(vm: DashboardViewModel) {
     // Re-evaluated whenever the activity resumes (e.g. coming back from a system settings page).
     val settingItems = remember(resume) {
         listOf(
-            SettingItem("Konum", "Hız göstergesi için GPS", locationGranted(context), "İzin ver") {
+            SettingItem(context.getString(R.string.perm_location), context.getString(R.string.perm_location_desc), locationGranted(context), context.getString(R.string.action_allow)) {
                 permissionLauncher.launch(runtimePermissions())
             },
-            SettingItem("Telefon", "Gelen aramayı cevaplamak/reddetmek için", phoneGranted(context), "İzin ver") {
+            SettingItem(context.getString(R.string.perm_phone), context.getString(R.string.perm_phone_desc), phoneGranted(context), context.getString(R.string.action_allow)) {
                 permissionLauncher.launch(runtimePermissions())
             },
-            SettingItem("Bildirim erişimi", "Müzik kontrolü ve arayan adı için", notificationAccessGranted(context), "Aç") {
+            SettingItem(context.getString(R.string.perm_notif), context.getString(R.string.perm_notif_desc), notificationAccessGranted(context), context.getString(R.string.action_open)) {
                 context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
             },
-            SettingItem("Üstte göster", "Hız şeridi için", overlayGranted(context), "Aç") { context.openOverlaySettings() },
-            SettingItem("Ana ekran olarak ayarla", "Home tuşu MotoDash'i açsın", false, "Ayarla") {
+            SettingItem(context.getString(R.string.perm_overlay), context.getString(R.string.perm_overlay_desc), overlayGranted(context), context.getString(R.string.action_open)) { context.openOverlaySettings() },
+            SettingItem(context.getString(R.string.perm_home), context.getString(R.string.perm_home_desc), false, context.getString(R.string.action_set)) {
                 context.openSettingsAction(Settings.ACTION_HOME_SETTINGS)
             },
-            SettingItem("Pil kısıtlaması", "Uygulamayı \"Kısıtlanmamış\" yap", false, "Aç") {
+            SettingItem(context.getString(R.string.perm_battery), context.getString(R.string.perm_battery_desc), false, context.getString(R.string.action_open)) {
                 context.openSettingsAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             },
         )

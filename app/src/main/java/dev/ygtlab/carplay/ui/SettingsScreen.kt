@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.ui.res.stringResource
+import dev.ygtlab.carplay.R
 import android.Manifest
 import android.content.Context
 import android.os.Build
@@ -75,7 +77,7 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Kurulum ve ayarlar", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(stringResource(R.string.settings_title), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 Box(
                     modifier = Modifier.size(64.dp).clip(CircleShape).background(MotoColors.CardHigh).clickable(onClick = onClose),
                     contentAlignment = Alignment.Center,
@@ -92,8 +94,8 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Hız şeridi (diğer uygulamaların üstünde)", fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
-                            Text("Harita tam ekranken hız ve saat görünür. \"Üstte göster\" izni gerekir.", fontSize = 15.sp, color = MotoColors.Gray)
+                            Text(stringResource(R.string.overlay_title), fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.overlay_desc), fontSize = 15.sp, color = MotoColors.Gray)
                         }
                         Switch(checked = overlayEnabled, onCheckedChange = onOverlayToggle)
                     }

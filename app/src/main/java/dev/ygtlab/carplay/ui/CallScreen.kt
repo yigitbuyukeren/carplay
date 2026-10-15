@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.ui.res.stringResource
+import dev.ygtlab.carplay.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,7 +46,7 @@ fun CallScreen(call: CallState, callerName: String?, onAnswer: () -> Unit, onHan
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
-                if (call.phase == CallPhase.RINGING) "Gelen arama" else "Görüşmede",
+                if (call.phase == CallPhase.RINGING) stringResource(R.string.call_incoming) else stringResource(R.string.call_active),
                 fontSize = 22.sp, color = MotoColors.Gray,
             )
             Text(

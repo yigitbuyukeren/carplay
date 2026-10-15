@@ -1,5 +1,8 @@
 package dev.ygtlab.carplay.ui
 
+import android.content.Context
+import androidx.compose.ui.res.stringResource
+import dev.ygtlab.carplay.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -209,7 +212,7 @@ fun MapScreen(
                             styleReady = true
                         }
                         m.addOnMapLongClickListener { latLng ->
-                            nav.selectPlace(Place("Seçilen konum", "", GeoPoint(latLng.latitude, latLng.longitude)))
+                            nav.selectPlace(Place(context.getString(R.string.selected_place), "", GeoPoint(latLng.latitude, latLng.longitude)))
                             true
                         }
                     }
@@ -228,7 +231,7 @@ fun MapScreen(
                 ui.route != null -> RouteCard(ui, onStart = nav::startNavigation, onCancel = nav::stopNavigation)
                 else -> SearchPanel(ui, nav::onQueryChange, nav::search, nav::selectPlace)
             }
-            if (ui.rerouting) Chip("Rota yeniden hesaplanıyor…", MotoColors.Orange)
+            if (ui.rerouting) Chip(stringResource(R.string.rerouting_chip), MotoColors.Orange)
         }
 
         if (ui.navigating) {
@@ -315,7 +318,7 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
             ) {
                 Icon(Icons.Rounded.Search, null, tint = MotoColors.Gray, modifier = Modifier.size(24.dp))
                 Box(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
-                    if (ui.query.isEmpty()) Text("Nereye gidiyoruz?", fontSize = 18.sp, color = MotoColors.Gray)
+                    if (ui.query.isEmpty()) Text(stringResource(R.string.where_to), fontSize = 18.sp, color = MotoColors.Gray)
                     BasicTextField(
                         value = ui.query,
                         onValueChange = onQuery,
@@ -330,14 +333,14 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
                 Box(
                     modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(12.dp)).background(MotoColors.Blue)
                         .clickable { submit() }.padding(horizontal = 14.dp, vertical = 6.dp),
-                ) { Text("Ara", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White) }
+                ) { Text(stringResource(R.string.search), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White) }
             }
             when {
-                ui.loading -> Text("Rota hesaplanıyor…", fontSize = 15.sp, color = MotoColors.Gray)
-                ui.searching -> Text("Aranıyor…", fontSize = 15.sp, color = MotoColors.Gray)
+                ui.loading -> Text(stringResource(R.string.route_computing), fontSize = 15.sp, color = MotoColors.Gray)
+                ui.searching -> Text(stringResource(R.string.searching), fontSize = 15.sp, color = MotoColors.Gray)
                 ui.error != null -> Text(ui.error, fontSize = 15.sp, color = MotoColors.Orange)
                 ui.results.isEmpty() && ui.query.isEmpty() ->
-                    Text("İpucu: haritaya uzun basarak da hedef seçebilirsin.", fontSize = 14.sp, color = MotoColors.Gray)
+                    Text(stringResource(R.string.hint_long_press), fontSize = 14.sp, color = MotoColors.Gray)
             }
             if (ui.results.isNotEmpty()) {
                 LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -366,11 +369,11 @@ private fun RouteCard(ui: NavUi, onStart: () -> Unit, onCancel: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                "${formatDistance(route.distanceM.toInt())} · ${formatDuration(route.durationS.toInt())} · Varış $eta",
+                "${formatDistance(route.distanceM.toInt())} · ${formatDuration(LocalContext.current, route.durationS.toInt())} · ${stringResource(R.string.arrival_fmt, eta)}",
                 fontSize = 16.sp, color = MotoColors.Gray,
             )
-            PillButton("Başlat", MotoColors.Green, onStart, Modifier.fillMaxWidth())
-            PillButton("Vazgeç", MotoColors.CardHigh, onCancel, Modifier.fillMaxWidth())
+            PillButton(stringResource(R.string.start), MotoColors.Green, onStart, Modifier.fillMaxWidth())
+            PillButton(stringResource(R.string.cancel), MotoColors.CardHigh, onCancel, Modifier.fillMaxWidth())
         }
     }
 }
@@ -379,8 +382,8 @@ private fun RouteCard(ui: NavUi, onStart: () -> Unit, onCancel: () -> Unit) {
 private fun ArrivedCard(onDone: () -> Unit) {
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Hedefe ulaştınız", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            PillButton("Tamam", MotoColors.Blue, onDone, Modifier.fillMaxWidth())
+            Text(stringResource(R.string.arrived), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            PillButton(stringResource(R.string.ok), MotoColors.Blue, onDone, Modifier.fillMaxWidth())
         }
     }
 }
@@ -411,9 +414,9 @@ private fun TripBar(ui: NavUi, onStop: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(eta, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text("${formatDuration(ui.remainingS)} · ${formatDistance(ui.remainingM)}", fontSize = 15.sp, color = MotoColors.Gray)
+                Text("${formatDuration(LocalContext.current, ui.remainingS)} · ${formatDistance(ui.remainingM)}", fontSize = 15.sp, color = MotoColors.Gray)
             }
-            PillButton("Bitir", MotoColors.Red, onStop)
+            PillButton(stringResource(R.string.finish), MotoColors.Red, onStop)
         }
     }
 }
@@ -442,7 +445,7 @@ private fun SpeedChip(speedKmh: Int) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(speedKmh.toString(), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text("km/sa", fontSize = 11.sp, color = MotoColors.Gray)
+        Text(stringResource(R.string.speed_unit), fontSize = 11.sp, color = MotoColors.Gray)
     }
 }
 
@@ -451,7 +454,9 @@ fun formatDistance(meters: Int): String = when {
     else -> "%.1f km".format(Locale.US, meters / 1000.0)
 }
 
-fun formatDuration(seconds: Int): String {
+fun formatDuration(context: Context, seconds: Int): String {
     val minutes = (seconds + 30) / 60
-    return if (minutes >= 60) "${minutes / 60} sa ${"%02d".format(minutes % 60)} dk" else "${maxOf(minutes, 1)} dk"
+    val h = context.getString(R.string.unit_hour)
+    val m = context.getString(R.string.unit_minute)
+    return if (minutes >= 60) "${minutes / 60} $h ${"%02d".format(minutes % 60)} $m" else "${maxOf(minutes, 1)} $m"
 }

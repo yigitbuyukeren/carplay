@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.ui.res.stringResource
+import dev.ygtlab.carplay.R
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -78,19 +80,19 @@ fun NowPlayingScreen(
         } else null
         status = when {
             query.isNullOrBlank() -> ""
-            media.playFromSearch(query, state.packageName ?: context.firstInstalledMusicApp()) -> "Çalınıyor: $query"
-            else -> "Müzik uygulaması bulunamadı"
+            media.playFromSearch(query, state.packageName ?: context.firstInstalledMusicApp()) -> context.getString(R.string.playing_query_fmt, query)
+            else -> context.getString(R.string.music_app_not_found)
         }
     }
     val startVoiceSearch = {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
-            .putExtra(RecognizerIntent.EXTRA_PROMPT, "Ne çalayım?")
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault().toLanguageTag())
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.voice_prompt))
         try {
             voice.launch(intent)
         } catch (_: ActivityNotFoundException) {
-            status = "Bu telefonda ses tanıma yok"
+            status = context.getString(R.string.no_speech)
         }
     }
 
@@ -105,7 +107,7 @@ fun NowPlayingScreen(
             .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(28.dp))
     ) {
         if (!state.hasAccess) {
-            Empty("Müzik kontrolü için bildirim erişimi ver", "Erişim ver", onGrantAccess)
+            Empty(stringResource(R.string.media_grant_prompt), stringResource(R.string.grant_access), onGrantAccess)
             return@Box
         }
         Row(
@@ -134,7 +136,7 @@ fun NowPlayingScreen(
             ) {
                 Column {
                     Text(
-                        if (state.hasSession) state.title.ifBlank { "Bilinmeyen parça" } else "Müzik çalmıyor",
+                        if (state.hasSession) state.title.ifBlank { stringResource(R.string.unknown_track) } else stringResource(R.string.media_not_playing),
                         fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White,
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )

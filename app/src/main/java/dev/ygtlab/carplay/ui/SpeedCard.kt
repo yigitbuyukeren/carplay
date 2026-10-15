@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.ui.res.stringResource
+import dev.ygtlab.carplay.R
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
@@ -61,9 +63,9 @@ fun SpeedCard(gps: GpsUi, modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
             )
-            Text("km/sa", fontSize = 22.sp, color = MotoColors.Gray, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.speed_unit), fontSize = 22.sp, color = MotoColors.Gray, fontWeight = FontWeight.Medium)
             if (!gps.hasFix) {
-                Text("GPS bekleniyor…", fontSize = 16.sp, color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(R.string.gps_waiting), fontSize = 16.sp, color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
             }
         }
     }

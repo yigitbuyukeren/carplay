@@ -8,7 +8,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
 
-/** Turkish turn-by-turn announcements that duck the music while speaking. */
+/** Turn-by-turn announcements that duck the music while speaking. */
 class Voice(context: Context) {
     private val audio = context.getSystemService(AudioManager::class.java)
     private val attributes = AudioAttributes.Builder()
@@ -25,7 +25,7 @@ class Voice(context: Context) {
     init {
         tts = TextToSpeech(context) { status ->
             if (status != TextToSpeech.SUCCESS) return@TextToSpeech
-            tts.language = Locale.forLanguageTag("tr-TR")
+            tts.language = Locale.getDefault()
             tts.setAudioAttributes(attributes)
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {}
