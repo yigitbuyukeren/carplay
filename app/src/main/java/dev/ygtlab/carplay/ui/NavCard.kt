@@ -28,12 +28,16 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.style.TextOverflow
+import dev.ygtlab.carplay.data.NavUi
 import dev.ygtlab.carplay.util.NAV_APPS
 import dev.ygtlab.carplay.util.isInstalled
 import dev.ygtlab.carplay.util.launchPackage
 
 @Composable
-fun NavCard(context: Context, modifier: Modifier = Modifier) {
+fun NavCard(context: Context, nav: NavUi, onOpenMap: () -> Unit, modifier: Modifier = Modifier) {
     val installed = remember { NAV_APPS.filter { context.isInstalled(it.packageName) } }
     val shape = RoundedCornerShape(28.dp)
     Box(
@@ -52,19 +56,22 @@ fun NavCard(context: Context, modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxSize().padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("Navigasyon", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            if (installed.isEmpty()) {
-                Text("Harita uygulaması bulunamadı", fontSize = 14.sp, color = MotoColors.Gray)
-            } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    installed.take(2).forEach { app ->
-                        PillButton(
-                            app.label,
-                            if (app.packageName == "com.waze") Color(0xFF2AA9E0) else MotoColors.Green,
-                            onClick = { context.launchPackage(app.packageName) },
-                            modifier = Modifier.weight(1f),
-                        )
+            val maneuver = nav.route?.maneuvers?.getOrNull(nav.maneuverIndex)
+            if (nav.navigating && maneuver != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(maneuverIcon(maneuver.type), null, tint = Color.White, modifier = Modifier.size(48.dp))
+                    Column(modifier = Modifier.padding(start = 12.dp)) {
+                        Text(formatDistance(nav.distToNextM), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(maneuver.instruction, fontSize = 14.sp, color = Color(0xE6FFFFFF), maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
+                }
+            } else {
+                Text("Navigasyon", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                PillButton(if (nav.navigating) "Haritaya dön" else "Harita ve rota", MotoColors.Blue, onOpenMap, Modifier.weight(1f))
+                installed.firstOrNull()?.let { app ->
+                    PillButton(app.label.substringBefore(' '), MotoColors.Green, { context.launchPackage(app.packageName) })
                 }
             }
         }

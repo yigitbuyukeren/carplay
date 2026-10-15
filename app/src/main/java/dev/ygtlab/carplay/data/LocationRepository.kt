@@ -11,7 +11,14 @@ import dev.ygtlab.carplay.util.hasPermission
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-data class LocationState(val speedKmh: Int = 0, val fixAtMs: Long = 0L)
+data class LocationState(
+    val speedKmh: Int = 0,
+    val fixAtMs: Long = 0L,
+    val lat: Double = 0.0,
+    val lon: Double = 0.0,
+    /** Heading in degrees, or null while standing still / unknown. */
+    val bearing: Float? = null,
+)
 
 class LocationRepository(private val context: Context) {
     private val manager = context.getSystemService(LocationManager::class.java)
@@ -22,7 +29,13 @@ class LocationRepository(private val context: Context) {
 
     private val listener = LocationListener { location ->
         val kmh = if (location.hasSpeed()) SpeedUtil.msToKmh(location.speed) else 0
-        _state.value = LocationState(kmh, System.currentTimeMillis())
+        _state.value = LocationState(
+            speedKmh = kmh,
+            fixAtMs = System.currentTimeMillis(),
+            lat = location.latitude,
+            lon = location.longitude,
+            bearing = if (location.hasBearing() && kmh > 0) location.bearing else _state.value.bearing,
+        )
     }
 
     @SuppressLint("MissingPermission")
