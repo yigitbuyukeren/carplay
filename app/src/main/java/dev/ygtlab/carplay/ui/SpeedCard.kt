@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
@@ -30,14 +31,14 @@ import dev.ygtlab.carplay.R
 private const val MAX_SPEED = 200f
 
 @Composable
-fun SpeedCard(gps: GpsUi, modifier: Modifier = Modifier) {
+fun SpeedCard(gps: GpsUi, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     val fraction by animateFloatAsState(
         targetValue = (gps.speedKmh / MAX_SPEED).coerceIn(0f, 1f),
         animationSpec = spring(stiffness = 120f),
         label = "speed",
     )
     val trackColor = LocalMotoPalette.current.track
-    Box(modifier = modifier.card(), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.card().clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         Canvas(
             modifier = Modifier.fillMaxHeight().aspectRatio(1f).padding(20.dp)
         ) {
