@@ -6,6 +6,7 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 - GPS hız göstergesi, saat/tarih, pil ve sıcaklık uyarısı
 - Müzik kontrolü (Spotify, YouTube Music vb.; bildirim erişimi gerekir)
 - Gelen arama ekranı (büyük Cevapla/Reddet)
+- Gömülü harita ve navigasyon: MapLibre + OpenStreetMap (OpenFreeMap karoları), Nominatim arama, Valhalla motosiklet rotası, Türkçe sesli yönlendirme, rota dışına çıkınca yeniden hesaplama
 - Google Haritalar / Waze / Yandex kısayolları
 - Diğer uygulamaların üstünde hız/saat şeridi (overlay)
 - Ana ekran (HOME) launcher olarak ayarlanabilir

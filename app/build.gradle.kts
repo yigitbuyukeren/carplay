@@ -43,6 +43,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.1")
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.palette:palette-ktx:1.0.0")
+    implementation("org.maplibre.gl:android-sdk:11.13.5")
 
     testImplementation("junit:junit:4.13.2")
 }
