@@ -1,7 +1,7 @@
 package dev.ygtlab.carplay.data
 
-import dev.ygtlab.carplay.R
 import android.content.Context
+import dev.ygtlab.carplay.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

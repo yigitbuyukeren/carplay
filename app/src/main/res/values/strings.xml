@@ -60,4 +60,10 @@
     <string name="theme_auto">Otomatik</string>
     <string name="theme_day">Gündüz</string>
     <string name="theme_night">Gece</string>
+    <string name="message_read">Oku</string>
+    <string name="message_dismiss">Kapat</string>
+    <string name="message_link">bağlantı</string>
+    <string name="message_speak_fmt">%1$s yazdı: %2$s</string>
+    <string name="msg_auto_title">Mesajları sesli oku</string>
+    <string name="msg_auto_desc">Gelen mesajı otomatik okur. Kapalıyken kartta Oku düğmesi çıkar.</string>
 </resources>

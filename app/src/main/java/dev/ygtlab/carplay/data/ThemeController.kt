@@ -6,9 +6,9 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import dev.ygtlab.carplay.util.Prefs
+import java.util.Calendar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.util.Calendar
 
 enum class ThemeMode { AUTO, DAY, NIGHT }
 

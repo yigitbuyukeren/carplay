@@ -1,7 +1,5 @@
 package dev.ygtlab.carplay.ui
 
-import androidx.compose.ui.res.stringResource
-import dev.ygtlab.carplay.R
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -53,11 +51,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.palette.graphics.Palette
+import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.MediaRepository
 import dev.ygtlab.carplay.data.MediaState
 import dev.ygtlab.carplay.util.firstInstalledMusicApp
