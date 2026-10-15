@@ -1,10 +1,7 @@
 package dev.ygtlab.carplay.ui
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BatteryChargingFull
@@ -26,8 +23,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** CarPlay-style clock + battery readout at the bottom of the dock. */
 @Composable
-fun StatusBar(battery: BatteryState, modifier: Modifier = Modifier) {
+fun DockStatus(battery: BatteryState) {
     val now by produceState(System.currentTimeMillis()) {
         while (true) {
             value = System.currentTimeMillis()
@@ -35,33 +33,22 @@ fun StatusBar(battery: BatteryState, modifier: Modifier = Modifier) {
         }
     }
     val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now))
-    val date = SimpleDateFormat("d MMMM, EEEE", Locale.forLanguageTag("tr")).format(Date(now))
     val tempColor = when {
         battery.tempC >= 45f -> MotoColors.Red
         battery.tempC >= 40f -> MotoColors.Orange
-        else -> Color.White
+        else -> MotoColors.Gray
     }
-
-    Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(time, fontSize = 44.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            Column(modifier = Modifier.padding(start = 14.dp, bottom = 6.dp)) {
-                Text(date, fontSize = 16.sp, color = MotoColors.Gray)
-            }
-        }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(time, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${battery.tempC.toInt()}°C", fontSize = 18.sp, color = tempColor, fontWeight = FontWeight.Medium)
             Icon(
                 if (battery.charging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryStd,
                 contentDescription = null,
-                tint = if (battery.charging) MotoColors.Green else Color.White,
-                modifier = Modifier.padding(start = 14.dp).size(26.dp),
+                tint = if (battery.charging) MotoColors.Green else MotoColors.Gray,
+                modifier = Modifier.size(16.dp),
             )
-            Text("%${battery.percent}", fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.Medium)
+            Text("%${battery.percent}", fontSize = 13.sp, color = MotoColors.Gray)
         }
+        Text("${battery.tempC.toInt()}°C", fontSize = 13.sp, color = tempColor, fontWeight = FontWeight.Medium)
     }
 }
