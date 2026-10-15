@@ -3,6 +3,7 @@ package dev.ygtlab.carplay.ui
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -44,6 +45,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val callerName by vm.callerName.collectAsStateWithLifecycle()
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
+    var showMap by remember { mutableStateOf(false) }
+    val navUi by vm.nav.ui.collectAsStateWithLifecycle()
     var showSettings by remember { mutableStateOf(!locationGranted(context)) }
     var overlayEnabled by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
 
@@ -73,17 +76,27 @@ fun DashboardScreen(vm: DashboardViewModel) {
         )
     }
 
+    BackHandler(enabled = showMap) { showMap = false }
+
     Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(WallpaperBrush)) {
         Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(modifier = Modifier.fillMaxSize().padding(end = 16.dp, top = 8.dp, bottom = 12.dp)) {
                 Dock(
                     battery = battery,
-                    onNavigation = { if (!context.openNavigation()) showSettings = false },
+                    onNavigation = { showMap = !showMap; showSettings = false },
                     onMusic = { context.openMusicApp(mediaState.packageName) },
                     onPhone = { context.openDialer() },
                     onSettings = { showSettings = true },
                 )
-                Column(modifier = Modifier.weight(1f)) {
+                if (showMap) {
+                    MapScreen(
+                        nav = vm.nav,
+                        locationState = vm.locationState,
+                        speedKmh = gps.speedKmh,
+                        onClose = { showMap = false },
+                        modifier = Modifier.weight(1f).fillMaxSize(),
+                    )
+                } else Column(modifier = Modifier.weight(1f)) {
                     Row(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -93,7 +106,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
-                            NavCard(context, modifier = Modifier.weight(1f).fillMaxSize())
+                            NavCard(context, navUi, onOpenMap = { showMap = true }, modifier = Modifier.weight(1f).fillMaxSize())
                             MediaCard(
                                 state = mediaState,
                                 media = vm.media,

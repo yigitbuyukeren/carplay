@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dev.ygtlab.carplay.data.BatteryRepository
 import dev.ygtlab.carplay.data.CallRepository
 import dev.ygtlab.carplay.data.LocationRepository
+import dev.ygtlab.carplay.data.LocationState
+import dev.ygtlab.carplay.data.NavigationController
 import dev.ygtlab.carplay.data.MediaRepository
 import dev.ygtlab.carplay.service.CallBridge
 import kotlinx.coroutines.delay
@@ -25,6 +27,9 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     val call = CallRepository(app)
 
     val callerName: StateFlow<String?> = CallBridge.callerName
+
+    val locationState: StateFlow<LocationState> = location.state
+    val nav = NavigationController(app, viewModelScope, location.state)
 
     /** Bumped on every onResume so permission-dependent UI re-checks its state. */
     val resumeTick = MutableStateFlow(0)
@@ -50,6 +55,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        nav.shutdown()
         location.stop()
     }
 
