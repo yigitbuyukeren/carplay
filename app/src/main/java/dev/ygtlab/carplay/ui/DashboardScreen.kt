@@ -93,13 +93,13 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
-                            NavCard(context, modifier = Modifier.weight(0.8f).fillMaxSize())
+                            NavCard(context, modifier = Modifier.weight(1f).fillMaxSize())
                             MediaCard(
                                 state = mediaState,
                                 media = vm.media,
                                 onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
                                 onOpenMusicApp = { context.openMusicApp(null) },
-                                modifier = Modifier.weight(1.2f).fillMaxSize(),
+                                modifier = Modifier.weight(1f).fillMaxSize(),
                             )
                         }
                     }
