@@ -18,3 +18,20 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@17
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 `local.properties` içinde `sdk.dir` ayarlı olmalı (dosya git'e girmez).
+
+## Güvenlik notu
+Bu uygulama sürüş sırasında dikkat dağıtabilir. Telefonu sabitle, ayarları park halindeyken yap ve trafik kurallarına uy. Yazılım garantisiz sunulur (MIT).
+
+## Kullanılan servisler ve atıflar
+- Harita verisi © [OpenStreetMap](https://www.openstreetmap.org/copyright) katkıda bulunanlar (ODbL)
+- Harita karoları: [OpenFreeMap](https://openfreemap.org); harita motoru: [MapLibre Native](https://maplibre.org)
+- Adres arama: [Nominatim](https://nominatim.org) (genel sunucu; kullanım politikasına uygun olarak yalnızca Ara'ya basınca sorgular)
+- Rota: [Valhalla](https://github.com/valhalla/valhalla) genel sunucusu (`valhalla1.openstreetmap.de`)
+
+Bunlar ücretsiz, garantisiz genel servislerdir. Yoğun veya ticari kullanım için kendi sunucunu kur.
+
+## Katkı
+Issue ve PR'lar açık. Fikirler: gündüz teması, hız limiti, çevrimdışı harita, yolculuk kaydı.
+
+## Lisans
+[MIT](LICENSE)
