@@ -1,14 +1,14 @@
 package dev.ygtlab.carplay.data
 
-import java.util.Locale
 import android.util.Log
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
 
 data class Place(val name: String, val detail: String, val point: GeoPoint)
 

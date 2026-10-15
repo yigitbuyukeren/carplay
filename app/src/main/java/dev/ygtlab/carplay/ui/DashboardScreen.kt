@@ -1,6 +1,5 @@
 package dev.ygtlab.carplay.ui
 
-import dev.ygtlab.carplay.R
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -9,24 +8,27 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ygtlab.carplay.DashboardViewModel
+import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.CallPhase
 import dev.ygtlab.carplay.service.OverlayService
 import dev.ygtlab.carplay.util.Prefs
@@ -46,6 +48,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val callerName by vm.callerName.collectAsStateWithLifecycle()
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
+    val message by vm.messages.collectAsStateWithLifecycle()
+    val autoRead by vm.readMessagesAloud.collectAsStateWithLifecycle()
+    var dismissedMessageId by remember { mutableLongStateOf(0L) }
     val themeMode by vm.theme.mode.collectAsStateWithLifecycle()
     val isDay by vm.theme.isDay.collectAsStateWithLifecycle()
     var showMap by remember { mutableStateOf(false) }
@@ -141,9 +146,21 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     items = settingItems,
                     overlayEnabled = overlayEnabled,
                     onOverlayToggle = { enabled -> overlayEnabled = toggleOverlay(context, enabled) },
+                    autoRead = autoRead,
+                    onAutoRead = vm::setReadMessagesAloud,
                     themeMode = themeMode,
                     onThemeMode = vm.theme::setMode,
                     onClose = { showSettings = false },
+                )
+            }
+
+            val shownMessage = message?.takeIf { it.id != dismissedMessageId && callState.phase == CallPhase.IDLE }
+            if (shownMessage != null && !showSettings) {
+                MessageBanner(
+                    message = shownMessage,
+                    onRead = { vm.speakMessage(shownMessage) },
+                    onDismiss = { dismissedMessageId = shownMessage.id },
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
                 )
             }
 

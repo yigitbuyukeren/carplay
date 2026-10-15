@@ -1,8 +1,6 @@
 package dev.ygtlab.carplay.ui
 
 import android.content.Context
-import androidx.compose.ui.res.stringResource
-import dev.ygtlab.carplay.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,6 +43,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -56,11 +55,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.GeoPoint
 import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.NavUi
 import dev.ygtlab.carplay.data.NavigationController
 import dev.ygtlab.carplay.data.Place
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
@@ -87,9 +90,6 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 private fun styleUrl(isDay: Boolean) =
     "https://tiles.openfreemap.org/styles/" + if (isDay) "bright" else "dark"

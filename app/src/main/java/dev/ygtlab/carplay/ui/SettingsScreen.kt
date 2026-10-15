@@ -1,8 +1,5 @@
 package dev.ygtlab.carplay.ui
 
-import dev.ygtlab.carplay.data.ThemeMode
-import androidx.compose.ui.res.stringResource
-import dev.ygtlab.carplay.R
 import android.Manifest
 import android.content.Context
 import android.os.Build
@@ -32,10 +29,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
+import dev.ygtlab.carplay.R
+import dev.ygtlab.carplay.data.ThemeMode
 import dev.ygtlab.carplay.util.hasPermission
 
 data class SettingItem(
@@ -69,6 +69,8 @@ fun SettingsScreen(
     items: List<SettingItem>,
     overlayEnabled: Boolean,
     onOverlayToggle: (Boolean) -> Unit,
+    autoRead: Boolean,
+    onAutoRead: (Boolean) -> Unit,
     themeMode: ThemeMode,
     onThemeMode: (ThemeMode) -> Unit,
     onClose: () -> Unit,
@@ -91,6 +93,18 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(items) { item -> SettingRow(item) }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.msg_auto_title), fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.msg_auto_desc), fontSize = 15.sp, color = LocalMotoPalette.current.muted)
+                        }
+                        Switch(checked = autoRead, onCheckedChange = onAutoRead)
+                    }
+                }
                 item { ThemeRow(themeMode, onThemeMode) }
                 item {
                     Row(

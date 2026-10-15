@@ -1,6 +1,5 @@
 package dev.ygtlab.carplay.service
 
-import dev.ygtlab.carplay.R
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -23,6 +22,7 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import dev.ygtlab.carplay.MainActivity
+import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.LocationRepository
 import dev.ygtlab.carplay.util.SpeedUtil
 import java.text.SimpleDateFormat

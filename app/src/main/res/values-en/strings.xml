@@ -60,4 +60,10 @@
     <string name="theme_auto">Auto</string>
     <string name="theme_day">Day</string>
     <string name="theme_night">Night</string>
+    <string name="message_read">Read</string>
+    <string name="message_dismiss">Dismiss</string>
+    <string name="message_link">link</string>
+    <string name="message_speak_fmt">%1$s wrote: %2$s</string>
+    <string name="msg_auto_title">Read messages aloud</string>
+    <string name="msg_auto_desc">Reads incoming messages automatically. When off, the card shows a Read button.</string>
 </resources>
