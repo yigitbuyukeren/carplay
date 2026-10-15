@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.ui.res.stringResource
+import dev.ygtlab.carplay.R
 import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -66,10 +68,10 @@ fun NavCard(context: Context, nav: NavUi, onOpenMap: () -> Unit, modifier: Modif
                     }
                 }
             } else {
-                Text("Navigasyon", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(stringResource(R.string.nav_title), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                PillButton(if (nav.navigating) "Haritaya dön" else "Harita ve rota", MotoColors.Blue, onOpenMap, Modifier.weight(1f))
+                PillButton(if (nav.navigating) stringResource(R.string.nav_back_to_map) else stringResource(R.string.nav_map_and_route), MotoColors.Blue, onOpenMap, Modifier.weight(1f))
                 installed.firstOrNull()?.let { app ->
                     PillButton(app.label.substringBefore(' '), MotoColors.Green, { context.launchPackage(app.packageName) })
                 }

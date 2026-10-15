@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.ui.res.stringResource
+import dev.ygtlab.carplay.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,8 +67,8 @@ fun MediaCard(
             .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(28.dp))
     ) {
         when {
-            !state.hasAccess -> Prompt("Müzik kontrolü için bildirim erişimi ver", "Erişim ver", onGrantAccess)
-            !state.hasSession -> Prompt("Müzik çalmıyor", "Müzik uygulamasını aç", onOpenMusicApp)
+            !state.hasAccess -> Prompt(stringResource(R.string.media_grant_prompt), stringResource(R.string.grant_access), onGrantAccess)
+            !state.hasSession -> Prompt(stringResource(R.string.media_not_playing), stringResource(R.string.open_music_app), onOpenMusicApp)
             else -> Row(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -86,7 +88,7 @@ fun MediaCard(
                 Spacer(Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        state.title.ifBlank { "Bilinmeyen parça" },
+                        state.title.ifBlank { stringResource(R.string.unknown_track) },
                         fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
