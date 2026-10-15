@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.data.SpeedLimitMath
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -102,6 +103,7 @@ fun MapScreen(
     nav: NavigationController,
     locationState: StateFlow<LocationState>,
     speedKmh: Int,
+    speedLimit: Int?,
     isDay: Boolean,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -268,7 +270,8 @@ fun MapScreen(
                     }
                 })
             }
-            SpeedChip(speedKmh)
+            if (speedLimit != null) SpeedLimitSign(speedLimit, size = 64.dp)
+            SpeedChip(speedKmh, over = SpeedLimitMath.isOver(speedKmh, speedLimit))
         }
     }
 }
@@ -321,7 +324,7 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MotoColors.CardHigh).padding(horizontal = 14.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MotoColors.PanelHigh).padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Rounded.Search, null, tint = MotoColors.Gray, modifier = Modifier.size(24.dp))
@@ -381,7 +384,7 @@ private fun RouteCard(ui: NavUi, onStart: () -> Unit, onCancel: () -> Unit) {
                 fontSize = 16.sp, color = MotoColors.Gray,
             )
             PillButton(stringResource(R.string.start), MotoColors.Green, onStart, Modifier.fillMaxWidth())
-            PillButton(stringResource(R.string.cancel), MotoColors.CardHigh, onCancel, Modifier.fillMaxWidth())
+            PillButton(stringResource(R.string.cancel), MotoColors.PanelHigh, onCancel, Modifier.fillMaxWidth())
         }
     }
 }
@@ -446,13 +449,13 @@ private fun RoundIconButton(icon: androidx.compose.ui.graphics.vector.ImageVecto
 }
 
 @Composable
-private fun SpeedChip(speedKmh: Int) {
+private fun SpeedChip(speedKmh: Int, over: Boolean) {
     Column(
         modifier = Modifier.size(72.dp).clip(CircleShape).background(Color(0xE6101114)).border(1.dp, Color(0x26FFFFFF), CircleShape),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(speedKmh.toString(), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(speedKmh.toString(), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = if (over) MotoColors.Red else Color.White)
         Text(stringResource(R.string.speed_unit), fontSize = 11.sp, color = MotoColors.Gray)
     }
 }

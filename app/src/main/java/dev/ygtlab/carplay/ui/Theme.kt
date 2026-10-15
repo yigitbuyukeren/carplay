@@ -101,6 +101,9 @@ object MotoColors {
     /** Secondary text on the always-dark map panels. For themed surfaces use [MotoPalette.muted]. */
     val Gray = Color(0xFF8E8E93)
 
+    /** Raised fill inside the always-dark map panels (search field, secondary buttons). */
+    val PanelHigh = Color(0xFF2C2C2E)
+
     val Card: Color @Composable get() = LocalMotoPalette.current.card
     val CardHigh: Color @Composable get() = LocalMotoPalette.current.cardHigh
 }
