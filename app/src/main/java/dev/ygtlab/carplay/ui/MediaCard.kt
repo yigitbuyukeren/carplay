@@ -2,6 +2,7 @@ package dev.ygtlab.carplay.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,7 +60,8 @@ fun MediaCard(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(28.dp))
-            .background(Brush.verticalGradient(listOf(tint, MotoColors.Card)))
+            .background(Brush.verticalGradient(listOf(tint, Color(0xFF0E0E10))))
+            .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(28.dp))
     ) {
         when {
             !state.hasAccess -> Prompt("Müzik kontrolü için bildirim erişimi ver", "Erişim ver", onGrantAccess)

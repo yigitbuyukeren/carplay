@@ -59,7 +59,7 @@ fun SpeedCard(gps: GpsUi, modifier: Modifier = Modifier) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 gps.speedKmh.toString(),
-                fontSize = 108.sp,
+                fontSize = 92.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
             )
