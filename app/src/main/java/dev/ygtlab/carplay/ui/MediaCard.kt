@@ -50,6 +50,7 @@ fun MediaCard(
     media: MediaRepository,
     onGrantAccess: () -> Unit,
     onOpenMusicApp: () -> Unit,
+    onOpenNowPlaying: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val tint = remember(state.art) {
@@ -71,7 +72,8 @@ fun MediaCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    modifier = Modifier.size(104.dp).clip(RoundedCornerShape(18.dp)).background(MotoColors.CardHigh),
+                    modifier = Modifier.size(104.dp).clip(RoundedCornerShape(18.dp)).background(MotoColors.CardHigh)
+                        .clickable(onClick = onOpenNowPlaying),
                     contentAlignment = Alignment.Center,
                 ) {
                     val art = state.art
