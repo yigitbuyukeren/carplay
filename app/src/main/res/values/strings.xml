@@ -82,4 +82,13 @@
     <string name="speed_limit_title">Hız limiti göstergesi</string>
     <string name="speed_limit_desc">Navigasyon sırasında yolun hız limitini gösterir, aşınca uyarır. Konumun OpenStreetMap (Valhalla) sunucusuna gönderilir.</string>
     <string name="speed_limit_warning">Hız limiti %1$d, yavaşla</string>
+    <string name="lean_title">Eğim göstergesi</string>
+    <string name="lean_desc">Telefonun sensörleriyle motorun yatışını gösterir. Motor dikken kalibre et, sonra birkaç viraj al.</string>
+    <string name="lean_calibrate">Kalibre et (motor dik)</string>
+    <string name="lean_calibrated">Kalibre edildi</string>
+    <string name="lean_learning">Viraj bekleniyor…</string>
+    <string name="lean_needs_calibration">Kalibre et</string>
+    <string name="lean_unsupported">Bu telefonda gerekli sensörler yok</string>
+    <string name="lean_left">Sol</string>
+    <string name="lean_right">Sağ</string>
 </resources>

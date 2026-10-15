@@ -82,4 +82,13 @@
     <string name="speed_limit_title">Speed limit display</string>
     <string name="speed_limit_desc">Shows the road\'s speed limit during navigation and warns when you go over. Your position is sent to the OpenStreetMap (Valhalla) server.</string>
     <string name="speed_limit_warning">Speed limit %1$d, slow down</string>
+    <string name="lean_title">Lean angle</string>
+    <string name="lean_desc">Shows how far the bike leans using the phone\'s sensors. Calibrate while the bike stands upright, then ride a few corners.</string>
+    <string name="lean_calibrate">Calibrate (bike upright)</string>
+    <string name="lean_calibrated">Calibrated</string>
+    <string name="lean_learning">Waiting for corners…</string>
+    <string name="lean_needs_calibration">Calibrate</string>
+    <string name="lean_unsupported">This phone lacks the required sensors</string>
+    <string name="lean_left">Left</string>
+    <string name="lean_right">Right</string>
 </resources>

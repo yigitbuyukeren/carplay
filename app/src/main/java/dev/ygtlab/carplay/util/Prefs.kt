@@ -9,6 +9,8 @@ object Prefs {
     private const val KEY_READ_MESSAGES = "read_messages_aloud"
     private const val KEY_RECORD_TRIPS = "record_trips"
     private const val KEY_SPEED_LIMIT = "speed_limit"
+    private const val KEY_LEAN = "lean_enabled"
+    private const val KEY_LEAN_STATE = "lean_state"
     private const val KEY_THEME = "theme_mode"
 
     fun overlayEnabled(context: Context): Boolean =
@@ -37,6 +39,23 @@ object Prefs {
 
     fun setSpeedLimit(context: Context, enabled: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_SPEED_LIMIT, enabled).apply()
+    }
+
+    fun leanEnabled(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_LEAN, false)
+
+    fun setLeanEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_LEAN, enabled).apply()
+    }
+
+    fun leanState(context: Context): FloatArray? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_LEAN_STATE, null)
+            ?.split(",")?.mapNotNull { it.toFloatOrNull() }?.toFloatArray()?.takeIf { it.size == 8 }
+
+    fun setLeanState(context: Context, state: FloatArray?) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString(KEY_LEAN_STATE, state?.joinToString(","))
+            .apply()
     }
 
     fun themeMode(context: Context): ThemeMode =
