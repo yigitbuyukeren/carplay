@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay
 
+import dev.ygtlab.carplay.data.LeanSensor
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.ygtlab.carplay.data.SpeedLimitController
@@ -52,6 +53,15 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     val locationState: StateFlow<LocationState> = location.state
     val nav = NavigationController(app, viewModelScope, location.state)
 
+    val leanEnabled = MutableStateFlow(Prefs.leanEnabled(app))
+    val lean = LeanSensor(app)
+
+    fun setLeanEnabled(enabled: Boolean) {
+        Prefs.setLeanEnabled(getApplication(), enabled)
+        leanEnabled.value = enabled
+        if (enabled) lean.start() else lean.stop()
+    }
+
     val speedLimitEnabled = MutableStateFlow(Prefs.speedLimit(app))
     private val guiding: Flow<Boolean> = nav.ui.map { ui: NavUi -> ui.navigating }.distinctUntilChanged()
     private val limitActive: StateFlow<Boolean> =
@@ -92,6 +102,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, GpsUi())
 
     init {
+        viewModelScope.launch { gps.collect { lean.moving = it.speedKmh >= LEAN_MIN_KMH } }
         viewModelScope.launch {
             MessageBridge.latest.filterNotNull().collect { message ->
                 val fresh = System.currentTimeMillis() - message.postedAtMs < FRESH_MESSAGE_MS
@@ -105,6 +116,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         battery.start()
         media.start()
         theme.start()
+        if (leanEnabled.value) lean.start()
         call.start()
         resumeTick.value++
     }
@@ -123,10 +135,12 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onPause() {
         theme.stop()
+        lean.stop()
     }
 
     override fun onCleared() {
         announcer.shutdown()
+        lean.stop()
         theme.stop()
         nav.shutdown()
         location.stop()
@@ -135,5 +149,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val FIX_TIMEOUT_MS = 5000L
         const val FRESH_MESSAGE_MS = 30_000L
+        const val LEAN_MIN_KMH = 15
     }
 }
