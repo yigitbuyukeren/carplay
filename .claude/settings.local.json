@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /Users/yigit/carplay; which adb java 2>&1; ls /Applications | grep -i -E \"android|studio\")",
+      "Bash(gh auth *)",
+      "Bash(git --version)",
+      "Bash(adb devices *)"
+    ]
+  }
+}
