@@ -23,9 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.CallPhase
 import dev.ygtlab.carplay.data.CallState
 import kotlinx.coroutines.delay
@@ -44,7 +46,7 @@ fun CallScreen(call: CallState, callerName: String?, onAnswer: () -> Unit, onHan
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
-                if (call.phase == CallPhase.RINGING) "Gelen arama" else "Görüşmede",
+                if (call.phase == CallPhase.RINGING) stringResource(R.string.call_incoming) else stringResource(R.string.call_active),
                 fontSize = 22.sp, color = MotoColors.Gray,
             )
             Text(

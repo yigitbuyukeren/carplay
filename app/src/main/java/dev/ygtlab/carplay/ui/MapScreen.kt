@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.data.SpeedLimitMath
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,6 +44,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -53,11 +56,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.GeoPoint
 import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.NavUi
 import dev.ygtlab.carplay.data.NavigationController
 import dev.ygtlab.carplay.data.Place
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
@@ -84,11 +91,9 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
-private const val STYLE_URL = "https://tiles.openfreemap.org/styles/dark"
+private fun styleUrl(isDay: Boolean) =
+    "https://tiles.openfreemap.org/styles/" + if (isDay) "bright" else "dark"
 private const val SRC_ROUTE = "route"
 private const val SRC_DEST = "dest"
 private const val SRC_ME = "me"
@@ -98,6 +103,8 @@ fun MapScreen(
     nav: NavigationController,
     locationState: StateFlow<LocationState>,
     speedKmh: Int,
+    speedLimit: Int?,
+    isDay: Boolean,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -134,6 +141,16 @@ fun MapScreen(
                 destroyed = true
                 mapView.onPause(); mapView.onStop(); mapView.onDestroy()
             }
+        }
+    }
+
+    // (Re)load the style when the map is ready or the day/night theme flips; layers are re-added on each load.
+    LaunchedEffect(map, isDay) {
+        val m = map ?: return@LaunchedEffect
+        styleReady = false
+        m.setStyle(Style.Builder().fromUri(styleUrl(isDay))) { style ->
+            addMapLayers(style)
+            styleReady = true
         }
     }
 
@@ -204,12 +221,8 @@ fun MapScreen(
                     mv.getMapAsync { m ->
                         map = m
                         m.uiSettings.isRotateGesturesEnabled = true
-                        m.setStyle(Style.Builder().fromUri(STYLE_URL)) { style ->
-                            addMapLayers(style)
-                            styleReady = true
-                        }
                         m.addOnMapLongClickListener { latLng ->
-                            nav.selectPlace(Place("Seçilen konum", "", GeoPoint(latLng.latitude, latLng.longitude)))
+                            nav.selectPlace(Place(context.getString(R.string.selected_place), "", GeoPoint(latLng.latitude, latLng.longitude)))
                             true
                         }
                     }
@@ -228,7 +241,7 @@ fun MapScreen(
                 ui.route != null -> RouteCard(ui, onStart = nav::startNavigation, onCancel = nav::stopNavigation)
                 else -> SearchPanel(ui, nav::onQueryChange, nav::search, nav::selectPlace)
             }
-            if (ui.rerouting) Chip("Rota yeniden hesaplanıyor…", MotoColors.Orange)
+            if (ui.rerouting) Chip(stringResource(R.string.rerouting_chip), MotoColors.Orange)
         }
 
         if (ui.navigating) {
@@ -257,7 +270,8 @@ fun MapScreen(
                     }
                 })
             }
-            SpeedChip(speedKmh)
+            if (speedLimit != null) SpeedLimitSign(speedLimit, size = 64.dp)
+            SpeedChip(speedKmh, over = SpeedLimitMath.isOver(speedKmh, speedLimit))
         }
     }
 }
@@ -310,12 +324,12 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MotoColors.CardHigh).padding(horizontal = 14.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MotoColors.PanelHigh).padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Rounded.Search, null, tint = MotoColors.Gray, modifier = Modifier.size(24.dp))
                 Box(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
-                    if (ui.query.isEmpty()) Text("Nereye gidiyoruz?", fontSize = 18.sp, color = MotoColors.Gray)
+                    if (ui.query.isEmpty()) Text(stringResource(R.string.where_to), fontSize = 18.sp, color = MotoColors.Gray)
                     BasicTextField(
                         value = ui.query,
                         onValueChange = onQuery,
@@ -330,14 +344,14 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
                 Box(
                     modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(12.dp)).background(MotoColors.Blue)
                         .clickable { submit() }.padding(horizontal = 14.dp, vertical = 6.dp),
-                ) { Text("Ara", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White) }
+                ) { Text(stringResource(R.string.search), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White) }
             }
             when {
-                ui.loading -> Text("Rota hesaplanıyor…", fontSize = 15.sp, color = MotoColors.Gray)
-                ui.searching -> Text("Aranıyor…", fontSize = 15.sp, color = MotoColors.Gray)
+                ui.loading -> Text(stringResource(R.string.route_computing), fontSize = 15.sp, color = MotoColors.Gray)
+                ui.searching -> Text(stringResource(R.string.searching), fontSize = 15.sp, color = MotoColors.Gray)
                 ui.error != null -> Text(ui.error, fontSize = 15.sp, color = MotoColors.Orange)
                 ui.results.isEmpty() && ui.query.isEmpty() ->
-                    Text("İpucu: haritaya uzun basarak da hedef seçebilirsin.", fontSize = 14.sp, color = MotoColors.Gray)
+                    Text(stringResource(R.string.hint_long_press), fontSize = 14.sp, color = MotoColors.Gray)
             }
             if (ui.results.isNotEmpty()) {
                 LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -366,11 +380,11 @@ private fun RouteCard(ui: NavUi, onStart: () -> Unit, onCancel: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                "${formatDistance(route.distanceM.toInt())} · ${formatDuration(route.durationS.toInt())} · Varış $eta",
+                "${formatDistance(route.distanceM.toInt())} · ${formatDuration(LocalContext.current, route.durationS.toInt())} · ${stringResource(R.string.arrival_fmt, eta)}",
                 fontSize = 16.sp, color = MotoColors.Gray,
             )
-            PillButton("Başlat", MotoColors.Green, onStart, Modifier.fillMaxWidth())
-            PillButton("Vazgeç", MotoColors.CardHigh, onCancel, Modifier.fillMaxWidth())
+            PillButton(stringResource(R.string.start), MotoColors.Green, onStart, Modifier.fillMaxWidth())
+            PillButton(stringResource(R.string.cancel), MotoColors.PanelHigh, onCancel, Modifier.fillMaxWidth())
         }
     }
 }
@@ -379,8 +393,8 @@ private fun RouteCard(ui: NavUi, onStart: () -> Unit, onCancel: () -> Unit) {
 private fun ArrivedCard(onDone: () -> Unit) {
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Hedefe ulaştınız", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            PillButton("Tamam", MotoColors.Blue, onDone, Modifier.fillMaxWidth())
+            Text(stringResource(R.string.arrived), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            PillButton(stringResource(R.string.ok), MotoColors.Blue, onDone, Modifier.fillMaxWidth())
         }
     }
 }
@@ -411,9 +425,9 @@ private fun TripBar(ui: NavUi, onStop: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(eta, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text("${formatDuration(ui.remainingS)} · ${formatDistance(ui.remainingM)}", fontSize = 15.sp, color = MotoColors.Gray)
+                Text("${formatDuration(LocalContext.current, ui.remainingS)} · ${formatDistance(ui.remainingM)}", fontSize = 15.sp, color = MotoColors.Gray)
             }
-            PillButton("Bitir", MotoColors.Red, onStop)
+            PillButton(stringResource(R.string.finish), MotoColors.Red, onStop)
         }
     }
 }
@@ -435,14 +449,14 @@ private fun RoundIconButton(icon: androidx.compose.ui.graphics.vector.ImageVecto
 }
 
 @Composable
-private fun SpeedChip(speedKmh: Int) {
+private fun SpeedChip(speedKmh: Int, over: Boolean) {
     Column(
         modifier = Modifier.size(72.dp).clip(CircleShape).background(Color(0xE6101114)).border(1.dp, Color(0x26FFFFFF), CircleShape),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(speedKmh.toString(), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text("km/sa", fontSize = 11.sp, color = MotoColors.Gray)
+        Text(speedKmh.toString(), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = if (over) MotoColors.Red else Color.White)
+        Text(stringResource(R.string.speed_unit), fontSize = 11.sp, color = MotoColors.Gray)
     }
 }
 
@@ -451,7 +465,9 @@ fun formatDistance(meters: Int): String = when {
     else -> "%.1f km".format(Locale.US, meters / 1000.0)
 }
 
-fun formatDuration(seconds: Int): String {
+fun formatDuration(context: Context, seconds: Int): String {
     val minutes = (seconds + 30) / 60
-    return if (minutes >= 60) "${minutes / 60} sa ${"%02d".format(minutes % 60)} dk" else "${maxOf(minutes, 1)} dk"
+    val h = context.getString(R.string.unit_hour)
+    val m = context.getString(R.string.unit_minute)
+    return if (minutes >= 60) "${minutes / 60} $h ${"%02d".format(minutes % 60)} $m" else "${maxOf(minutes, 1)} $m"
 }

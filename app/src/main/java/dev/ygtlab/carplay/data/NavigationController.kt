@@ -1,6 +1,7 @@
 package dev.ygtlab.carplay.data
 
 import android.content.Context
+import dev.ygtlab.carplay.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -31,7 +32,7 @@ data class NavUi(
  * announces manoeuvres in Turkish and re-routes when the rider leaves the route.
  */
 class NavigationController(
-    context: Context,
+    private val context: Context,
     private val scope: CoroutineScope,
     private val location: StateFlow<LocationState>,
 ) {
@@ -64,10 +65,10 @@ class NavigationController(
             repo.search(query, here())
                 .onSuccess { places ->
                     _ui.update {
-                        it.copy(results = places, searching = false, error = if (places.isEmpty()) "Sonuç bulunamadı" else null)
+                        it.copy(results = places, searching = false, error = if (places.isEmpty()) context.getString(R.string.no_results) else null)
                     }
                 }
-                .onFailure { _ui.update { s -> s.copy(searching = false, error = "Arama başarısız, internet bağlantısını kontrol et") } }
+                .onFailure { _ui.update { s -> s.copy(searching = false, error = context.getString(R.string.search_failed)) } }
         }
     }
 
@@ -82,7 +83,7 @@ class NavigationController(
         scope.launch {
             repo.route(from, place.point)
                 .onSuccess { route -> _ui.update { it.copy(route = route, loading = false) } }
-                .onFailure { _ui.update { s -> s.copy(loading = false, destination = null, error = "Rota alınamadı") } }
+                .onFailure { _ui.update { s -> s.copy(loading = false, destination = null, error = context.getString(R.string.route_failed)) } }
         }
     }
 
@@ -137,7 +138,7 @@ class NavigationController(
         val remaining = (route.distanceM - travelled).coerceAtLeast(0.0)
 
         if (remaining <= ARRIVAL_M) {
-            voice.speak("Hedefe ulaştınız")
+            voice.speak(context.getString(R.string.arrived))
             trackJob?.cancel()
             _ui.update { it.copy(navigating = false, arrived = true, remainingM = 0, remainingS = 0, distToNextM = 0) }
             return
@@ -167,7 +168,7 @@ class NavigationController(
     private fun reroute(from: GeoPoint) {
         val dest = _ui.value.destination ?: return
         _ui.update { it.copy(rerouting = true) }
-        voice.speak("Rota yeniden hesaplanıyor")
+        voice.speak(context.getString(R.string.rerouting_voice))
         scope.launch {
             repo.route(from, dest.point)
                 .onSuccess { route ->
