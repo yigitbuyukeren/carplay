@@ -8,24 +8,27 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ygtlab.carplay.DashboardViewModel
+import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.CallPhase
 import dev.ygtlab.carplay.service.OverlayService
 import dev.ygtlab.carplay.util.Prefs
@@ -45,7 +48,19 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val callerName by vm.callerName.collectAsStateWithLifecycle()
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
+    val leanEnabled by vm.leanEnabled.collectAsStateWithLifecycle()
+    val leanState by vm.lean.state.collectAsStateWithLifecycle()
+    val speedLimitOn by vm.speedLimitEnabled.collectAsStateWithLifecycle()
+    val speedLimit by vm.speedLimit.limit.collectAsStateWithLifecycle()
+    val recordTrips by vm.recordTrips.collectAsStateWithLifecycle()
+    var showTrips by remember { mutableStateOf(false) }
+    val message by vm.messages.collectAsStateWithLifecycle()
+    val autoRead by vm.readMessagesAloud.collectAsStateWithLifecycle()
+    var dismissedMessageId by remember { mutableLongStateOf(0L) }
+    val themeMode by vm.theme.mode.collectAsStateWithLifecycle()
+    val isDay by vm.theme.isDay.collectAsStateWithLifecycle()
     var showMap by remember { mutableStateOf(false) }
+    var showNowPlaying by remember { mutableStateOf(false) }
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
     var showSettings by remember { mutableStateOf(!locationGranted(context)) }
     var overlayEnabled by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
@@ -57,42 +72,59 @@ fun DashboardScreen(vm: DashboardViewModel) {
     // Re-evaluated whenever the activity resumes (e.g. coming back from a system settings page).
     val settingItems = remember(resume) {
         listOf(
-            SettingItem("Konum", "Hız göstergesi için GPS", locationGranted(context), "İzin ver") {
+            SettingItem(context.getString(R.string.trips_title), context.getString(R.string.trips_desc), false, context.getString(R.string.action_open)) {
+                showTrips = true
+            },
+            SettingItem(context.getString(R.string.perm_location), context.getString(R.string.perm_location_desc), locationGranted(context), context.getString(R.string.action_allow)) {
                 permissionLauncher.launch(runtimePermissions())
             },
-            SettingItem("Telefon", "Gelen aramayı cevaplamak/reddetmek için", phoneGranted(context), "İzin ver") {
+            SettingItem(context.getString(R.string.perm_phone), context.getString(R.string.perm_phone_desc), phoneGranted(context), context.getString(R.string.action_allow)) {
                 permissionLauncher.launch(runtimePermissions())
             },
-            SettingItem("Bildirim erişimi", "Müzik kontrolü ve arayan adı için", notificationAccessGranted(context), "Aç") {
+            SettingItem(context.getString(R.string.perm_notif), context.getString(R.string.perm_notif_desc), notificationAccessGranted(context), context.getString(R.string.action_open)) {
                 context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
             },
-            SettingItem("Üstte göster", "Hız şeridi için", overlayGranted(context), "Aç") { context.openOverlaySettings() },
-            SettingItem("Ana ekran olarak ayarla", "Home tuşu MotoDash'i açsın", false, "Ayarla") {
+            SettingItem(context.getString(R.string.perm_overlay), context.getString(R.string.perm_overlay_desc), overlayGranted(context), context.getString(R.string.action_open)) { context.openOverlaySettings() },
+            SettingItem(context.getString(R.string.perm_home), context.getString(R.string.perm_home_desc), false, context.getString(R.string.action_set)) {
                 context.openSettingsAction(Settings.ACTION_HOME_SETTINGS)
             },
-            SettingItem("Pil kısıtlaması", "Uygulamayı \"Kısıtlanmamış\" yap", false, "Aç") {
+            SettingItem(context.getString(R.string.perm_battery), context.getString(R.string.perm_battery_desc), false, context.getString(R.string.action_open)) {
                 context.openSettingsAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             },
         )
     }
 
-    BackHandler(enabled = showMap) { showMap = false }
+    BackHandler(enabled = showMap || showNowPlaying || showTrips) {
+        showTrips = false
+        showMap = false
+        showNowPlaying = false
+    }
 
-    Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(WallpaperBrush)) {
+    Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.wallpaper)) {
         Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(modifier = Modifier.fillMaxSize().padding(end = 16.dp, top = 8.dp, bottom = 12.dp)) {
                 Dock(
                     battery = battery,
-                    onNavigation = { showMap = !showMap; showSettings = false },
-                    onMusic = { context.openMusicApp(mediaState.packageName) },
+                    onNavigation = { showMap = !showMap; showNowPlaying = false; showSettings = false },
+                    onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showSettings = false },
                     onPhone = { context.openDialer() },
                     onSettings = { showSettings = true },
                 )
-                if (showMap) {
+                if (showNowPlaying) {
+                    NowPlayingScreen(
+                        state = mediaState,
+                        media = vm.media,
+                        onOpenMusicApp = { context.openMusicApp(mediaState.packageName) },
+                        onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
+                        modifier = Modifier.weight(1f).fillMaxSize(),
+                    )
+                } else if (showMap) {
                     MapScreen(
                         nav = vm.nav,
                         locationState = vm.locationState,
                         speedKmh = gps.speedKmh,
+                        speedLimit = speedLimit,
+                        isDay = isDay,
                         onClose = { showMap = false },
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )
@@ -101,7 +133,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        SpeedCard(gps, modifier = Modifier.weight(1f).fillMaxSize())
+                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
                         Column(
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -112,6 +144,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                                 media = vm.media,
                                 onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
                                 onOpenMusicApp = { context.openMusicApp(null) },
+                                onOpenNowPlaying = { showNowPlaying = true },
                                 modifier = Modifier.weight(1f).fillMaxSize(),
                             )
                         }
@@ -124,7 +157,33 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     items = settingItems,
                     overlayEnabled = overlayEnabled,
                     onOverlayToggle = { enabled -> overlayEnabled = toggleOverlay(context, enabled) },
+                    lean = leanState,
+                    leanEnabled = leanEnabled,
+                    onLeanEnabled = vm::setLeanEnabled,
+                    onLeanCalibrate = vm.lean::calibrate,
+                    speedLimit = speedLimitOn,
+                    onSpeedLimit = vm::setSpeedLimitEnabled,
+                    recordTrips = recordTrips,
+                    onRecordTrips = vm::setRecordTrips,
+                    autoRead = autoRead,
+                    onAutoRead = vm::setReadMessagesAloud,
+                    themeMode = themeMode,
+                    onThemeMode = vm.theme::setMode,
                     onClose = { showSettings = false },
+                )
+            }
+
+            if (showTrips) {
+                TripsScreen(trips = vm.trips, onClose = { showTrips = false })
+            }
+
+            val shownMessage = message?.takeIf { it.id != dismissedMessageId && callState.phase == CallPhase.IDLE }
+            if (shownMessage != null && !showSettings) {
+                MessageBanner(
+                    message = shownMessage,
+                    onRead = { vm.speakMessage(shownMessage) },
+                    onDismiss = { dismissedMessageId = shownMessage.id },
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
                 )
             }
 

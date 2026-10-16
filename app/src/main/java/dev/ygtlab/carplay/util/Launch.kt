@@ -32,6 +32,8 @@ fun Context.launchPackage(pkg: String): Boolean {
 fun Context.openNavigation(): Boolean =
     NAV_APPS.firstOrNull { isInstalled(it.packageName) }?.let { launchPackage(it.packageName) } ?: false
 
+fun Context.firstInstalledMusicApp(): String? = MUSIC_PACKAGES.firstOrNull { isInstalled(it) }
+
 fun Context.openMusicApp(preferred: String?): Boolean {
     val candidates = listOfNotNull(preferred) + MUSIC_PACKAGES
     return candidates.any { launchPackage(it) }

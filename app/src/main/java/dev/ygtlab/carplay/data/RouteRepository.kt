@@ -1,13 +1,14 @@
 package dev.ygtlab.carplay.data
 
 import android.util.Log
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
 
 data class Place(val name: String, val detail: String, val point: GeoPoint)
 
@@ -43,7 +44,7 @@ class RouteRepository {
                     .put(JSONObject().put("lat", from.lat).put("lon", from.lon))
                     .put(JSONObject().put("lat", to.lat).put("lon", to.lon)))
                 .put("costing", "motorcycle")
-                .put("directions_options", JSONObject().put("language", "tr-TR").put("units", "kilometers"))
+                .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", "kilometers"))
             val json = JSONObject(http("https://valhalla1.openstreetmap.de/route", body.toString()))
             val trip = json.getJSONObject("trip")
             val leg = trip.getJSONArray("legs").getJSONObject(0)
@@ -75,7 +76,7 @@ class RouteRepository {
             val view = near?.let {
                 "&viewbox=${it.lon - 1.0},${it.lat + 1.0},${it.lon + 1.0},${it.lat - 1.0}"
             }.orEmpty()
-            val url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=tr" +
+            val url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=${Locale.getDefault().language}" +
                 "&q=${URLEncoder.encode(query, "UTF-8")}$view"
             val items = JSONArray(http(url))
             (0 until items.length()).mapNotNull { i ->
@@ -118,4 +119,10 @@ class RouteRepository {
             conn.disconnect()
         }
     }
+}
+
+/** Valhalla only ships a fixed set of instruction languages; fall back to English. */
+private fun valhallaLanguage(): String = when (Locale.getDefault().language) {
+    "tr" -> "tr-TR"
+    else -> "en-US"
 }

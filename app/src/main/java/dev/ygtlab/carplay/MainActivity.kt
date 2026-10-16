@@ -6,9 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ygtlab.carplay.ui.DashboardScreen
 import dev.ygtlab.carplay.ui.MotoTheme
 
@@ -20,13 +22,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
-            MotoTheme { DashboardScreen(viewModel) }
+            val isDay by viewModel.theme.isDay.collectAsStateWithLifecycle()
+            MotoTheme(isDay) { DashboardScreen(viewModel) }
         }
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.onPause()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

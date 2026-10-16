@@ -22,6 +22,7 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import dev.ygtlab.carplay.MainActivity
+import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.LocationRepository
 import dev.ygtlab.carplay.util.SpeedUtil
 import java.text.SimpleDateFormat
@@ -79,14 +80,14 @@ class OverlayService : Service() {
     private fun startForegroundCompat() {
         val channelId = "overlay"
         getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(NotificationChannel(channelId, "Hız şeridi", NotificationManager.IMPORTANCE_LOW))
+            .createNotificationChannel(NotificationChannel(channelId, getString(R.string.overlay_channel), NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
         val notification = Notification.Builder(this, channelId)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentTitle("MotoDash")
-            .setContentText("Hız şeridi açık")
+            .setContentText(getString(R.string.overlay_notification))
             .setContentIntent(open)
             .setOngoing(true)
             .build()

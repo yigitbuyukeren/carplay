@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -25,12 +27,12 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
-import androidx.compose.ui.text.style.TextOverflow
+import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.NavUi
 import dev.ygtlab.carplay.util.NAV_APPS
 import dev.ygtlab.carplay.util.isInstalled
@@ -66,10 +68,10 @@ fun NavCard(context: Context, nav: NavUi, onOpenMap: () -> Unit, modifier: Modif
                     }
                 }
             } else {
-                Text("Navigasyon", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(stringResource(R.string.nav_title), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                PillButton(if (nav.navigating) "Haritaya dön" else "Harita ve rota", MotoColors.Blue, onOpenMap, Modifier.weight(1f))
+                PillButton(if (nav.navigating) stringResource(R.string.nav_back_to_map) else stringResource(R.string.nav_map_and_route), MotoColors.Blue, onOpenMap, Modifier.weight(1f))
                 installed.firstOrNull()?.let { app ->
                     PillButton(app.label.substringBefore(' '), MotoColors.Green, { context.launchPackage(app.packageName) })
                 }
