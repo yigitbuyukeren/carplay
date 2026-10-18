@@ -33,9 +33,14 @@ data class Route(
     }
 }
 
+interface Routing {
+    suspend fun route(from: GeoPoint, to: GeoPoint): Result<Route>
+    suspend fun search(query: String, near: GeoPoint?): Result<List<Place>>
+}
+
 /** Valhalla (OSM) motorcycle routing and Nominatim geocoding, both public no-key services. */
-class RouteRepository {
-    suspend fun route(from: GeoPoint, to: GeoPoint): Result<Route> = withContext(Dispatchers.IO) {
+class RouteRepository : Routing {
+    override suspend fun route(from: GeoPoint, to: GeoPoint): Result<Route> = withContext(Dispatchers.IO) {
         safely("route") {
             val body = JSONObject()
                 .put("locations", JSONArray()
@@ -69,7 +74,7 @@ class RouteRepository {
         }
     }
 
-    suspend fun search(query: String, near: GeoPoint?): Result<List<Place>> = withContext(Dispatchers.IO) {
+    override suspend fun search(query: String, near: GeoPoint?): Result<List<Place>> = withContext(Dispatchers.IO) {
         safely("search") {
             val view = near?.let {
                 "&viewbox=${it.lon - 1.0},${it.lat + 1.0},${it.lon + 1.0},${it.lat - 1.0}"
