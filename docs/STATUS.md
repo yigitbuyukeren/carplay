@@ -19,7 +19,7 @@ Her gün sonunda güncellenir (bkz. [WORKFLOW.md](WORKFLOW.md)).
 - **Benzinlikler**: ⛽ düğmesi; yakınında (Nominatim, yedek: Overpass) veya rota üzerinde (Overpass, yedek: Nominatim koridoru). Navigasyon sırasında **ara durak** eklenir, varınca "Yola devam".
 - **Isınma koruması**: 42°C üstünde parlaklık kısılır ve harita 20 FPS'e iner; sıcakken motor 1 dk durursa ekran kararır; 45°C'de uyarı.
 - **SOS** (varsayılan kapalı): kişi seçici ile en fazla 3 kişi, otomatik kaza algılama ve uzun basmalı düğme, geri sayım ekranı, geri sayım sonunda kişi başına tek SMS (OSM konum linki), "Test et" SMS göndermez.
-- `NavigationController` bağımlılıkları enjekte edilebilir hale getirildi, 14 testle kapsandı (eşleme, 600/150 m anonsları, yeniden rota, varış, benzinlik, ara durak).
+- `NavigationController` bağımlılıkları enjekte edilebilir hale getirildi, 26 testle kapsandı (eşleme, 600/150 m anonsları, yeniden rota, varış, benzinlik, ara durak, rota seçenekleri, GPX).
 - Ayarlar dört sekmeye bölündü (Kurulum / Sürüş / Güvenlik / Motor).
 - Release yapılandırması: R8 + kaynak küçültme, `keystore.properties` ile imzalama (dosya git'e girmez), CI artık `assembleRelease` de derliyor.
 
