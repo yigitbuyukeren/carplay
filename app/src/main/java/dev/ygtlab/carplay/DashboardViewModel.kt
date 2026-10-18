@@ -6,6 +6,7 @@ import dev.ygtlab.carplay.data.AndroidSmsSender
 import dev.ygtlab.carplay.data.AndroidSosAlarm
 import dev.ygtlab.carplay.data.CrashSensor
 import dev.ygtlab.carplay.data.Place
+import dev.ygtlab.carplay.data.RouteOptions
 import dev.ygtlab.carplay.data.SosContact
 import dev.ygtlab.carplay.data.SosController
 import dev.ygtlab.carplay.data.SosMath
@@ -70,7 +71,11 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     val callerName: StateFlow<String?> = CallBridge.callerName
 
     val locationState: StateFlow<LocationState> = location.state
-    val nav = NavigationController(app::getString, viewModelScope, location.state, Voice(app))
+    val nav = NavigationController(
+        app::getString, viewModelScope, location.state, Voice(app),
+        initialOptions = RouteOptions(Prefs.avoidHighways(app), Prefs.avoidTolls(app)),
+        onOptionsChanged = { Prefs.setRouteOptions(app, it.avoidHighways, it.avoidTolls) },
+    )
 
     val places = MutableStateFlow(SavedPlaces.fromJson(Prefs.savedPlaces(app)))
 

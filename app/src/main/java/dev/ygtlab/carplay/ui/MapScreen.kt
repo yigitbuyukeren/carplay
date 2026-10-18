@@ -77,6 +77,7 @@ import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.NavUi
 import dev.ygtlab.carplay.data.NavigationController
 import dev.ygtlab.carplay.data.Place
+import dev.ygtlab.carplay.data.RouteOptions
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -137,6 +138,7 @@ fun MapScreen(
 ) {
     val ui by nav.ui.collectAsStateWithLifecycle()
     val fuel by nav.fuel.collectAsStateWithLifecycle()
+    val options by nav.options.collectAsStateWithLifecycle()
     val me by locationState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -297,7 +299,8 @@ fun MapScreen(
                     onDone = nav::stopNavigation,
                 )
                 ui.route != null -> RouteCard(
-                    ui, onStart = nav::startNavigation, onCancel = nav::stopNavigation,
+                    ui, options, onOptions = nav::setOptions,
+                    onStart = nav::startNavigation, onCancel = nav::stopNavigation,
                     saved = ui.destination?.let { d -> places.any { Geo.distance(it.place.point, d.point) < SAVED_SPOT_M } } == true,
                     onSave = { ui.destination?.let { saving = it } },
                 )
@@ -537,7 +540,15 @@ private fun SaveChooser(place: Place, onPick: (PlaceKind) -> Unit, onCancel: () 
 }
 
 @Composable
-private fun RouteCard(ui: NavUi, saved: Boolean, onSave: () -> Unit, onStart: () -> Unit, onCancel: () -> Unit) {
+private fun RouteCard(
+    ui: NavUi,
+    options: RouteOptions,
+    onOptions: (RouteOptions) -> Unit,
+    saved: Boolean,
+    onSave: () -> Unit,
+    onStart: () -> Unit,
+    onCancel: () -> Unit,
+) {
     val route = ui.route ?: return
     val eta = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis() + route.durationS.toLong() * 1000))
     GlassPanel(Modifier.fillMaxWidth()) {
@@ -552,13 +563,32 @@ private fun RouteCard(ui: NavUi, saved: Boolean, onSave: () -> Unit, onStart: ()
                 }
             }
             Text(
-                "${formatDistance(route.distanceM.toInt())} · ${formatDuration(LocalContext.current, route.durationS.toInt())} · ${stringResource(R.string.arrival_fmt, eta)}",
+                if (ui.loading) stringResource(R.string.route_updating)
+                else "${formatDistance(route.distanceM.toInt())} · ${formatDuration(LocalContext.current, route.durationS.toInt())} · ${stringResource(R.string.arrival_fmt, eta)}",
                 fontSize = 16.sp, color = MotoColors.Gray,
             )
-            PillButton(stringResource(R.string.start), MotoColors.Green, onStart, Modifier.fillMaxWidth())
-            PillButton(stringResource(R.string.cancel), MotoColors.PanelHigh, onCancel, Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OptionChip(stringResource(R.string.opt_no_highway), options.avoidHighways, { onOptions(options.copy(avoidHighways = !options.avoidHighways)) }, Modifier.weight(1f))
+                OptionChip(stringResource(R.string.opt_no_toll), options.avoidTolls, { onOptions(options.copy(avoidTolls = !options.avoidTolls)) }, Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillButton(stringResource(R.string.start), MotoColors.Green, onStart, Modifier.weight(2f))
+                PillButton(stringResource(R.string.cancel), MotoColors.PanelHigh, onCancel, Modifier.weight(1f), horizontalPadding = 8.dp)
+            }
         }
     }
+}
+
+/** A toggle that reads like a button: filled blue when on. At least 56dp tall. */
+@Composable
+private fun OptionChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.height(56.dp).clip(RoundedCornerShape(28.dp))
+            .background(if (selected) MotoColors.Blue else MotoColors.PanelHigh)
+            .border(1.dp, if (selected) Color.White else Color(0x26FFFFFF), RoundedCornerShape(28.dp))
+            .clickable(onClick = onClick).padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis) }
 }
 
 @Composable

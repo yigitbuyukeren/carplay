@@ -13,6 +13,8 @@ object Prefs {
     private const val KEY_LEAN_STATE = "lean_state"
     private const val KEY_THEME = "theme_mode"
     private const val KEY_PLACES = "saved_places"
+    private const val KEY_AVOID_HIGHWAYS = "route_avoid_highways"
+    private const val KEY_AVOID_TOLLS = "route_avoid_tolls"
     private const val KEY_SOS_CONTACTS = "sos_contacts"
     private const val KEY_SOS_CRASH = "sos_crash"
     private const val KEY_SOS_BUTTON = "sos_button"
@@ -149,5 +151,16 @@ object Prefs {
 
     fun setSosButton(context: Context, enabled: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_SOS_BUTTON, enabled).apply()
+    }
+
+    fun avoidHighways(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_AVOID_HIGHWAYS, false)
+
+    fun avoidTolls(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_AVOID_TOLLS, false)
+
+    fun setRouteOptions(context: Context, highways: Boolean, tolls: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_AVOID_HIGHWAYS, highways).putBoolean(KEY_AVOID_TOLLS, tolls).apply()
     }
 }

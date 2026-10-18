@@ -33,8 +33,20 @@ data class Route(
     }
 }
 
+/** What the rider wants to avoid. Everything off leaves Valhalla's own motorcycle defaults untouched. */
+data class RouteOptions(val avoidHighways: Boolean = false, val avoidTolls: Boolean = false) {
+    /** Valhalla `costing_options`, or null when there is nothing to change. */
+    fun costingOptions(): JSONObject? {
+        if (!avoidHighways && !avoidTolls) return null
+        val motorcycle = JSONObject()
+        if (avoidHighways) motorcycle.put("use_highways", 0)
+        if (avoidTolls) motorcycle.put("use_tolls", 0)
+        return JSONObject().put("motorcycle", motorcycle)
+    }
+}
+
 interface Routing {
-    suspend fun route(from: GeoPoint, to: GeoPoint): Result<Route>
+    suspend fun route(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<Route>
     suspend fun search(query: String, near: GeoPoint?): Result<List<Place>>
 
     /** The address of a spot picked on the map; null when there is nothing worth naming. */
@@ -62,7 +74,7 @@ object PlaceNames {
 
 /** Valhalla (OSM) motorcycle routing and Nominatim geocoding, both public no-key services. */
 class RouteRepository : Routing {
-    override suspend fun route(from: GeoPoint, to: GeoPoint): Result<Route> = withContext(Dispatchers.IO) {
+    override suspend fun route(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<Route> = withContext(Dispatchers.IO) {
         safely("route") {
             val body = JSONObject()
                 .put("locations", JSONArray()
@@ -70,30 +82,36 @@ class RouteRepository : Routing {
                     .put(JSONObject().put("lat", to.lat).put("lon", to.lon)))
                 .put("costing", "motorcycle")
                 .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", "kilometers"))
-            val json = JSONObject(Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString()))
-            val trip = json.getJSONObject("trip")
-            val leg = trip.getJSONArray("legs").getJSONObject(0)
-            val maneuvers = leg.getJSONArray("maneuvers").let { arr ->
-                (0 until arr.length()).map { i ->
-                    val m = arr.getJSONObject(i)
-                    Maneuver(
-                        type = m.getInt("type"),
-                        instruction = m.optString("instruction"),
-                        alert = m.optString("verbal_transition_alert_instruction"),
-                        verbal = m.optString("verbal_pre_transition_instruction", m.optString("instruction")),
-                        lengthM = m.getDouble("length") * 1000,
-                        beginIndex = m.getInt("begin_shape_index"),
-                    )
-                }
-            }
-            val summary = trip.getJSONObject("summary")
-            Route(
-                shape = Geo.decodePolyline(leg.getString("shape")),
-                maneuvers = maneuvers,
-                distanceM = summary.getDouble("length") * 1000,
-                durationS = summary.getDouble("time"),
-            )
+            options.costingOptions()?.let { body.put("costing_options", it) }
+            parseTrip(Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString()))
         }
+    }
+
+    /** Parses a Valhalla `route` or `trace_route` reply. */
+    private fun parseTrip(reply: String): Route {
+        val json = JSONObject(reply)
+        val trip = json.getJSONObject("trip")
+        val leg = trip.getJSONArray("legs").getJSONObject(0)
+        val maneuvers = leg.getJSONArray("maneuvers").let { arr ->
+            (0 until arr.length()).map { i ->
+                val m = arr.getJSONObject(i)
+                Maneuver(
+                    type = m.getInt("type"),
+                    instruction = m.optString("instruction"),
+                    alert = m.optString("verbal_transition_alert_instruction"),
+                    verbal = m.optString("verbal_pre_transition_instruction", m.optString("instruction")),
+                    lengthM = m.getDouble("length") * 1000,
+                    beginIndex = m.getInt("begin_shape_index"),
+                )
+            }
+        }
+        val summary = trip.getJSONObject("summary")
+        return Route(
+            shape = Geo.decodePolyline(leg.getString("shape")),
+            maneuvers = maneuvers,
+            distanceM = summary.getDouble("length") * 1000,
+            durationS = summary.getDouble("time"),
+        )
     }
 
     override suspend fun reverse(point: GeoPoint): Result<Place?> = withContext(Dispatchers.IO) {

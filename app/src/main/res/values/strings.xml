@@ -226,4 +226,7 @@
     <string name="settings_tab_safety">Güvenlik</string>
     <string name="settings_tab_engine">Motor</string>
     <string name="fuel_nearby">Yakınında</string>
+    <string name="opt_no_highway">Otoyolsuz</string>
+    <string name="opt_no_toll">Ücretsiz yol</string>
+    <string name="route_updating">Rota güncelleniyor…</string>
 </resources>
