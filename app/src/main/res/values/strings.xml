@@ -89,12 +89,9 @@
     <string name="lean_learning">Viraj bekleniyor…</string>
     <string name="lean_needs_calibration">Kalibre et</string>
     <string name="lean_unsupported">Bu telefonda gerekli sensörler yok</string>
-    <string name="lean_left">Sol</string>
-    <string name="lean_right">Sağ</string>
     <string name="obd_title">OBD motor verileri</string>
     <string name="obd_desc">Eşli ELM327 Bluetooth adaptöründen devir, vites, motor sıcaklığı, akü voltajı ve arıza kodları. Adaptör aynı anda tek uygulamaya bağlanır; MotoDash bağlıyken Car Scanner bağlanamaz.</string>
     <string name="obd_grant">Bluetooth izni ver</string>
-    <string name="obd_pick_device">Adaptör</string>
     <string name="obd_no_paired">Eşli adaptör yok. Kontağı aç, sonra Ara\'ya bas.</string>
     <string name="obd_status_off">Kapalı</string>
     <string name="obd_status_connecting">Bağlanıyor…</string>
@@ -252,6 +249,6 @@
     <string name="gpx_off_track">Rotadan çıktınız</string>
     <string name="gpx_off_chip">Rotanın dışındasın</string>
     <string name="gpx_open">GPX aç</string>
-    <string name="gpx_continue">Rotayı takip et</string>
     <string name="gpx_title">GPX rotası</string>
+    <string name="overlay_speed_fmt">%1$d km/sa</string>
 </resources>

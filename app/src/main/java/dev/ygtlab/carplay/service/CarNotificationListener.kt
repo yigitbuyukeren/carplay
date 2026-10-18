@@ -1,9 +1,8 @@
 package dev.ygtlab.carplay.service
 
 import android.app.Notification
-import android.os.Bundle
-import android.os.Parcelable
 import android.service.notification.NotificationListenerService
+import androidx.core.app.NotificationCompat
 import android.service.notification.StatusBarNotification
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +43,7 @@ class CarNotificationListener : NotificationListenerService() {
             n.extras.getString(Notification.EXTRA_TEMPLATE) == Notification.MessagingStyle::class.java.name
         if (!isMessage) return
 
-        val (sender, text) = parse(n.extras) ?: return
+        val (sender, text) = parse(n) ?: return
         // Chat apps re-post the same notification when other things change; ignore repeats.
         if (sbn.key == lastKey && text == lastText) return
         lastKey = sbn.key
@@ -62,22 +61,22 @@ class CarNotificationListener : NotificationListenerService() {
         if (sbn.notification.category == Notification.CATEGORY_CALL) CallBridge.callerName.value = null
     }
 
-    @Suppress("DEPRECATION")
-    private fun parse(extras: Bundle): Pair<String, String>? {
-        val bundles = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
-        if (!bundles.isNullOrEmpty()) {
-            val last = Notification.MessagingStyle.Message
-                .getMessagesFromBundleArray(bundles.filterIsInstance<Parcelable>().toTypedArray())
-                .lastOrNull()
-            val text = last?.text?.toString()
-            if (last != null && !text.isNullOrBlank()) {
-                val sender = last.senderPerson?.name?.toString()
-                    ?: last.sender?.toString()
-                    ?: extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
-                    ?: extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
-                    ?: ""
-                return sender to text
-            }
+    /**
+     * Sender and text of a chat notification. The androidx compat style reads the messages on every
+     * Android version this app supports; the platform calls need API 28 and 30.
+     */
+    private fun parse(n: Notification): Pair<String, String>? {
+        val extras = n.extras
+        val style = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(n)
+        val last = style?.messages?.lastOrNull()
+        val lastText = last?.text?.toString()
+        if (style != null && last != null && !lastText.isNullOrBlank()) {
+            val sender = last.person?.name?.toString()
+                ?: style.conversationTitle?.toString()
+                ?: extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
+                ?: extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+                ?: ""
+            return sender to lastText
         }
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: extras.getCharSequence(Notification.EXTRA_TEXT))

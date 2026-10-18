@@ -27,7 +27,7 @@ Her geliştirme oturumunun başında ve sonunda bu listeyi uygula. Güncel durum
 
 ## Günü kapatırken
 
-1. **Testler ve derleme yeşil**: `./gradlew testDebugUnitTest assembleDebug`
+1. **Testler, lint ve derleme yeşil**: `./gradlew testDebugUnitTest lintDebug assembleDebug` (CI ayrıca `assembleRelease` ile R8'li sürümü derler)
 2. **Yeni mantık eklendiyse testi de eklendi mi?** (`app/src/test/...`)
 3. **Arayüz değiştiyse** emülatörde kontrol et; gerekirse `docs/screenshots/` güncelle.
 4. **Sürüş kuralları korunuyor mu?** Sürerken yazı girişi yok, dokunma alanları ≥56dp, yüksek kontrast, yeni metinler hem `values/strings.xml` hem `values-en/strings.xml` içinde.
