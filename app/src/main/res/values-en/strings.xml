@@ -180,4 +180,8 @@
     <string name="fuel_unnamed">Fuel station</string>
     <string name="fuel_add_stop">Add stop</string>
     <string name="fuel_go">Go</string>
+    <string name="thermal_title">Heat protection</string>
+    <string name="thermal_desc">Above 42°C the screen dims and the map slows down; if the bike stands still for a minute the screen goes dark and wakes when you move. Nothing changes at normal temperature.</string>
+    <string name="thermal_banner">Phone is overheating, consider unplugging the charger</string>
+    <string name="thermal_voice">The phone is getting too hot</string>
 </resources>

@@ -2,6 +2,7 @@ package dev.ygtlab.carplay
 
 import dev.ygtlab.carplay.data.LeanSensor
 import dev.ygtlab.carplay.data.Place
+import dev.ygtlab.carplay.data.ThermalGuard
 import dev.ygtlab.carplay.data.WeatherAlert
 import dev.ygtlab.carplay.data.WeatherController
 import dev.ygtlab.carplay.data.PlaceKind
@@ -172,6 +173,20 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         val fresh = now - loc.fixAtMs < FIX_TIMEOUT_MS
         GpsUi(if (fresh) loc.speedKmh else 0, fresh)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, GpsUi())
+
+    val thermalEnabled = MutableStateFlow(Prefs.thermalGuard(app))
+    val thermal = ThermalGuard(
+        viewModelScope, battery.state,
+        gps.map { it.speedKmh }.stateIn(viewModelScope, SharingStarted.Eagerly, 0),
+        thermalEnabled,
+    ) {
+        if (call.state.value.phase == CallPhase.IDLE) announcer.speak(app.getString(R.string.thermal_voice))
+    }
+
+    fun setThermalEnabled(enabled: Boolean) {
+        Prefs.setThermalGuard(getApplication(), enabled)
+        thermalEnabled.value = enabled
+    }
 
     init {
         weather.start()

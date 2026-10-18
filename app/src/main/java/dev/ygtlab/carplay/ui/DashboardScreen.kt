@@ -68,6 +68,10 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showNowPlaying by remember { mutableStateOf(false) }
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
     val places by vm.places.collectAsStateWithLifecycle()
+    val thermal by vm.thermal.state.collectAsStateWithLifecycle()
+    val thermalOn by vm.thermalEnabled.collectAsStateWithLifecycle()
+    var heatDismissed by remember { mutableStateOf(false) }
+    LaunchedEffect(thermal.warn) { if (!thermal.warn) heatDismissed = false }
     val weather by vm.weather.snapshot.collectAsStateWithLifecycle()
     val weatherOn by vm.weatherEnabled.collectAsStateWithLifecycle()
     val rainVoice by vm.rainVoice.collectAsStateWithLifecycle()
@@ -140,6 +144,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         speedKmh = gps.speedKmh,
                         speedLimit = speedLimit,
                         isDay = isDay,
+                        lowPower = thermal.lowPower,
                         places = places,
                         onSavePlace = vm::savePlace,
                         onRemovePlace = vm::removePlace,
@@ -179,6 +184,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     ToggleItem(stringResource(R.string.msg_auto_title), stringResource(R.string.msg_auto_desc), autoRead, vm::setReadMessagesAloud),
                     ToggleItem(stringResource(R.string.weather_title), stringResource(R.string.weather_desc), weatherOn, vm::setWeatherEnabled),
                     ToggleItem(stringResource(R.string.rain_voice_title), stringResource(R.string.rain_voice_desc), rainVoice, vm::setRainVoice),
+                    ToggleItem(stringResource(R.string.thermal_title), stringResource(R.string.thermal_desc), thermalOn, vm::setThermalEnabled),
                     ToggleItem(stringResource(R.string.speed_limit_title), stringResource(R.string.speed_limit_desc), speedLimitOn, vm::setSpeedLimitEnabled),
                     ToggleItem(stringResource(R.string.record_trips_title), stringResource(R.string.record_trips_desc), recordTrips, vm::setRecordTrips),
                     ToggleItem(stringResource(R.string.overlay_title), stringResource(R.string.overlay_desc), overlayEnabled) { enabled ->
@@ -228,6 +234,12 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 val w = weather
                 val rainIn = w?.rainInMin
                 when {
+                    thermal.warn && !heatDismissed -> AlertStrip(
+                        text = stringResource(R.string.thermal_banner),
+                        accent = MotoColors.Red,
+                        onDismiss = { heatDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
                     weatherOn && w != null && rainIn != null && !rainDismissed -> AlertStrip(
                         text = if (rainIn > 0) stringResource(R.string.rain_banner_fmt, rainIn) else stringResource(R.string.rain_banner_now),
                         accent = MotoColors.Blue,
