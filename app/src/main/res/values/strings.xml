@@ -180,4 +180,8 @@
     <string name="fuel_unnamed">Benzinlik</string>
     <string name="fuel_add_stop">Ara durak</string>
     <string name="fuel_go">Git</string>
+    <string name="thermal_title">Isınma koruması</string>
+    <string name="thermal_desc">Telefon 42°C\'yi aşınca ekran kısılır ve harita yavaşlar; motor bir dakika durursa ekran kararır, hareket edince geri açılır. Normal sıcaklıkta hiçbir şey değişmez.</string>
+    <string name="thermal_banner">Telefon ısınıyor, şarjı kesmeyi düşün</string>
+    <string name="thermal_voice">Telefon çok ısındı</string>
 </resources>

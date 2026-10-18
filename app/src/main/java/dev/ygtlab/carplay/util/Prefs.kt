@@ -13,6 +13,7 @@ object Prefs {
     private const val KEY_LEAN_STATE = "lean_state"
     private const val KEY_THEME = "theme_mode"
     private const val KEY_PLACES = "saved_places"
+    private const val KEY_THERMAL = "thermal_guard"
     private const val KEY_WEATHER = "weather_enabled"
     private const val KEY_RAIN_VOICE = "rain_voice"
     private const val KEY_OBD = "obd_enabled"
@@ -117,5 +118,12 @@ object Prefs {
 
     fun setRainVoice(context: Context, enabled: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_RAIN_VOICE, enabled).apply()
+    }
+
+    fun thermalGuard(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_THERMAL, true)
+
+    fun setThermalGuard(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_THERMAL, enabled).apply()
     }
 }

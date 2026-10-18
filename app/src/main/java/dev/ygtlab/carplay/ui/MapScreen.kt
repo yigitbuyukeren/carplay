@@ -118,6 +118,8 @@ private const val SRC_FUEL = "fuel"
 /** No typing while riding: the search box locks above this speed. */
 private const val SEARCH_LOCK_KMH = 5
 private const val SAVED_SPOT_M = 30.0
+private const val FULL_FPS = 60
+private const val LOW_POWER_FPS = 20
 
 @Composable
 fun MapScreen(
@@ -126,6 +128,7 @@ fun MapScreen(
     speedKmh: Int,
     speedLimit: Int?,
     isDay: Boolean,
+    lowPower: Boolean,
     places: List<SavedPlace>,
     onSavePlace: (PlaceKind, Place) -> Unit,
     onRemovePlace: (SavedPlace) -> Unit,
@@ -146,6 +149,9 @@ fun MapScreen(
     var styleReady by remember { mutableStateOf(false) }
     var centeredOnce by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf<Place?>(null) }
+
+    // A hot phone gets a calmer map: fewer frames per second.
+    LaunchedEffect(lowPower) { mapView.setMaximumFps(if (lowPower) LOW_POWER_FPS else FULL_FPS) }
 
     DisposableEffect(lifecycle, mapView) {
         var destroyed = false

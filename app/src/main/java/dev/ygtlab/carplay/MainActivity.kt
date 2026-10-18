@@ -10,7 +10,11 @@ import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import dev.ygtlab.carplay.ui.DashboardScreen
 import dev.ygtlab.carplay.ui.MotoTheme
 
@@ -21,6 +25,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // A hot phone dims itself (see ThermalGuard); a cool one keeps the system brightness.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.thermal.state.collect { thermal ->
+                    window.attributes = window.attributes.also { it.screenBrightness = thermal.brightness }
+                }
+            }
+        }
         setContent {
             val isDay by viewModel.theme.isDay.collectAsStateWithLifecycle()
             MotoTheme(isDay) { DashboardScreen(viewModel) }
