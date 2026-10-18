@@ -42,7 +42,7 @@ class OverlayService : Service() {
         override fun run() {
             val loc = location.state.value
             val fresh = System.currentTimeMillis() - loc.fixAtMs < 5000
-            speedView.text = "${if (fresh) loc.speedKmh else 0} km/sa"
+            speedView.text = getString(R.string.overlay_speed_fmt, if (fresh) loc.speedKmh else 0)
             clockView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
             handler.postDelayed(this, 1000)
         }

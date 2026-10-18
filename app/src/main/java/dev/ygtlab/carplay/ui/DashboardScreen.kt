@@ -264,7 +264,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 )
             }
 
-            if (!showSettings && callState.phase == CallPhase.IDLE && shownMessage == null) {
+            // Not over the map: there the top left holds the route or manoeuvre card, and rain, ice and heat are also spoken.
+            if (!showSettings && !showMap && callState.phase == CallPhase.IDLE && shownMessage == null) {
                 val w = weather
                 val rainIn = w?.rainInMin
                 when {

@@ -89,12 +89,9 @@
     <string name="lean_learning">Waiting for corners…</string>
     <string name="lean_needs_calibration">Calibrate</string>
     <string name="lean_unsupported">This phone lacks the required sensors</string>
-    <string name="lean_left">Left</string>
-    <string name="lean_right">Right</string>
     <string name="obd_title">OBD engine data</string>
     <string name="obd_desc">Rpm, gear, engine temperature, battery voltage and trouble codes from a paired ELM327 Bluetooth adapter. The adapter talks to one app at a time; Car Scanner cannot connect while MotoDash is connected.</string>
     <string name="obd_grant">Allow Bluetooth</string>
-    <string name="obd_pick_device">Adapter</string>
     <string name="obd_no_paired">No paired adapter. Turn the ignition on, then tap Scan.</string>
     <string name="obd_status_off">Off</string>
     <string name="obd_status_connecting">Connecting…</string>
@@ -252,6 +249,6 @@
     <string name="gpx_off_track">You left the route</string>
     <string name="gpx_off_chip">Off the route</string>
     <string name="gpx_open">Open GPX</string>
-    <string name="gpx_continue">Follow the route</string>
     <string name="gpx_title">GPX route</string>
+    <string name="overlay_speed_fmt">%1$d km/h</string>
 </resources>

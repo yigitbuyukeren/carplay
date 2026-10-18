@@ -10,8 +10,10 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 | Rota | Navigasyon |
 |---|---|
 | ![Rota](docs/screenshots/route.png) | ![Navigasyon](docs/screenshots/navigation.png) |
-| **Benzinlikler** | **SOS geri sayımı** |
-| ![Benzinlikler](docs/screenshots/fuel.png) | ![SOS](docs/screenshots/sos.png) |
+| **Benzinlikler** | **GPX rotası** |
+| ![Benzinlikler](docs/screenshots/fuel.png) | ![GPX](docs/screenshots/gpx.png) |
+| **SOS geri sayımı** | **Bakım takibi** |
+| ![SOS](docs/screenshots/sos.png) | ![Bakım](docs/screenshots/maintenance.png) |
 
 ## Özellikler
 **Gösterge ve sürüş**
@@ -22,7 +24,10 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 
 **Navigasyon**
 - Gömülü harita ve sesli yönlendirme: MapLibre + OpenStreetMap (OpenFreeMap), Nominatim arama, Valhalla motosiklet rotası, rota dışına çıkınca yeniden hesaplama
+- Rota seçenekleri: otoyolsuz ve ücretsiz yol (Valhalla), seçim hatırlanır
+- GPX: Kurviger, Calimoto gibi planlayıcılardan gelen veya kendi kaydettiğin GPX dosyasını aç (dosya seçici, paylaş menüsü veya dosya yöneticisi), yollara eşlenir ve dönüş dönüş takip edilir; uzaktaysan önce rotaya götürür, rotadan çıkınca bekler ve geri döndüğünde devam eder
 - Kayıtlı yerler: Ev, İş ve favoriler; büyük karolarla tek dokunuşla rota, dashboard'da "Eve git"
+- Park yeri: yolculuk bittiğinde motorun bırakıldığı yer otomatik kaydedilir ("Park yerine git")
 - Benzinlikler: yakınında veya rotanın üzerinde; navigasyon sırasında tek dokunuşla **ara durak** ekle, varınca "Yola devam"
 - Yolun hız limiti ve aşınca sesli uyarı
 - Sürerken arama kutusu kilitlenir (sürüş kuralı: hareket halindeyken yazı girişi yok); hedefi kayıtlı yerlerden veya haritaya uzun basarak seç
@@ -30,6 +35,7 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 
 **Motor (isteğe bağlı)**
 - OBD: ELM327 Bluetooth adaptörden devir, tahmini vites, motor sıcaklığı, akü voltajı ve Türkçe açıklamalı arıza kodları (emülatör için sahte OBD modu var)
+- Bakım takibi: yağ, zincir, hava filtresi, balata ve lastik için sürülen kilometreye göre hatırlatma (uygulamanın kendi sayacı; motorun gerçek kilometre sayacı değil)
 
 **Güvenlik**
 - Hava durumu: sıcaklık, 1 saat içinde yağmur ve buzlanma uyarısı (şerit + sesli)
