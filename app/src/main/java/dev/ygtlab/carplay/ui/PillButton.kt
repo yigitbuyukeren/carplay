@@ -13,18 +13,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun PillButton(text: String, color: Color, onClick: () -> Unit, modifier: Modifier = Modifier, textColor: Color = Color.White) {
+fun PillButton(
+    text: String,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    textColor: Color = Color.White,
+    horizontalPadding: Dp = 24.dp,
+) {
     Box(
         modifier = modifier
             .defaultMinSize(minHeight = 56.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(color)
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = textColor)

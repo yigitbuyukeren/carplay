@@ -65,6 +65,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showMap by remember { mutableStateOf(false) }
     var showNowPlaying by remember { mutableStateOf(false) }
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
+    val places by vm.places.collectAsStateWithLifecycle()
     var showSettings by remember { mutableStateOf(!locationGranted(context)) }
     var overlayEnabled by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
 
@@ -128,6 +129,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         speedKmh = gps.speedKmh,
                         speedLimit = speedLimit,
                         isDay = isDay,
+                        places = places,
+                        onSavePlace = vm::savePlace,
+                        onRemovePlace = vm::removePlace,
                         onClose = { showMap = false },
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )
@@ -141,7 +145,11 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
-                            NavCard(context, navUi, onOpenMap = { showMap = true }, modifier = Modifier.weight(1f).fillMaxSize())
+                            NavCard(
+                                context, navUi, places,
+                                onOpenMap = { showMap = true },
+                                onGoTo = { vm.nav.selectPlace(it); showMap = true },
+                                modifier = Modifier.weight(1f).fillMaxSize())
                             MediaCard(
                                 state = mediaState,
                                 media = vm.media,

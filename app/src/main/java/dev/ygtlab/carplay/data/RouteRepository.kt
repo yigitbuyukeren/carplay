@@ -1,8 +1,6 @@
 package dev.ygtlab.carplay.data
 
 import android.util.Log
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +43,7 @@ class RouteRepository {
                     .put(JSONObject().put("lat", to.lat).put("lon", to.lon)))
                 .put("costing", "motorcycle")
                 .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", "kilometers"))
-            val json = JSONObject(http("https://valhalla1.openstreetmap.de/route", body.toString()))
+            val json = JSONObject(Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString()))
             val trip = json.getJSONObject("trip")
             val leg = trip.getJSONArray("legs").getJSONObject(0)
             val maneuvers = leg.getJSONArray("maneuvers").let { arr ->
@@ -78,7 +76,7 @@ class RouteRepository {
             }.orEmpty()
             val url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=${Locale.getDefault().language}" +
                 "&q=${URLEncoder.encode(query, "UTF-8")}$view"
-            val items = JSONArray(http(url))
+            val items = JSONArray(Http.get(url))
             (0 until items.length()).mapNotNull { i ->
                 val item = items.getJSONObject(i)
                 val full = item.optString("display_name")
@@ -87,36 +85,6 @@ class RouteRepository {
                 val detail = full.split(",").map { it.trim() }.drop(1).take(3).joinToString(", ")
                 Place(name, detail, GeoPoint(item.getDouble("lat"), item.getDouble("lon")))
             }
-        }
-    }
-
-    /** Like runCatching, but lets coroutine cancellation through and logs real failures. */
-    private inline fun <T> safely(tag: String, block: () -> T): Result<T> =
-        try {
-            Result.success(block())
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w("MotoDash", "$tag failed", e)
-            Result.failure(e)
-        }
-
-    private fun http(url: String, postBody: String? = null): String {
-        val conn = URL(url).openConnection() as HttpURLConnection
-        try {
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 12_000
-            conn.setRequestProperty("User-Agent", "MotoDash/0.1 (personal project)")
-            if (postBody != null) {
-                conn.requestMethod = "POST"
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.outputStream.use { it.write(postBody.toByteArray()) }
-            }
-            if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode}")
-            return conn.inputStream.bufferedReader().use { it.readText() }
-        } finally {
-            conn.disconnect()
         }
     }
 }
