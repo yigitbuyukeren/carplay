@@ -398,6 +398,24 @@ class NavigationControllerTest {
     }
 
     @Test
+    fun startingALittleAwayFromTheTrackWaitsQuietlyUntilTheRiderReachesIt() {
+        nav.followTrack("Sahil", gpxPoints)
+        val aside = GeoPoint(start.lat + 4 * STEP, start.lon + 0.0015) // about 125 m from the road, within the join distance
+        location.value = fixAt(aside)
+        nav.startNavigation()
+        repeat(5) { location.value = fixAt(aside) }
+        assertTrue(nav.ui.value.navigating)
+        assertTrue(nav.ui.value.offTrack) // guidance waits ...
+        assertFalse(speaker.said.contains("t${R.string.gpx_off_track}")) // ... without telling a rider who has not joined yet that they left
+
+        location.value = fixAt(GeoPoint(start.lat + 4 * STEP, start.lon)) // reaches the road
+        assertFalse(nav.ui.value.offTrack)
+
+        repeat(5) { location.value = fixAt(aside) } // now leaving it is worth saying
+        assertEquals("t${R.string.gpx_off_track}", speaker.said.last())
+    }
+
+    @Test
     fun aFuelStopOnATrackResumesTheTrackAfterwards() {
         routing = FakeRouting(ArrayDeque())
         nav = NavigationController(text, scope, location, speaker, routing, fuel)

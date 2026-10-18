@@ -83,6 +83,9 @@ class NavigationController(
     /** Where to pick the track up after the rider has reached the join point or a fuel stop. */
     private var pendingTrackIndex: Int? = null
 
+    /** The rider has been on the track since guidance began; "you left the route" only makes sense after that. */
+    private var joinedTrack = false
+
     private fun here(): GeoPoint? =
         location.value.takeIf { it.fixAtMs > 0 }?.let { GeoPoint(it.lat, it.lon) }
 
@@ -181,6 +184,7 @@ class NavigationController(
     private fun begin(route: Route, startIndex: Int) {
         progressIndex = startIndex
         offRouteFixes = 0
+        joinedTrack = false
         spoken.clear()
         val next = route.maneuvers.indexOfFirst { it.beginIndex > startIndex }.takeIf { it >= 0 } ?: route.maneuvers.lastIndex
         val remaining = (route.distanceM - route.cumulative[startIndex]).coerceAtLeast(0.0)
@@ -386,6 +390,7 @@ class NavigationController(
         }
         offRouteFixes = 0
         progressIndex = bestIdx
+        joinedTrack = true
         if (state.offTrack) _ui.update { it.copy(offTrack = false) }
 
         val travelled = route.cumulative[bestIdx] +
@@ -429,11 +434,13 @@ class NavigationController(
         if (distance <= OFF_ROUTE_M) {
             progressIndex = index
             offRouteFixes = 0
+            joinedTrack = true
             _ui.update { it.copy(offTrack = false) }
             return
         }
         if (!_ui.value.offTrack) {
-            voice.speak(text(R.string.gpx_off_track))
+            // Still walking up to the track after starting a little way from it: wait quietly.
+            if (joinedTrack) voice.speak(text(R.string.gpx_off_track))
             _ui.update { it.copy(offTrack = true) }
         }
         offRouteFixes = OFF_ROUTE_FIXES // keep looking on every fix
