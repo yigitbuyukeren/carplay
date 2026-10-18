@@ -49,6 +49,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
     val leanEnabled by vm.leanEnabled.collectAsStateWithLifecycle()
+    val obdEnabled by vm.obdEnabled.collectAsStateWithLifecycle()
+    val obdDevice by vm.obdDevice.collectAsStateWithLifecycle()
+    val obdState by vm.obd.state.collectAsStateWithLifecycle()
     val leanState by vm.lean.state.collectAsStateWithLifecycle()
     val speedLimitOn by vm.speedLimitEnabled.collectAsStateWithLifecycle()
     val speedLimit by vm.speedLimit.limit.collectAsStateWithLifecycle()
@@ -133,7 +136,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
+                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, obd = obdState.takeIf { obdEnabled }, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
                         Column(
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -170,6 +173,18 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     themeMode = themeMode,
                     onThemeMode = vm.theme::setMode,
                     onClose = { showSettings = false },
+                    obdCard = {
+                        ObdSettingsCard(
+                            obd = vm.obd,
+                            bluetooth = vm.bluetooth,
+                            state = obdState,
+                            enabled = obdEnabled,
+                            onEnabled = vm::setObdEnabled,
+                            device = obdDevice,
+                            onDevice = vm::setObdDevice,
+                            moving = gps.speedKmh > 2 || (obdState.data.speedKmh ?: 0) > 2,
+                        )
+                    },
                 )
             }
 

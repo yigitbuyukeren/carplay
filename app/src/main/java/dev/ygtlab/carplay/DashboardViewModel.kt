@@ -1,6 +1,9 @@
 package dev.ygtlab.carplay
 
 import dev.ygtlab.carplay.data.LeanSensor
+import dev.ygtlab.carplay.data.EngineAlert
+import dev.ygtlab.carplay.data.ObdRepository
+import dev.ygtlab.carplay.data.BluetoothScanner
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.ygtlab.carplay.data.SpeedLimitController
@@ -86,6 +89,35 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         recordTrips.value = enabled
     }
 
+    val obdEnabled = MutableStateFlow(Prefs.obdEnabled(app))
+    val obdDevice = MutableStateFlow(Prefs.obdDevice(app))
+    val obd: ObdRepository = ObdRepository(app, viewModelScope) { alert ->
+        if (call.state.value.phase != CallPhase.IDLE) return@ObdRepository
+        announcer.speak(
+            when (alert) {
+                EngineAlert.OVERHEAT -> app.getString(R.string.obd_alert_overheat, obd.state.value.data.coolantC ?: 0)
+                EngineAlert.LOW_VOLTAGE -> app.getString(R.string.obd_alert_low_voltage)
+                EngineAlert.HIGH_VOLTAGE -> app.getString(R.string.obd_alert_high_voltage)
+                EngineAlert.MALFUNCTION -> app.getString(R.string.obd_alert_mil)
+            }
+        )
+    }
+
+    fun setObdEnabled(enabled: Boolean) {
+        Prefs.setObdEnabled(getApplication(), enabled)
+        obdEnabled.value = enabled
+        if (enabled) obd.start() else obd.stop()
+    }
+
+    fun setObdDevice(address: String) {
+        Prefs.setObdDevice(getApplication(), address)
+        obdDevice.value = address
+        obd.restart()
+    }
+
+    /** Pairing a new adapter from the settings card selects it and connects right away. */
+    val bluetooth = BluetoothScanner(app, ::setObdDevice)
+
     /** Bumped on every onResume so permission-dependent UI re-checks its state. */
     val resumeTick = MutableStateFlow(0)
 
@@ -118,6 +150,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         theme.start()
         if (leanEnabled.value) lean.start()
         call.start()
+        obd.start()
         resumeTick.value++
     }
 
@@ -139,6 +172,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        obd.stop()
+        bluetooth.release()
         announcer.shutdown()
         lean.stop()
         theme.stop()

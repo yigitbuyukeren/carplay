@@ -83,6 +83,7 @@ fun SettingsScreen(
     themeMode: ThemeMode,
     onThemeMode: (ThemeMode) -> Unit,
     onClose: () -> Unit,
+    obdCard: @Composable () -> Unit = {},
 ) {
     Box(modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.scrim).clickable(enabled = false) {}) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 16.dp)) {
@@ -114,6 +115,7 @@ fun SettingsScreen(
                         Switch(checked = autoRead, onCheckedChange = onAutoRead)
                     }
                 }
+                item { obdCard() }
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
