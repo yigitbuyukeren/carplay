@@ -1,21 +1,29 @@
 package dev.ygtlab.carplay.ui
 
 import dev.ygtlab.carplay.data.SpeedLimitMath
+import dev.ygtlab.carplay.data.Geo
+import dev.ygtlab.carplay.data.PlaceKind
+import dev.ygtlab.carplay.data.SavedPlace
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +32,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
@@ -65,6 +77,7 @@ import dev.ygtlab.carplay.data.Place
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
@@ -98,6 +111,10 @@ private const val SRC_ROUTE = "route"
 private const val SRC_DEST = "dest"
 private const val SRC_ME = "me"
 
+/** No typing while riding: the search box locks above this speed. */
+private const val SEARCH_LOCK_KMH = 5
+private const val SAVED_SPOT_M = 30.0
+
 @Composable
 fun MapScreen(
     nav: NavigationController,
@@ -105,6 +122,9 @@ fun MapScreen(
     speedKmh: Int,
     speedLimit: Int?,
     isDay: Boolean,
+    places: List<SavedPlace>,
+    onSavePlace: (PlaceKind, Place) -> Unit,
+    onRemovePlace: (SavedPlace) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -120,6 +140,7 @@ fun MapScreen(
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleReady by remember { mutableStateOf(false) }
     var centeredOnce by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf<Place?>(null) }
 
     DisposableEffect(lifecycle, mapView) {
         var destroyed = false
@@ -235,11 +256,30 @@ fun MapScreen(
             modifier = Modifier.fillMaxHeight().width(380.dp).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            val chosen = saving
             when {
+                chosen != null -> SaveChooser(
+                    place = chosen,
+                    onPick = { kind -> onSavePlace(kind, chosen); saving = null },
+                    onCancel = { saving = null },
+                )
                 ui.navigating -> ManeuverBanner(ui)
                 ui.arrived -> ArrivedCard(onDone = nav::stopNavigation)
-                ui.route != null -> RouteCard(ui, onStart = nav::startNavigation, onCancel = nav::stopNavigation)
-                else -> SearchPanel(ui, nav::onQueryChange, nav::search, nav::selectPlace)
+                ui.route != null -> RouteCard(
+                    ui, onStart = nav::startNavigation, onCancel = nav::stopNavigation,
+                    saved = ui.destination?.let { d -> places.any { Geo.distance(it.place.point, d.point) < SAVED_SPOT_M } } == true,
+                    onSave = { ui.destination?.let { saving = it } },
+                )
+                else -> SearchPanel(
+                    ui = ui,
+                    locked = speedKmh >= SEARCH_LOCK_KMH,
+                    places = places,
+                    onQuery = nav::onQueryChange,
+                    onSearch = nav::search,
+                    onSelect = nav::selectPlace,
+                    onSave = { saving = it },
+                    onRemovePlace = onRemovePlace,
+                )
             }
             if (ui.rerouting) Chip(stringResource(R.string.rerouting_chip), MotoColors.Orange)
         }
@@ -317,10 +357,20 @@ private fun GlassPanel(modifier: Modifier = Modifier, content: @Composable () ->
 }
 
 @Composable
-private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Unit, onSelect: (Place) -> Unit) {
+private fun SearchPanel(
+    ui: NavUi,
+    locked: Boolean,
+    places: List<SavedPlace>,
+    onQuery: (String) -> Unit,
+    onSearch: () -> Unit,
+    onSelect: (Place) -> Unit,
+    onSave: (Place) -> Unit,
+    onRemovePlace: (SavedPlace) -> Unit,
+) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val submit = { keyboard?.hide(); focus.clearFocus(); onSearch() }
+    LaunchedEffect(locked) { if (locked) { keyboard?.hide(); focus.clearFocus() } }
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
@@ -333,6 +383,7 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
                     BasicTextField(
                         value = ui.query,
                         onValueChange = onQuery,
+                        enabled = !locked,
                         singleLine = true,
                         textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
                         cursorBrush = SolidColor(Color.White),
@@ -342,27 +393,41 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
                     )
                 }
                 Box(
-                    modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(12.dp)).background(MotoColors.Blue)
-                        .clickable { submit() }.padding(horizontal = 14.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(12.dp))
+                        .background(if (locked) MotoColors.Gray else MotoColors.Blue)
+                        .clickable(enabled = !locked) { submit() }.padding(horizontal = 14.dp, vertical = 6.dp),
                 ) { Text(stringResource(R.string.search), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White) }
             }
             when {
                 ui.loading -> Text(stringResource(R.string.route_computing), fontSize = 15.sp, color = MotoColors.Gray)
                 ui.searching -> Text(stringResource(R.string.searching), fontSize = 15.sp, color = MotoColors.Gray)
                 ui.error != null -> Text(ui.error, fontSize = 15.sp, color = MotoColors.Orange)
+                locked -> Text(stringResource(R.string.search_locked), fontSize = 14.sp, color = MotoColors.Orange)
                 ui.results.isEmpty() && ui.query.isEmpty() ->
-                    Text(stringResource(R.string.hint_long_press), fontSize = 14.sp, color = MotoColors.Gray)
+                    Text(stringResource(if (places.isEmpty()) R.string.saved_hint else R.string.hint_long_press), fontSize = 14.sp, color = MotoColors.Gray)
+            }
+            if (ui.results.isEmpty() && places.isNotEmpty() && !ui.loading) {
+                SavedTiles(places, onGo = onSelect, onRemove = onRemovePlace)
             }
             if (ui.results.isNotEmpty()) {
                 LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     items(ui.results) { place ->
-                        Column(
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                                .clickable { keyboard?.hide(); focus.clearFocus(); onSelect(place) }.padding(horizontal = 8.dp, vertical = 10.dp)
-                        ) {
-                            Text(place.name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (place.detail.isNotBlank()) {
-                                Text(place.detail, fontSize = 14.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val saved = places.any { Geo.distance(it.place.point, place.point) < SAVED_SPOT_M }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                                    .clickable { keyboard?.hide(); focus.clearFocus(); onSelect(place) }.padding(horizontal = 8.dp, vertical = 10.dp)
+                            ) {
+                                Text(place.name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (place.detail.isNotBlank()) {
+                                    Text(place.detail, fontSize = 14.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            Box(Modifier.size(56.dp).clickable { onSave(place) }, contentAlignment = Alignment.Center) {
+                                Icon(
+                                    if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
+                                    tint = if (saved) MotoColors.Orange else MotoColors.Gray, modifier = Modifier.size(28.dp),
+                                )
                             }
                         }
                     }
@@ -372,13 +437,80 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
     }
 }
 
+/** Home, work and favorites as big tiles: one tap to route, long press then tap again to delete. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RouteCard(ui: NavUi, onStart: () -> Unit, onCancel: () -> Unit) {
+private fun SavedTiles(places: List<SavedPlace>, onGo: (Place) -> Unit, onRemove: (SavedPlace) -> Unit) {
+    var confirm by remember { mutableStateOf<SavedPlace?>(null) }
+    LaunchedEffect(confirm) { if (confirm != null) { delay(3000); confirm = null } }
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(places) { sp ->
+            val pending = confirm == sp
+            Row(
+                modifier = Modifier.height(56.dp).clip(RoundedCornerShape(16.dp))
+                    .background(if (pending) MotoColors.Red else MotoColors.PanelHigh)
+                    .combinedClickable(
+                        onClick = { if (pending) { onRemove(sp); confirm = null } else onGo(sp.place) },
+                        onLongClick = { confirm = sp },
+                    )
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    when (sp.kind) { PlaceKind.HOME -> Icons.Rounded.Home; PlaceKind.WORK -> Icons.Rounded.Work; PlaceKind.FAVORITE -> Icons.Rounded.Star },
+                    null, tint = Color.White, modifier = Modifier.size(26.dp),
+                )
+                Column(modifier = Modifier.padding(start = 10.dp).widthIn(max = 130.dp)) {
+                    Text(
+                        if (pending) stringResource(R.string.saved_delete_confirm) else savedLabel(sp),
+                        fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    if (!pending && sp.kind != PlaceKind.FAVORITE) {
+                        Text(sp.place.name, fontSize = 12.sp, color = Color(0xB3FFFFFF), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun savedLabel(sp: SavedPlace): String = when (sp.kind) {
+    PlaceKind.HOME -> stringResource(R.string.saved_home)
+    PlaceKind.WORK -> stringResource(R.string.saved_work)
+    PlaceKind.FAVORITE -> sp.place.name
+}
+
+@Composable
+private fun SaveChooser(place: Place, onPick: (PlaceKind) -> Unit, onCancel: () -> Unit) {
+    GlassPanel(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(place.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillButton(stringResource(R.string.saved_home), MotoColors.Blue, { onPick(PlaceKind.HOME) }, Modifier.weight(1f), horizontalPadding = 4.dp)
+                PillButton(stringResource(R.string.saved_work), MotoColors.Blue, { onPick(PlaceKind.WORK) }, Modifier.weight(1f), horizontalPadding = 4.dp)
+                PillButton(stringResource(R.string.saved_favorite), MotoColors.Orange, { onPick(PlaceKind.FAVORITE) }, Modifier.weight(1.3f), horizontalPadding = 4.dp)
+            }
+            PillButton(stringResource(R.string.cancel), MotoColors.PanelHigh, onCancel, Modifier.fillMaxWidth())
+        }
+    }
+}
+
+@Composable
+private fun RouteCard(ui: NavUi, saved: Boolean, onSave: () -> Unit, onStart: () -> Unit, onCancel: () -> Unit) {
     val route = ui.route ?: return
     val eta = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis() + route.durationS.toLong() * 1000))
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Box(Modifier.size(56.dp).clickable(onClick = onSave), contentAlignment = Alignment.Center) {
+                    Icon(
+                        if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
+                        tint = if (saved) MotoColors.Orange else MotoColors.Gray, modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
             Text(
                 "${formatDistance(route.distanceM.toInt())} · ${formatDuration(LocalContext.current, route.durationS.toInt())} · ${stringResource(R.string.arrival_fmt, eta)}",
                 fontSize = 16.sp, color = MotoColors.Gray,

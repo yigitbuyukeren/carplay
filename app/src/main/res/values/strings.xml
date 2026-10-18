@@ -151,4 +151,12 @@
     <string name="obd_pairing">Eşleniyor…</string>
     <string name="obd_new_devices">Bulunan cihazlar</string>
     <string name="obd_paired_devices">Eşli cihazlar</string>
+    <string name="saved_home">Ev</string>
+    <string name="saved_work">İş</string>
+    <string name="saved_favorite">Favori</string>
+    <string name="saved_hint">Arama sonucundaki ☆ ile Ev, İş veya favori ekle. Haritaya uzun basarak da hedef seçebilirsin.</string>
+    <string name="saved_delete_confirm">Silmek için dokun</string>
+    <string name="search_locked">Sürerken arama kilitli. Kayıtlı yerlerden seç veya haritaya uzun bas.</string>
+    <string name="go_home">Eve git</string>
+    <string name="go_work">İşe git</string>
 </resources>

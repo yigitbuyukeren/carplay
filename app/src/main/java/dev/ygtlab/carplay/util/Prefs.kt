@@ -12,6 +12,7 @@ object Prefs {
     private const val KEY_LEAN = "lean_enabled"
     private const val KEY_LEAN_STATE = "lean_state"
     private const val KEY_THEME = "theme_mode"
+    private const val KEY_PLACES = "saved_places"
     private const val KEY_OBD = "obd_enabled"
     private const val KEY_OBD_DEVICE = "obd_device"
     private const val KEY_OBD_GEARS = "obd_gears"
@@ -93,5 +94,12 @@ object Prefs {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putString(KEY_OBD_GEARS, ratios.joinToString(","))
             .apply()
+    }
+
+    fun savedPlaces(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_PLACES, null)
+
+    fun setSavedPlaces(context: Context, json: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_PLACES, json).apply()
     }
 }

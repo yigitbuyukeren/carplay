@@ -1,6 +1,10 @@
 package dev.ygtlab.carplay
 
 import dev.ygtlab.carplay.data.LeanSensor
+import dev.ygtlab.carplay.data.Place
+import dev.ygtlab.carplay.data.PlaceKind
+import dev.ygtlab.carplay.data.SavedPlace
+import dev.ygtlab.carplay.data.SavedPlaces
 import dev.ygtlab.carplay.data.EngineAlert
 import dev.ygtlab.carplay.data.ObdRepository
 import dev.ygtlab.carplay.data.BluetoothScanner
@@ -55,6 +59,17 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     val locationState: StateFlow<LocationState> = location.state
     val nav = NavigationController(app, viewModelScope, location.state)
+
+    val places = MutableStateFlow(SavedPlaces.fromJson(Prefs.savedPlaces(app)))
+
+    fun savePlace(kind: PlaceKind, place: Place) = updatePlaces(SavedPlaces.put(places.value, SavedPlace(kind, place)))
+
+    fun removePlace(item: SavedPlace) = updatePlaces(SavedPlaces.remove(places.value, item))
+
+    private fun updatePlaces(list: List<SavedPlace>) {
+        places.value = list
+        Prefs.setSavedPlaces(getApplication(), SavedPlaces.toJson(list))
+    }
 
     val leanEnabled = MutableStateFlow(Prefs.leanEnabled(app))
     val lean = LeanSensor(app)
