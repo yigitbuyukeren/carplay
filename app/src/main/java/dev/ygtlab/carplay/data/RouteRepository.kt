@@ -1,8 +1,6 @@
 package dev.ygtlab.carplay.data
 
 import android.util.Log
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -35,9 +33,52 @@ data class Route(
     }
 }
 
+/** What the rider wants to avoid. Everything off leaves Valhalla's own motorcycle defaults untouched. */
+data class RouteOptions(val avoidHighways: Boolean = false, val avoidTolls: Boolean = false) {
+    /** Valhalla `costing_options`, or null when there is nothing to change. */
+    fun costingOptions(): JSONObject? {
+        if (!avoidHighways && !avoidTolls) return null
+        val motorcycle = JSONObject()
+        if (avoidHighways) motorcycle.put("use_highways", 0)
+        if (avoidTolls) motorcycle.put("use_tolls", 0)
+        return JSONObject().put("motorcycle", motorcycle)
+    }
+}
+
+interface Routing {
+    suspend fun route(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<Route>
+    suspend fun search(query: String, near: GeoPoint?): Result<List<Place>>
+
+    /** Snaps a recorded or planned track to the roads and returns it as a route with turn instructions. */
+    suspend fun traceRoute(points: List<GeoPoint>, options: RouteOptions): Result<Route> =
+        Result.failure(UnsupportedOperationException("trace_route"))
+
+    /** The address of a spot picked on the map; null when there is nothing worth naming. */
+    suspend fun reverse(point: GeoPoint): Result<Place?> = Result.success(null)
+}
+
+object PlaceNames {
+    /** Nominatim `reverse` reply to a short name and a one-line detail, e.g. "Cadde 12" / "Fatih, İstanbul". */
+    fun fromReverse(json: String, at: GeoPoint): Place? {
+        val root = JSONObject(json)
+        if (root.has("error")) return null
+        val address = root.optJSONObject("address")
+        val road = address?.optString("road").orEmpty()
+        val number = address?.optString("house_number").orEmpty()
+        val name = root.optString("name").ifBlank { listOf(road, number).filter { it.isNotBlank() }.joinToString(" ") }
+        if (name.isBlank()) return null
+        val detail = listOfNotNull(
+            address?.optString("suburb")?.takeIf { it.isNotBlank() } ?: address?.optString("neighbourhood")?.takeIf { it.isNotBlank() },
+            address?.optString("city")?.takeIf { it.isNotBlank() } ?: address?.optString("town")?.takeIf { it.isNotBlank() }
+                ?: address?.optString("county")?.takeIf { it.isNotBlank() },
+        ).filter { it != name }.joinToString(", ")
+        return Place(name, detail, at)
+    }
+}
+
 /** Valhalla (OSM) motorcycle routing and Nominatim geocoding, both public no-key services. */
-class RouteRepository {
-    suspend fun route(from: GeoPoint, to: GeoPoint): Result<Route> = withContext(Dispatchers.IO) {
+class RouteRepository : Routing {
+    override suspend fun route(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<Route> = withContext(Dispatchers.IO) {
         safely("route") {
             val body = JSONObject()
                 .put("locations", JSONArray()
@@ -45,40 +86,69 @@ class RouteRepository {
                     .put(JSONObject().put("lat", to.lat).put("lon", to.lon)))
                 .put("costing", "motorcycle")
                 .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", "kilometers"))
-            val json = JSONObject(http("https://valhalla1.openstreetmap.de/route", body.toString()))
-            val trip = json.getJSONObject("trip")
-            val leg = trip.getJSONArray("legs").getJSONObject(0)
-            val maneuvers = leg.getJSONArray("maneuvers").let { arr ->
-                (0 until arr.length()).map { i ->
-                    val m = arr.getJSONObject(i)
-                    Maneuver(
-                        type = m.getInt("type"),
-                        instruction = m.optString("instruction"),
-                        alert = m.optString("verbal_transition_alert_instruction"),
-                        verbal = m.optString("verbal_pre_transition_instruction", m.optString("instruction")),
-                        lengthM = m.getDouble("length") * 1000,
-                        beginIndex = m.getInt("begin_shape_index"),
-                    )
-                }
-            }
-            val summary = trip.getJSONObject("summary")
-            Route(
-                shape = Geo.decodePolyline(leg.getString("shape")),
-                maneuvers = maneuvers,
-                distanceM = summary.getDouble("length") * 1000,
-                durationS = summary.getDouble("time"),
-            )
+            options.costingOptions()?.let { body.put("costing_options", it) }
+            parseTrip(Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString()))
         }
     }
 
-    suspend fun search(query: String, near: GeoPoint?): Result<List<Place>> = withContext(Dispatchers.IO) {
+    override suspend fun traceRoute(points: List<GeoPoint>, options: RouteOptions): Result<Route> = withContext(Dispatchers.IO) {
+        safely("trace_route") {
+            val shape = JSONArray().also { arr -> points.forEach { arr.put(JSONObject().put("lat", it.lat).put("lon", it.lon)) } }
+            val body = JSONObject()
+                .put("shape", shape)
+                .put("costing", "motorcycle")
+                .put("shape_match", "map_snap")
+                .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", "kilometers"))
+                // Wide enough for tracks recorded every few kilometres, such as route-planner exports.
+                .put("trace_options", JSONObject().put("search_radius", 50).put("gps_accuracy", 10).put("breakage_distance", 3000))
+            options.costingOptions()?.let { body.put("costing_options", it) }
+            parseTrip(Http.postJson("https://valhalla1.openstreetmap.de/trace_route", body.toString(), readMs = 40_000))
+        }
+    }
+
+    /** Parses a Valhalla `route` or `trace_route` reply. */
+    private fun parseTrip(reply: String): Route {
+        val json = JSONObject(reply)
+        val trip = json.getJSONObject("trip")
+        val leg = trip.getJSONArray("legs").getJSONObject(0)
+        val maneuvers = leg.getJSONArray("maneuvers").let { arr ->
+            (0 until arr.length()).map { i ->
+                val m = arr.getJSONObject(i)
+                Maneuver(
+                    type = m.getInt("type"),
+                    instruction = m.optString("instruction"),
+                    alert = m.optString("verbal_transition_alert_instruction"),
+                    verbal = m.optString("verbal_pre_transition_instruction", m.optString("instruction")),
+                    lengthM = m.getDouble("length") * 1000,
+                    beginIndex = m.getInt("begin_shape_index"),
+                )
+            }
+        }
+        val summary = trip.getJSONObject("summary")
+        return Route(
+            shape = Geo.decodePolyline(leg.getString("shape")),
+            maneuvers = maneuvers,
+            distanceM = summary.getDouble("length") * 1000,
+            durationS = summary.getDouble("time"),
+        )
+    }
+
+    override suspend fun reverse(point: GeoPoint): Result<Place?> = withContext(Dispatchers.IO) {
+        safely("reverse") {
+            val url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=${Locale.getDefault().language}" +
+                "&lat=${"%.6f".format(Locale.US, point.lat)}&lon=${"%.6f".format(Locale.US, point.lon)}"
+            PlaceNames.fromReverse(Http.get(url), point)
+        }
+    }
+
+    override suspend fun search(query: String, near: GeoPoint?): Result<List<Place>> = withContext(Dispatchers.IO) {
         safely("search") {
             val view = near?.let {
                 "&viewbox=${it.lon - 1.0},${it.lat + 1.0},${it.lon + 1.0},${it.lat - 1.0}"
             }.orEmpty()
             val url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=${Locale.getDefault().language}" +
                 "&q=${URLEncoder.encode(query, "UTF-8")}$view"
-            val items = JSONArray(http(url))
+            val items = JSONArray(Http.get(url))
             (0 until items.length()).mapNotNull { i ->
                 val item = items.getJSONObject(i)
                 val full = item.optString("display_name")
@@ -87,36 +157,6 @@ class RouteRepository {
                 val detail = full.split(",").map { it.trim() }.drop(1).take(3).joinToString(", ")
                 Place(name, detail, GeoPoint(item.getDouble("lat"), item.getDouble("lon")))
             }
-        }
-    }
-
-    /** Like runCatching, but lets coroutine cancellation through and logs real failures. */
-    private inline fun <T> safely(tag: String, block: () -> T): Result<T> =
-        try {
-            Result.success(block())
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w("MotoDash", "$tag failed", e)
-            Result.failure(e)
-        }
-
-    private fun http(url: String, postBody: String? = null): String {
-        val conn = URL(url).openConnection() as HttpURLConnection
-        try {
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 12_000
-            conn.setRequestProperty("User-Agent", "MotoDash/0.1 (personal project)")
-            if (postBody != null) {
-                conn.requestMethod = "POST"
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.outputStream.use { it.write(postBody.toByteArray()) }
-            }
-            if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode}")
-            return conn.inputStream.bufferedReader().use { it.readText() }
-        } finally {
-            conn.disconnect()
         }
     }
 }

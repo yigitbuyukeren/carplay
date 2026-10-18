@@ -10,8 +10,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 
 object SpeedLimitMath {
     /** GPS speed is rounded and slightly noisy; only warn clearly above the limit. */
@@ -43,31 +41,12 @@ class SpeedLimitRepository {
                 .put("costing", "motorcycle")
                 .put("shape_match", "map_snap")
                 .put("filters", JSONObject().put("attributes", JSONArray().put("edge.speed_limit")).put("action", "include"))
-            Result.success(SpeedLimitMath.parseLimit(post("https://valhalla1.openstreetmap.de/trace_attributes", body.toString())))
+            Result.success(SpeedLimitMath.parseLimit(Http.postJson("https://valhalla1.openstreetmap.de/trace_attributes", body.toString(), connectMs = 8_000, readMs = 10_000, emptyOn400 = true)))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w("MotoDash", "speed limit lookup failed", e)
             Result.failure(e)
-        }
-    }
-
-    private fun post(url: String, body: String): String {
-        val conn = URL(url).openConnection() as HttpURLConnection
-        try {
-            conn.connectTimeout = 8_000
-            conn.readTimeout = 10_000
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("User-Agent", "MotoDash/0.1 (personal project)")
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.outputStream.use { it.write(body.toByteArray()) }
-            // A 400 means the points could not be snapped to a road; that is "no limit", not an outage.
-            if (conn.responseCode == 400) return "{}"
-            if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode}")
-            return conn.inputStream.bufferedReader().use { it.readText() }
-        } finally {
-            conn.disconnect()
         }
     }
 }

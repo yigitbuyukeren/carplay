@@ -1,21 +1,32 @@
 package dev.ygtlab.carplay.ui
 
 import dev.ygtlab.carplay.data.SpeedLimitMath
+import dev.ygtlab.carplay.data.Geo
+import dev.ygtlab.carplay.data.PlaceKind
+import dev.ygtlab.carplay.data.SavedPlace
 import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +35,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.LocalGasStation
+import androidx.compose.material.icons.rounded.LocalParking
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
@@ -57,14 +75,18 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ygtlab.carplay.R
+import dev.ygtlab.carplay.data.FuelStation
+import dev.ygtlab.carplay.data.FuelUi
 import dev.ygtlab.carplay.data.GeoPoint
 import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.NavUi
 import dev.ygtlab.carplay.data.NavigationController
 import dev.ygtlab.carplay.data.Place
+import dev.ygtlab.carplay.data.RouteOptions
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
@@ -97,6 +119,13 @@ private fun styleUrl(isDay: Boolean) =
 private const val SRC_ROUTE = "route"
 private const val SRC_DEST = "dest"
 private const val SRC_ME = "me"
+private const val SRC_FUEL = "fuel"
+
+/** No typing while riding: the search box locks above this speed. */
+private const val SEARCH_LOCK_KMH = 5
+private const val SAVED_SPOT_M = 30.0
+private const val FULL_FPS = 60
+private const val LOW_POWER_FPS = 20
 
 @Composable
 fun MapScreen(
@@ -105,10 +134,17 @@ fun MapScreen(
     speedKmh: Int,
     speedLimit: Int?,
     isDay: Boolean,
+    lowPower: Boolean,
+    places: List<SavedPlace>,
+    onSavePlace: (PlaceKind, Place) -> Unit,
+    onRemovePlace: (SavedPlace) -> Unit,
+    onOpenGpx: (Uri) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val ui by nav.ui.collectAsStateWithLifecycle()
+    val fuel by nav.fuel.collectAsStateWithLifecycle()
+    val options by nav.options.collectAsStateWithLifecycle()
     val me by locationState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -120,6 +156,12 @@ fun MapScreen(
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleReady by remember { mutableStateOf(false) }
     var centeredOnce by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf<Place?>(null) }
+    // GPX files carry no reliable MIME type in file managers, so the picker accepts any file.
+    val gpxPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) onOpenGpx(uri) }
+
+    // A hot phone gets a calmer map: fewer frames per second.
+    LaunchedEffect(lowPower) { mapView.setMaximumFps(if (lowPower) LOW_POWER_FPS else FULL_FPS) }
 
     DisposableEffect(lifecycle, mapView) {
         var destroyed = false
@@ -202,6 +244,14 @@ fun MapScreen(
         }
     }
 
+    // Fuel station markers while the list is open.
+    LaunchedEffect(styleReady, fuel.stations, fuel.visible) {
+        val m = map ?: return@LaunchedEffect
+        if (!styleReady) return@LaunchedEffect
+        val features = if (fuel.visible) fuel.stations.map { Feature.fromGeometry(Point.fromLngLat(it.place.point.lon, it.place.point.lat)) } else emptyList()
+        m.style?.getSourceAs<GeoJsonSource>(SRC_FUEL)?.setGeoJson(FeatureCollection.fromFeatures(features))
+    }
+
     // Leaving navigation: flatten the camera back to a north-up overview.
     LaunchedEffect(ui.navigating) {
         val m = map ?: return@LaunchedEffect
@@ -222,7 +272,7 @@ fun MapScreen(
                         map = m
                         m.uiSettings.isRotateGesturesEnabled = true
                         m.addOnMapLongClickListener { latLng ->
-                            nav.selectPlace(Place(context.getString(R.string.selected_place), "", GeoPoint(latLng.latitude, latLng.longitude)))
+                            nav.selectPoint(GeoPoint(latLng.latitude, latLng.longitude))
                             true
                         }
                     }
@@ -235,13 +285,49 @@ fun MapScreen(
             modifier = Modifier.fillMaxHeight().width(380.dp).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            val chosen = saving
             when {
+                chosen != null -> SaveChooser(
+                    place = chosen,
+                    onPick = { kind -> onSavePlace(kind, chosen); saving = null },
+                    onCancel = { saving = null },
+                )
+                fuel.visible -> FuelPanel(
+                    fuel = fuel,
+                    guiding = ui.navigating,
+                    onGo = nav::selectPlace,
+                    onAddStop = nav::detourVia,
+                    onRetry = nav::findFuel,
+                    onClose = nav::closeFuel,
+                )
                 ui.navigating -> ManeuverBanner(ui)
-                ui.arrived -> ArrivedCard(onDone = nav::stopNavigation)
-                ui.route != null -> RouteCard(ui, onStart = nav::startNavigation, onCancel = nav::stopNavigation)
-                else -> SearchPanel(ui, nav::onQueryChange, nav::search, nav::selectPlace)
+                ui.arrived -> ArrivedCard(
+                    next = ui.finalDestination,
+                    joiningTrack = ui.joiningTrack,
+                    onContinue = nav::continueToFinal,
+                    onDone = nav::stopNavigation,
+                )
+                ui.route != null -> RouteCard(
+                    ui, options, onOptions = nav::setOptions,
+                    onStart = nav::startNavigation, onCancel = nav::stopNavigation,
+                    saved = ui.destination?.let { d -> places.any { Geo.distance(it.place.point, d.point) < SAVED_SPOT_M } } == true,
+                    isTrack = ui.track != null,
+                    onSave = { ui.destination?.let { saving = it } },
+                )
+                else -> SearchPanel(
+                    ui = ui,
+                    locked = speedKmh >= SEARCH_LOCK_KMH,
+                    places = places,
+                    onQuery = nav::onQueryChange,
+                    onSearch = nav::search,
+                    onSelect = nav::selectPlace,
+                    onSave = { saving = it },
+                    onRemovePlace = onRemovePlace,
+                    onPickGpx = if (speedKmh >= SEARCH_LOCK_KMH) null else ({ gpxPicker.launch(arrayOf("*/*")) }),
+                )
             }
             if (ui.rerouting) Chip(stringResource(R.string.rerouting_chip), MotoColors.Orange)
+            if (ui.offTrack) Chip(stringResource(R.string.gpx_off_chip), MotoColors.Orange)
         }
 
         if (ui.navigating) {
@@ -262,6 +348,9 @@ fun MapScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.End,
         ) {
+            if (!ui.arrived) {
+                RoundIconButton(Icons.Rounded.LocalGasStation, onClick = { if (fuel.visible) nav.closeFuel() else nav.findFuel() })
+            }
             if (!ui.navigating) {
                 RoundIconButton(Icons.Rounded.MyLocation, onClick = {
                     val m = map
@@ -294,6 +383,12 @@ private fun addMapLayers(style: Style) {
             circleColor("#FF453A"), circleRadius(9f), circleStrokeColor("#FFFFFF"), circleStrokeWidth(3f)
         )
     )
+    style.addSource(GeoJsonSource(SRC_FUEL))
+    style.addLayer(
+        CircleLayer("fuel-pin", SRC_FUEL).withProperties(
+            circleColor("#FF9F0A"), circleRadius(10f), circleStrokeColor("#FFFFFF"), circleStrokeWidth(3f)
+        )
+    )
     style.addSource(GeoJsonSource(SRC_ME))
     style.addLayer(CircleLayer("me-halo", SRC_ME).withProperties(circleColor("#0A84FF"), circleRadius(18f), circleOpacity(0.25f)))
     style.addLayer(
@@ -317,10 +412,21 @@ private fun GlassPanel(modifier: Modifier = Modifier, content: @Composable () ->
 }
 
 @Composable
-private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Unit, onSelect: (Place) -> Unit) {
+private fun SearchPanel(
+    ui: NavUi,
+    locked: Boolean,
+    places: List<SavedPlace>,
+    onQuery: (String) -> Unit,
+    onSearch: () -> Unit,
+    onSelect: (Place) -> Unit,
+    onSave: (Place) -> Unit,
+    onRemovePlace: (SavedPlace) -> Unit,
+    onPickGpx: (() -> Unit)?,
+) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val submit = { keyboard?.hide(); focus.clearFocus(); onSearch() }
+    LaunchedEffect(locked) { if (locked) { keyboard?.hide(); focus.clearFocus() } }
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
@@ -333,6 +439,7 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
                     BasicTextField(
                         value = ui.query,
                         onValueChange = onQuery,
+                        enabled = !locked,
                         singleLine = true,
                         textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
                         cursorBrush = SolidColor(Color.White),
@@ -342,27 +449,41 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
                     )
                 }
                 Box(
-                    modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(12.dp)).background(MotoColors.Blue)
-                        .clickable { submit() }.padding(horizontal = 14.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(12.dp))
+                        .background(if (locked) MotoColors.Gray else MotoColors.Blue)
+                        .clickable(enabled = !locked) { submit() }.padding(horizontal = 14.dp, vertical = 6.dp),
                 ) { Text(stringResource(R.string.search), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White) }
             }
             when {
                 ui.loading -> Text(stringResource(R.string.route_computing), fontSize = 15.sp, color = MotoColors.Gray)
                 ui.searching -> Text(stringResource(R.string.searching), fontSize = 15.sp, color = MotoColors.Gray)
                 ui.error != null -> Text(ui.error, fontSize = 15.sp, color = MotoColors.Orange)
+                locked -> Text(stringResource(R.string.search_locked), fontSize = 14.sp, color = MotoColors.Orange)
                 ui.results.isEmpty() && ui.query.isEmpty() ->
-                    Text(stringResource(R.string.hint_long_press), fontSize = 14.sp, color = MotoColors.Gray)
+                    Text(stringResource(if (places.isEmpty()) R.string.saved_hint else R.string.hint_long_press), fontSize = 14.sp, color = MotoColors.Gray)
+            }
+            if (ui.results.isEmpty() && !ui.loading) {
+                SavedTiles(places, onGo = onSelect, onRemove = onRemovePlace, onPickGpx = onPickGpx)
             }
             if (ui.results.isNotEmpty()) {
                 LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     items(ui.results) { place ->
-                        Column(
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                                .clickable { keyboard?.hide(); focus.clearFocus(); onSelect(place) }.padding(horizontal = 8.dp, vertical = 10.dp)
-                        ) {
-                            Text(place.name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (place.detail.isNotBlank()) {
-                                Text(place.detail, fontSize = 14.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val saved = places.any { Geo.distance(it.place.point, place.point) < SAVED_SPOT_M }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                                    .clickable { keyboard?.hide(); focus.clearFocus(); onSelect(place) }.padding(horizontal = 8.dp, vertical = 10.dp)
+                            ) {
+                                Text(place.name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (place.detail.isNotBlank()) {
+                                    Text(place.detail, fontSize = 14.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            Box(Modifier.size(56.dp).clickable { onSave(place) }, contentAlignment = Alignment.Center) {
+                                Icon(
+                                    if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
+                                    tint = if (saved) MotoColors.Orange else MotoColors.Gray, modifier = Modifier.size(28.dp),
+                                )
                             }
                         }
                     }
@@ -372,30 +493,214 @@ private fun SearchPanel(ui: NavUi, onQuery: (String) -> Unit, onSearch: () -> Un
     }
 }
 
+/** Home, work and favorites as big tiles: one tap to route, long press then tap again to delete. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RouteCard(ui: NavUi, onStart: () -> Unit, onCancel: () -> Unit) {
-    val route = ui.route ?: return
-    val eta = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis() + route.durationS.toLong() * 1000))
+private fun SavedTiles(places: List<SavedPlace>, onGo: (Place) -> Unit, onRemove: (SavedPlace) -> Unit, onPickGpx: (() -> Unit)?) {
+    var confirm by remember { mutableStateOf<SavedPlace?>(null) }
+    LaunchedEffect(confirm) { if (confirm != null) { delay(3000); confirm = null } }
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            Row(
+                modifier = Modifier.height(56.dp).clip(RoundedCornerShape(16.dp)).background(MotoColors.PanelHigh)
+                    .clickable(enabled = onPickGpx != null) { onPickGpx?.invoke() }.padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Rounded.FolderOpen, null, tint = if (onPickGpx != null) Color.White else MotoColors.Gray, modifier = Modifier.size(26.dp))
+                Text(
+                    stringResource(R.string.gpx_open), fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
+                    color = if (onPickGpx != null) Color.White else MotoColors.Gray, modifier = Modifier.padding(start = 10.dp),
+                )
+            }
+        }
+        items(places) { sp ->
+            val pending = confirm == sp
+            Row(
+                modifier = Modifier.height(56.dp).clip(RoundedCornerShape(16.dp))
+                    .background(if (pending) MotoColors.Red else MotoColors.PanelHigh)
+                    .combinedClickable(
+                        onClick = { if (pending) { onRemove(sp); confirm = null } else onGo(sp.place) },
+                        onLongClick = { confirm = sp },
+                    )
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    when (sp.kind) {
+                        PlaceKind.HOME -> Icons.Rounded.Home
+                        PlaceKind.WORK -> Icons.Rounded.Work
+                        PlaceKind.PARKED -> Icons.Rounded.LocalParking
+                        PlaceKind.FAVORITE -> Icons.Rounded.Star
+                    },
+                    null, tint = Color.White, modifier = Modifier.size(26.dp),
+                )
+                Column(modifier = Modifier.padding(start = 10.dp).widthIn(max = 130.dp)) {
+                    Text(
+                        if (pending) stringResource(R.string.saved_delete_confirm) else savedLabel(sp),
+                        fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    // Home/Work show their address, the parked bike shows when it was left.
+                    val sub = when (sp.kind) { PlaceKind.HOME, PlaceKind.WORK -> sp.place.name; PlaceKind.PARKED -> sp.place.detail; PlaceKind.FAVORITE -> "" }
+                    if (!pending && sub.isNotBlank()) {
+                        Text(sub, fontSize = 12.sp, color = Color(0xB3FFFFFF), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun savedLabel(sp: SavedPlace): String = when (sp.kind) {
+    PlaceKind.HOME -> stringResource(R.string.saved_home)
+    PlaceKind.WORK -> stringResource(R.string.saved_work)
+    PlaceKind.PARKED -> stringResource(R.string.saved_parked)
+    PlaceKind.FAVORITE -> sp.place.name
+}
+
+@Composable
+private fun SaveChooser(place: Place, onPick: (PlaceKind) -> Unit, onCancel: () -> Unit) {
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(
-                "${formatDistance(route.distanceM.toInt())} · ${formatDuration(LocalContext.current, route.durationS.toInt())} · ${stringResource(R.string.arrival_fmt, eta)}",
-                fontSize = 16.sp, color = MotoColors.Gray,
-            )
-            PillButton(stringResource(R.string.start), MotoColors.Green, onStart, Modifier.fillMaxWidth())
+            Text(place.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillButton(stringResource(R.string.saved_home), MotoColors.Blue, { onPick(PlaceKind.HOME) }, Modifier.weight(1f), horizontalPadding = 4.dp)
+                PillButton(stringResource(R.string.saved_work), MotoColors.Blue, { onPick(PlaceKind.WORK) }, Modifier.weight(1f), horizontalPadding = 4.dp)
+                PillButton(stringResource(R.string.saved_favorite), MotoColors.Orange, { onPick(PlaceKind.FAVORITE) }, Modifier.weight(1.3f), horizontalPadding = 4.dp)
+            }
             PillButton(stringResource(R.string.cancel), MotoColors.PanelHigh, onCancel, Modifier.fillMaxWidth())
         }
     }
 }
 
 @Composable
-private fun ArrivedCard(onDone: () -> Unit) {
+private fun RouteCard(
+    ui: NavUi,
+    options: RouteOptions,
+    onOptions: (RouteOptions) -> Unit,
+    saved: Boolean,
+    isTrack: Boolean,
+    onSave: () -> Unit,
+    onStart: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val route = ui.route ?: return
+    val eta = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis() + route.durationS.toLong() * 1000))
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.arrived), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            PillButton(stringResource(R.string.ok), MotoColors.Blue, onDone, Modifier.fillMaxWidth())
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (!isTrack) Box(Modifier.size(56.dp).clickable(onClick = onSave), contentAlignment = Alignment.Center) {
+                    Icon(
+                        if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
+                        tint = if (saved) MotoColors.Orange else MotoColors.Gray, modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
+            Text(
+                if (ui.loading) stringResource(R.string.route_updating)
+                else "${formatDistance(route.distanceM.toInt())} · ${formatDuration(LocalContext.current, route.durationS.toInt())} · ${stringResource(R.string.arrival_fmt, eta)}",
+                fontSize = 16.sp, color = MotoColors.Gray,
+            )
+            if (!isTrack) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OptionChip(stringResource(R.string.opt_no_highway), options.avoidHighways, { onOptions(options.copy(avoidHighways = !options.avoidHighways)) }, Modifier.weight(1f))
+                OptionChip(stringResource(R.string.opt_no_toll), options.avoidTolls, { onOptions(options.copy(avoidTolls = !options.avoidTolls)) }, Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillButton(stringResource(R.string.start), MotoColors.Green, onStart, Modifier.weight(2f))
+                PillButton(stringResource(R.string.cancel), MotoColors.PanelHigh, onCancel, Modifier.weight(1f), horizontalPadding = 8.dp)
+            }
         }
+    }
+}
+
+/** A toggle that reads like a button: filled blue when on. At least 56dp tall. */
+@Composable
+private fun OptionChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.height(56.dp).clip(RoundedCornerShape(28.dp))
+            .background(if (selected) MotoColors.Blue else MotoColors.PanelHigh)
+            .border(1.dp, if (selected) Color.White else Color(0x26FFFFFF), RoundedCornerShape(28.dp))
+            .clickable(onClick = onClick).padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+}
+
+@Composable
+private fun ArrivedCard(next: Place?, joiningTrack: Boolean, onContinue: () -> Unit, onDone: () -> Unit) {
+    GlassPanel(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                stringResource(if (joiningTrack) R.string.gpx_joined else if (next != null) R.string.stop_arrived else R.string.arrived),
+                fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White,
+            )
+            if (next != null) {
+                Text(next.name, fontSize = 16.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                PillButton(stringResource(R.string.continue_trip), MotoColors.Green, onContinue, Modifier.fillMaxWidth())
+                PillButton(stringResource(R.string.finish), MotoColors.PanelHigh, onDone, Modifier.fillMaxWidth())
+            } else {
+                PillButton(stringResource(R.string.ok), MotoColors.Blue, onDone, Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
+
+/** Fuel stations around the rider, or along the road ahead while guiding. */
+@Composable
+private fun FuelPanel(
+    fuel: FuelUi,
+    guiding: Boolean,
+    onGo: (Place) -> Unit,
+    onAddStop: (Place) -> Unit,
+    onRetry: () -> Unit,
+    onClose: () -> Unit,
+) {
+    GlassPanel(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.fuel_title), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(
+                        stringResource(if (fuel.alongRoute) R.string.fuel_ahead else R.string.fuel_nearby),
+                        fontSize = 14.sp, color = MotoColors.Gray,
+                    )
+                }
+                Box(Modifier.size(56.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+            }
+            when {
+                fuel.loading -> Text(stringResource(R.string.fuel_searching), fontSize = 15.sp, color = MotoColors.Gray)
+                fuel.error != null -> {
+                    Text(fuel.error, fontSize = 15.sp, color = MotoColors.Orange)
+                    PillButton(stringResource(R.string.retry), MotoColors.Blue, onRetry, Modifier.fillMaxWidth())
+                }
+                else -> LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(fuel.stations) { station -> FuelRow(station, guiding, onGo, onAddStop) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FuelRow(station: FuelStation, guiding: Boolean, onGo: (Place) -> Unit, onAddStop: (Place) -> Unit) {
+    val name = station.place.name.ifBlank { stringResource(R.string.fuel_unnamed) }
+    val place = station.place.copy(name = name)
+    val detail = listOf(station.place.detail, formatDistance(station.distanceM)).filter { it.isNotBlank() }.joinToString(" · ")
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MotoColors.PanelHigh).padding(start = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(vertical = 8.dp)) {
+            Text(name, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(detail, fontSize = 13.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        PillButton(
+            stringResource(if (guiding) R.string.fuel_add_stop else R.string.fuel_go),
+            MotoColors.Orange, { if (guiding) onAddStop(place) else onGo(place) },
+            Modifier.padding(6.dp), horizontalPadding = 14.dp,
+        )
     }
 }
 

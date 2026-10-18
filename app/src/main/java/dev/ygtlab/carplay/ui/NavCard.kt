@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,12 +36,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.NavUi
+import dev.ygtlab.carplay.data.Place
+import dev.ygtlab.carplay.data.PlaceKind
+import dev.ygtlab.carplay.data.SavedPlace
+import dev.ygtlab.carplay.data.WeatherMath
+import dev.ygtlab.carplay.data.WeatherSnapshot
 import dev.ygtlab.carplay.util.NAV_APPS
 import dev.ygtlab.carplay.util.isInstalled
 import dev.ygtlab.carplay.util.launchPackage
 
 @Composable
-fun NavCard(context: Context, nav: NavUi, onOpenMap: () -> Unit, modifier: Modifier = Modifier) {
+fun NavCard(
+    context: Context,
+    nav: NavUi,
+    places: List<SavedPlace>,
+    weather: WeatherSnapshot?,
+    onOpenMap: () -> Unit,
+    onGoTo: (Place) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val installed = remember { NAV_APPS.filter { context.isInstalled(it.packageName) } }
     val shape = RoundedCornerShape(28.dp)
     Box(
@@ -54,6 +69,7 @@ fun NavCard(context: Context, nav: NavUi, onOpenMap: () -> Unit, modifier: Modif
                 Brush.verticalGradient(listOf(Color(0x99000000), Color.Transparent, Color(0xCC000000)))
             )
         )
+        if (weather != null) WeatherChip(weather, Modifier.align(Alignment.TopEnd).padding(12.dp))
         Column(
             modifier = Modifier.fillMaxSize().padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween,
@@ -68,7 +84,25 @@ fun NavCard(context: Context, nav: NavUi, onOpenMap: () -> Unit, modifier: Modif
                     }
                 }
             } else {
-                Text(stringResource(R.string.nav_title), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.nav_title), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    // One tap from the dashboard to a route home or to work.
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        places.filter { it.kind != PlaceKind.FAVORITE }.forEach { sp ->
+                            PillButton(
+                                stringResource(
+                                    when (sp.kind) {
+                                        PlaceKind.HOME -> R.string.go_home
+                                        PlaceKind.WORK -> R.string.go_work
+                                        else -> R.string.go_parked
+                                    }
+                                ),
+                                Color(0x33FFFFFF), { onGoTo(sp.place) },
+                                horizontalPadding = 16.dp,
+                            )
+                        }
+                    }
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 PillButton(if (nav.navigating) stringResource(R.string.nav_back_to_map) else stringResource(R.string.nav_map_and_route), MotoColors.Blue, onOpenMap, Modifier.weight(1f))
@@ -77,6 +111,19 @@ fun NavCard(context: Context, nav: NavUi, onOpenMap: () -> Unit, modifier: Modif
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun WeatherChip(weather: WeatherSnapshot, modifier: Modifier = Modifier) {
+    val tint = if (weather.iceRisk) MotoColors.Cyan else Color.White
+    Row(
+        modifier = modifier.clip(RoundedCornerShape(16.dp)).background(Color(0x99000000)).padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(WeatherMath.emoji(weather.code), fontSize = 18.sp)
+        Text("${weather.tempC}°", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = tint, modifier = Modifier.padding(start = 6.dp))
+        if (weather.iceRisk) Text("❄", fontSize = 16.sp, modifier = Modifier.padding(start = 4.dp))
     }
 }
 

@@ -8,8 +8,15 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
 
+/** Anything that can say a sentence out loud; lets the navigation logic run in plain unit tests. */
+interface Speaker {
+    fun speak(text: String)
+    fun stop()
+    fun shutdown()
+}
+
 /** Turn-by-turn announcements that duck the music while speaking. */
-class Voice(context: Context) {
+class Voice(context: Context) : Speaker {
     private val audio = context.getSystemService(AudioManager::class.java)
     private val attributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
@@ -41,18 +48,18 @@ class Voice(context: Context) {
         }
     }
 
-    fun speak(text: String) {
+    override fun speak(text: String) {
         if (!ready || text.isBlank()) return
         audio.requestAudioFocus(focusRequest)
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "nav")
     }
 
-    fun stop() {
+    override fun stop() {
         if (ready) tts.stop()
         audio.abandonAudioFocusRequest(focusRequest)
     }
 
-    fun shutdown() {
+    override fun shutdown() {
         tts.shutdown()
     }
 }
