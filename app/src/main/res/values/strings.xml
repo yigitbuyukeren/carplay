@@ -245,4 +245,13 @@
     <string name="svc_done">Yapıldı</string>
     <string name="svc_banner_overdue_fmt">Bakım zamanı: %1$s (%2$s km geçti)</string>
     <string name="svc_banner_soon_fmt">Bakım yaklaşıyor: %1$s (%2$s km kaldı)</string>
+    <string name="gpx_failed">GPX dosyası eşleştirilemedi. Çok uzun (200 km üstü), bozuk veya yol ağından uzak olabilir.</string>
+    <string name="gpx_unreadable">GPX dosyası okunamadı</string>
+    <string name="gpx_join_point">Rotanın başlangıcı</string>
+    <string name="gpx_joined">Rotaya ulaştınız, devam edebilirsiniz</string>
+    <string name="gpx_off_track">Rotadan çıktınız</string>
+    <string name="gpx_off_chip">Rotanın dışındasın</string>
+    <string name="gpx_open">GPX aç</string>
+    <string name="gpx_continue">Rotayı takip et</string>
+    <string name="gpx_title">GPX rotası</string>
 </resources>

@@ -20,6 +20,12 @@ data class NavUi(
     val error: String? = null,
     val navigating: Boolean = false,
     val rerouting: Boolean = false,
+    /** Name of the GPX track being followed (null for ordinary routes). */
+    val track: String? = null,
+    /** Following a track but the rider has left it; guidance resumes when they are back on it. */
+    val offTrack: Boolean = false,
+    /** Riding to the point where the GPX track is joined; [finalDestination] is its end. */
+    val joiningTrack: Boolean = false,
     val arrived: Boolean = false,
     val maneuverIndex: Int = 0,
     val distToNextM: Int = 0,
@@ -71,6 +77,12 @@ class NavigationController(
     private var offRouteFixes = 0
     private val spoken = HashSet<Int>()
 
+    /** The snapped GPX route while one is loaded or being followed. */
+    private var trackRoute: Route? = null
+
+    /** Where to pick the track up after the rider has reached the join point or a fuel stop. */
+    private var pendingTrackIndex: Int? = null
+
     private fun here(): GeoPoint? =
         location.value.takeIf { it.fixAtMs > 0 }?.let { GeoPoint(it.lat, it.lon) }
 
@@ -114,7 +126,12 @@ class NavigationController(
             _ui.update { it.copy(error = text(R.string.gps_waiting)) }
             return
         }
-        _ui.update { it.copy(destination = place, finalDestination = null, query = place.name, results = emptyList(), loading = true, error = null) }
+        trackRoute = null
+        pendingTrackIndex = null
+        _ui.update {
+            it.copy(destination = place, finalDestination = null, query = place.name, results = emptyList(), loading = true, error = null,
+                track = null, joiningTrack = false, offTrack = false)
+        }
         routeJob?.cancel()
         routeJob = scope.launch {
             repo.route(from, place.point, _options.value)
@@ -145,22 +162,107 @@ class NavigationController(
     }
 
     fun startNavigation() {
-        val route = _ui.value.route ?: return
-        progressIndex = 0
+        val state = _ui.value
+        val route = state.route ?: return
+        if (state.track == null) {
+            begin(route, 0)
+            return
+        }
+        // A GPX track: join it where the rider is, or ride to it first when it is far away.
+        val from = here()
+        if (from == null) {
+            _ui.update { it.copy(error = text(R.string.gps_waiting)) }
+            return
+        }
+        val (index, distance) = nearestSegment(route, from)
+        if (distance <= TRACK_JOIN_M) begin(route, index) else approachTrack(route, index)
+    }
+
+    private fun begin(route: Route, startIndex: Int) {
+        progressIndex = startIndex
         offRouteFixes = 0
         spoken.clear()
+        val next = route.maneuvers.indexOfFirst { it.beginIndex > startIndex }.takeIf { it >= 0 } ?: route.maneuvers.lastIndex
+        val remaining = (route.distanceM - route.cumulative[startIndex]).coerceAtLeast(0.0)
         _ui.update {
-            it.copy(navigating = true, arrived = false, maneuverIndex = 1.coerceAtMost(route.maneuvers.lastIndex),
-                remainingM = route.distanceM.toInt(), remainingS = route.durationS.toInt())
+            it.copy(navigating = true, arrived = false, offTrack = false, maneuverIndex = next.coerceAtLeast(0),
+                remainingM = remaining.toInt(), remainingS = (route.durationS * remaining / route.distanceM).toInt())
         }
-        route.maneuvers.firstOrNull()?.let { voice.speak(it.verbal) }
+        if (startIndex == 0) route.maneuvers.firstOrNull()?.let { voice.speak(it.verbal) }
         trackJob?.cancel()
         trackJob = scope.launch { location.collect(::onFix) }
+    }
+
+    // ---- GPX ---------------------------------------------------------------------------------
+
+    /**
+     * Previews a GPX track: it is snapped to the roads by the routing service and shown like any route.
+     * No GPS fix is needed yet; that is only asked for when guidance starts.
+     */
+    fun followTrack(name: String, points: List<GeoPoint>) {
+        searchJob?.cancel()
+        trackJob?.cancel()
+        closeFuel()
+        trackRoute = null
+        pendingTrackIndex = null
+        val end = points.lastOrNull() ?: return
+        _ui.value = NavUi(query = name, destination = Place(name, "GPX", end), loading = true, track = name)
+        routeJob?.cancel()
+        routeJob = scope.launch {
+            repo.traceRoute(GpxMath.thin(points), _options.value)
+                .onSuccess { route ->
+                    trackRoute = route
+                    _ui.update { it.copy(route = route, loading = false) }
+                }
+                .onFailure { _ui.value = NavUi(error = text(R.string.gpx_failed)) }
+        }
+    }
+
+    /** Shown on the search panel; used when a file could not be read at all. */
+    fun reportError(message: String) {
+        _ui.update { it.copy(error = message) }
+    }
+
+    private fun approachTrack(route: Route, index: Int) {
+        val from = here() ?: return
+        val state = _ui.value
+        val name = state.track.orEmpty()
+        val joinPoint = route.shape[index]
+        val join = Place(text(R.string.gpx_join_point), name, joinPoint)
+        _ui.update { it.copy(loading = true, error = null) }
+        routeJob?.cancel()
+        routeJob = scope.launch {
+            repo.route(from, joinPoint, _options.value)
+                .onSuccess { approach ->
+                    pendingTrackIndex = index
+                    _ui.update {
+                        it.copy(destination = join, finalDestination = Place(name, "GPX", route.shape.last()), route = approach,
+                            track = null, joiningTrack = true, loading = false)
+                    }
+                    begin(approach, 0)
+                }
+                .onFailure { _ui.update { s -> s.copy(loading = false, error = text(R.string.route_failed)) } }
+        }
+    }
+
+    private fun nearestSegment(route: Route, p: GeoPoint): Pair<Int, Double> {
+        var bestIndex = 0
+        var best = Double.MAX_VALUE
+        for (i in 0 until route.shape.lastIndex) {
+            val d = Geo.project(p, route.shape[i], route.shape[i + 1]).distanceM
+            if (d < best) {
+                best = d
+                bestIndex = i
+            }
+        }
+        return bestIndex to best
     }
 
     fun stopNavigation() {
         trackJob?.cancel()
         fuelJob?.cancel()
+        trackRoute = null
+        pendingTrackIndex = null
         voice.stop()
         _ui.value = NavUi()
         _fuel.value = FuelUi()
@@ -206,6 +308,9 @@ class NavigationController(
         val from = here() ?: return
         val final = state.finalDestination ?: state.destination ?: return
         closeFuel()
+        // On a GPX track the trip resumes along the track from the stop, not by routing to its end.
+        val track = trackRoute.takeIf { state.track != null || pendingTrackIndex != null }
+        if (track != null) pendingTrackIndex = nearestSegment(track, stop.point).first
         _ui.update { it.copy(rerouting = true) }
         scope.launch {
             repo.route(from, stop.point, _options.value)
@@ -215,6 +320,7 @@ class NavigationController(
                     spoken.clear()
                     _ui.update {
                         it.copy(destination = stop, finalDestination = final, route = route, rerouting = false,
+                            track = null, joiningTrack = false, offTrack = false,
                             maneuverIndex = 1.coerceAtMost(route.maneuvers.lastIndex),
                             remainingM = route.distanceM.toInt(), remainingS = route.durationS.toInt())
                     }
@@ -226,6 +332,18 @@ class NavigationController(
 
     /** At the fuel stop: route on to the original destination and keep guiding. */
     fun continueToFinal() {
+        val track = trackRoute
+        val resumeAt = pendingTrackIndex
+        if (track != null && resumeAt != null) {
+            pendingTrackIndex = null
+            val name = _ui.value.finalDestination?.name.orEmpty()
+            _ui.update {
+                it.copy(route = track, destination = Place(name, "GPX", track.shape.last()), finalDestination = null,
+                    track = name, joiningTrack = false, arrived = false, loading = false)
+            }
+            begin(track, resumeAt)
+            return
+        }
         val final = _ui.value.finalDestination ?: return
         val from = here() ?: return
         _ui.update { it.copy(loading = true, arrived = false) }
@@ -261,18 +379,21 @@ class NavigationController(
 
         if (best.distanceM > OFF_ROUTE_M) {
             offRouteFixes++
-            if (offRouteFixes >= OFF_ROUTE_FIXES && !state.rerouting) reroute(p)
+            if (offRouteFixes >= OFF_ROUTE_FIXES && !state.rerouting) {
+                if (state.track != null) leftTrack(route, p) else reroute(p)
+            }
             return
         }
         offRouteFixes = 0
         progressIndex = bestIdx
+        if (state.offTrack) _ui.update { it.copy(offTrack = false) }
 
         val travelled = route.cumulative[bestIdx] +
             best.fraction * (route.cumulative[bestIdx + 1] - route.cumulative[bestIdx])
         val remaining = (route.distanceM - travelled).coerceAtLeast(0.0)
 
         if (remaining <= ARRIVAL_M) {
-            voice.speak(text(if (state.finalDestination != null) R.string.stop_arrived else R.string.arrived))
+            voice.speak(text(if (state.joiningTrack) R.string.gpx_joined else if (state.finalDestination != null) R.string.stop_arrived else R.string.arrived))
             trackJob?.cancel()
             _ui.update { it.copy(navigating = false, arrived = true, remainingM = 0, remainingS = 0, distToNextM = 0) }
             return
@@ -297,6 +418,25 @@ class NavigationController(
                 remainingS = (route.durationS * remaining / route.distanceM).toInt(),
             )
         }
+    }
+
+    /**
+     * A GPX track is not re-routed (that would throw the track away). The rider is matched against the
+     * whole track again, so a shortcut rejoins where it meets it; otherwise guidance simply waits.
+     */
+    private fun leftTrack(route: Route, p: GeoPoint) {
+        val (index, distance) = nearestSegment(route, p)
+        if (distance <= OFF_ROUTE_M) {
+            progressIndex = index
+            offRouteFixes = 0
+            _ui.update { it.copy(offTrack = false) }
+            return
+        }
+        if (!_ui.value.offTrack) {
+            voice.speak(text(R.string.gpx_off_track))
+            _ui.update { it.copy(offTrack = true) }
+        }
+        offRouteFixes = OFF_ROUTE_FIXES // keep looking on every fix
     }
 
     private fun reroute(from: GeoPoint) {
@@ -331,5 +471,6 @@ class NavigationController(
         const val ARRIVAL_M = 25.0
         const val ALERT_M = 600.0
         const val PRE_M = 150.0
+        const val TRACK_JOIN_M = 300.0
     }
 }
