@@ -13,6 +13,8 @@ object Prefs {
     private const val KEY_LEAN_STATE = "lean_state"
     private const val KEY_THEME = "theme_mode"
     private const val KEY_PLACES = "saved_places"
+    private const val KEY_WEATHER = "weather_enabled"
+    private const val KEY_RAIN_VOICE = "rain_voice"
     private const val KEY_OBD = "obd_enabled"
     private const val KEY_OBD_DEVICE = "obd_device"
     private const val KEY_OBD_GEARS = "obd_gears"
@@ -101,5 +103,19 @@ object Prefs {
 
     fun setSavedPlaces(context: Context, json: String) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_PLACES, json).apply()
+    }
+
+    fun weatherEnabled(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_WEATHER, true)
+
+    fun setWeatherEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_WEATHER, enabled).apply()
+    }
+
+    fun rainVoice(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_RAIN_VOICE, true)
+
+    fun setRainVoice(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_RAIN_VOICE, enabled).apply()
     }
 }

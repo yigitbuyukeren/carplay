@@ -159,4 +159,14 @@
     <string name="search_locked">Search is locked while riding. Pick a saved place or long-press the map.</string>
     <string name="go_home">Go home</string>
     <string name="go_work">Go to work</string>
+    <string name="weather_title">Weather</string>
+    <string name="weather_desc">Temperature and rain outlook on the dashboard. Your approximate position (about 1 km precision) is sent to the Open-Meteo server.</string>
+    <string name="rain_voice_title">Spoken rain and ice warning</string>
+    <string name="rain_voice_desc">Speaks once when rain is coming or the air drops to 3 degrees or below.</string>
+    <string name="rain_banner_fmt">Rain expected in %1$d min</string>
+    <string name="rain_banner_now">Rain starting now</string>
+    <string name="rain_voice_fmt">Rain starting in about %1$d minutes</string>
+    <string name="rain_voice_now">Rain is starting, be careful</string>
+    <string name="ice_banner_fmt">Ice risk: %1$d°C</string>
+    <string name="ice_voice_fmt">It is %1$d degrees, the road may be icy</string>
 </resources>

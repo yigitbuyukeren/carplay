@@ -2,6 +2,8 @@ package dev.ygtlab.carplay
 
 import dev.ygtlab.carplay.data.LeanSensor
 import dev.ygtlab.carplay.data.Place
+import dev.ygtlab.carplay.data.WeatherAlert
+import dev.ygtlab.carplay.data.WeatherController
 import dev.ygtlab.carplay.data.PlaceKind
 import dev.ygtlab.carplay.data.SavedPlace
 import dev.ygtlab.carplay.data.SavedPlaces
@@ -69,6 +71,29 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private fun updatePlaces(list: List<SavedPlace>) {
         places.value = list
         Prefs.setSavedPlaces(getApplication(), SavedPlaces.toJson(list))
+    }
+
+    val weatherEnabled = MutableStateFlow(Prefs.weatherEnabled(app))
+    val rainVoice = MutableStateFlow(Prefs.rainVoice(app))
+    val weather = WeatherController(viewModelScope, location.state, weatherEnabled) { alert, snapshot ->
+        if (!rainVoice.value || call.state.value.phase != CallPhase.IDLE) return@WeatherController
+        announcer.speak(
+            when (alert) {
+                WeatherAlert.RAIN -> snapshot.rainInMin?.takeIf { it > 0 }
+                    ?.let { app.getString(R.string.rain_voice_fmt, it) } ?: app.getString(R.string.rain_voice_now)
+                WeatherAlert.ICE -> app.getString(R.string.ice_voice_fmt, snapshot.tempC)
+            }
+        )
+    }
+
+    fun setWeatherEnabled(enabled: Boolean) {
+        Prefs.setWeatherEnabled(getApplication(), enabled)
+        weatherEnabled.value = enabled
+    }
+
+    fun setRainVoice(enabled: Boolean) {
+        Prefs.setRainVoice(getApplication(), enabled)
+        rainVoice.value = enabled
     }
 
     val leanEnabled = MutableStateFlow(Prefs.leanEnabled(app))
@@ -149,6 +174,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, GpsUi())
 
     init {
+        weather.start()
         viewModelScope.launch { gps.collect { lean.moving = it.speedKmh >= LEAN_MIN_KMH } }
         viewModelScope.launch {
             MessageBridge.latest.filterNotNull().collect { message ->

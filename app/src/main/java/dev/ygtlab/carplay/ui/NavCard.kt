@@ -37,6 +37,8 @@ import dev.ygtlab.carplay.data.NavUi
 import dev.ygtlab.carplay.data.Place
 import dev.ygtlab.carplay.data.PlaceKind
 import dev.ygtlab.carplay.data.SavedPlace
+import dev.ygtlab.carplay.data.WeatherMath
+import dev.ygtlab.carplay.data.WeatherSnapshot
 import dev.ygtlab.carplay.util.NAV_APPS
 import dev.ygtlab.carplay.util.isInstalled
 import dev.ygtlab.carplay.util.launchPackage
@@ -46,6 +48,7 @@ fun NavCard(
     context: Context,
     nav: NavUi,
     places: List<SavedPlace>,
+    weather: WeatherSnapshot?,
     onOpenMap: () -> Unit,
     onGoTo: (Place) -> Unit,
     modifier: Modifier = Modifier,
@@ -64,6 +67,7 @@ fun NavCard(
                 Brush.verticalGradient(listOf(Color(0x99000000), Color.Transparent, Color(0xCC000000)))
             )
         )
+        if (weather != null) WeatherChip(weather, Modifier.align(Alignment.TopEnd).padding(12.dp))
         Column(
             modifier = Modifier.fillMaxSize().padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween,
@@ -99,6 +103,19 @@ fun NavCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun WeatherChip(weather: WeatherSnapshot, modifier: Modifier = Modifier) {
+    val tint = if (weather.iceRisk) MotoColors.Cyan else Color.White
+    Row(
+        modifier = modifier.clip(RoundedCornerShape(16.dp)).background(Color(0x99000000)).padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(WeatherMath.emoji(weather.code), fontSize = 18.sp)
+        Text("${weather.tempC}°", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = tint, modifier = Modifier.padding(start = 6.dp))
+        if (weather.iceRisk) Text("❄", fontSize = 16.sp, modifier = Modifier.padding(start = 4.dp))
     }
 }
 
