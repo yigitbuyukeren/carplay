@@ -21,6 +21,8 @@ class TripRecorder(
     scope: CoroutineScope,
     location: StateFlow<LocationState>,
     private val enabled: StateFlow<Boolean>,
+    /** Called with the last moving point of every kept trip: that is where the bike was left. */
+    private val onParked: (TripPoint) -> Unit = {},
 ) {
     private val io: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
 
@@ -73,20 +75,22 @@ class TripRecorder(
     private suspend fun end(id: Long, endedAt: Long) {
         tripId = null
         _recording.value = false
-        withContext(io) { finish(id, endedAt) }
+        val parked = withContext(io) { finish(id, endedAt) }
         version.value++
+        parked?.let(onParked)
     }
 
-    /** Runs on [io]. */
-    private fun finish(id: Long, endedAt: Long) {
+    /** Runs on [io]. Returns the point where the bike stopped when the trip was kept, null when it was discarded. */
+    private fun finish(id: Long, endedAt: Long): TripPoint? {
         val points = store.points(id)
         val stats = TripMath.compute(points)
         val started = points.firstOrNull()?.t ?: endedAt
         if (stats.distanceM < MIN_DISTANCE_M || stats.movingMs < MIN_MOVING_MS) {
             store.delete(id)
-        } else {
-            store.finishTrip(id, maxOf(endedAt, started + 1), stats)
+            return null
         }
+        store.finishTrip(id, maxOf(endedAt, started + 1), stats)
+        return points.lastOrNull { it.t <= endedAt } ?: points.lastOrNull()
     }
 
     suspend fun delete(id: Long) {

@@ -5,6 +5,7 @@ import android.Manifest
 import dev.ygtlab.carplay.data.AndroidSmsSender
 import dev.ygtlab.carplay.data.AndroidSosAlarm
 import dev.ygtlab.carplay.data.CrashSensor
+import dev.ygtlab.carplay.data.GeoPoint
 import dev.ygtlab.carplay.data.Place
 import dev.ygtlab.carplay.data.RouteOptions
 import dev.ygtlab.carplay.data.SosContact
@@ -137,7 +138,10 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     val recordTrips = MutableStateFlow(Prefs.recordTrips(app))
-    val trips = TripRecorder(TripStore(app), viewModelScope, location.state, recordTrips)
+    val trips = TripRecorder(TripStore(app), viewModelScope, location.state, recordTrips) { stop ->
+        val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(stop.t))
+        savePlace(PlaceKind.PARKED, Place(app.getString(R.string.saved_parked), time, GeoPoint(stop.lat, stop.lon)))
+    }
 
     fun setRecordTrips(enabled: Boolean) {
         Prefs.setRecordTrips(getApplication(), enabled)
