@@ -33,6 +33,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.LocalGasStation
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Work
@@ -69,6 +70,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ygtlab.carplay.R
+import dev.ygtlab.carplay.data.FuelStation
+import dev.ygtlab.carplay.data.FuelUi
 import dev.ygtlab.carplay.data.GeoPoint
 import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.NavUi
@@ -110,6 +113,7 @@ private fun styleUrl(isDay: Boolean) =
 private const val SRC_ROUTE = "route"
 private const val SRC_DEST = "dest"
 private const val SRC_ME = "me"
+private const val SRC_FUEL = "fuel"
 
 /** No typing while riding: the search box locks above this speed. */
 private const val SEARCH_LOCK_KMH = 5
@@ -129,6 +133,7 @@ fun MapScreen(
     modifier: Modifier = Modifier,
 ) {
     val ui by nav.ui.collectAsStateWithLifecycle()
+    val fuel by nav.fuel.collectAsStateWithLifecycle()
     val me by locationState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -223,6 +228,14 @@ fun MapScreen(
         }
     }
 
+    // Fuel station markers while the list is open.
+    LaunchedEffect(styleReady, fuel.stations, fuel.visible) {
+        val m = map ?: return@LaunchedEffect
+        if (!styleReady) return@LaunchedEffect
+        val features = if (fuel.visible) fuel.stations.map { Feature.fromGeometry(Point.fromLngLat(it.place.point.lon, it.place.point.lat)) } else emptyList()
+        m.style?.getSourceAs<GeoJsonSource>(SRC_FUEL)?.setGeoJson(FeatureCollection.fromFeatures(features))
+    }
+
     // Leaving navigation: flatten the camera back to a north-up overview.
     LaunchedEffect(ui.navigating) {
         val m = map ?: return@LaunchedEffect
@@ -263,8 +276,19 @@ fun MapScreen(
                     onPick = { kind -> onSavePlace(kind, chosen); saving = null },
                     onCancel = { saving = null },
                 )
+                fuel.visible -> FuelPanel(
+                    fuel = fuel,
+                    guiding = ui.navigating,
+                    onGo = nav::selectPlace,
+                    onAddStop = nav::detourVia,
+                    onClose = nav::closeFuel,
+                )
                 ui.navigating -> ManeuverBanner(ui)
-                ui.arrived -> ArrivedCard(onDone = nav::stopNavigation)
+                ui.arrived -> ArrivedCard(
+                    next = ui.finalDestination,
+                    onContinue = nav::continueToFinal,
+                    onDone = nav::stopNavigation,
+                )
                 ui.route != null -> RouteCard(
                     ui, onStart = nav::startNavigation, onCancel = nav::stopNavigation,
                     saved = ui.destination?.let { d -> places.any { Geo.distance(it.place.point, d.point) < SAVED_SPOT_M } } == true,
@@ -302,6 +326,9 @@ fun MapScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.End,
         ) {
+            if (!ui.arrived) {
+                RoundIconButton(Icons.Rounded.LocalGasStation, onClick = { if (fuel.visible) nav.closeFuel() else nav.findFuel() })
+            }
             if (!ui.navigating) {
                 RoundIconButton(Icons.Rounded.MyLocation, onClick = {
                     val m = map
@@ -332,6 +359,12 @@ private fun addMapLayers(style: Style) {
     style.addLayer(
         CircleLayer("dest-pin", SRC_DEST).withProperties(
             circleColor("#FF453A"), circleRadius(9f), circleStrokeColor("#FFFFFF"), circleStrokeWidth(3f)
+        )
+    )
+    style.addSource(GeoJsonSource(SRC_FUEL))
+    style.addLayer(
+        CircleLayer("fuel-pin", SRC_FUEL).withProperties(
+            circleColor("#FF9F0A"), circleRadius(10f), circleStrokeColor("#FFFFFF"), circleStrokeWidth(3f)
         )
     )
     style.addSource(GeoJsonSource(SRC_ME))
@@ -522,12 +555,76 @@ private fun RouteCard(ui: NavUi, saved: Boolean, onSave: () -> Unit, onStart: ()
 }
 
 @Composable
-private fun ArrivedCard(onDone: () -> Unit) {
+private fun ArrivedCard(next: Place?, onContinue: () -> Unit, onDone: () -> Unit) {
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.arrived), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            PillButton(stringResource(R.string.ok), MotoColors.Blue, onDone, Modifier.fillMaxWidth())
+            Text(
+                stringResource(if (next != null) R.string.stop_arrived else R.string.arrived),
+                fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White,
+            )
+            if (next != null) {
+                Text(next.name, fontSize = 16.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                PillButton(stringResource(R.string.continue_trip), MotoColors.Green, onContinue, Modifier.fillMaxWidth())
+                PillButton(stringResource(R.string.finish), MotoColors.PanelHigh, onDone, Modifier.fillMaxWidth())
+            } else {
+                PillButton(stringResource(R.string.ok), MotoColors.Blue, onDone, Modifier.fillMaxWidth())
+            }
         }
+    }
+}
+
+/** Fuel stations around the rider, or along the road ahead while guiding. */
+@Composable
+private fun FuelPanel(
+    fuel: FuelUi,
+    guiding: Boolean,
+    onGo: (Place) -> Unit,
+    onAddStop: (Place) -> Unit,
+    onClose: () -> Unit,
+) {
+    GlassPanel(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.fuel_title), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(
+                        stringResource(if (fuel.alongRoute) R.string.fuel_ahead else R.string.fuel_nearby),
+                        fontSize = 14.sp, color = MotoColors.Gray,
+                    )
+                }
+                Box(Modifier.size(56.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+            }
+            when {
+                fuel.loading -> Text(stringResource(R.string.fuel_searching), fontSize = 15.sp, color = MotoColors.Gray)
+                fuel.error != null -> Text(fuel.error, fontSize = 15.sp, color = MotoColors.Orange)
+                else -> LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(fuel.stations) { station -> FuelRow(station, guiding, onGo, onAddStop) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FuelRow(station: FuelStation, guiding: Boolean, onGo: (Place) -> Unit, onAddStop: (Place) -> Unit) {
+    val name = station.place.name.ifBlank { stringResource(R.string.fuel_unnamed) }
+    val place = station.place.copy(name = name)
+    val detail = listOf(station.place.detail, formatDistance(station.distanceM)).filter { it.isNotBlank() }.joinToString(" · ")
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MotoColors.PanelHigh).padding(start = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(vertical = 8.dp)) {
+            Text(name, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(detail, fontSize = 13.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        PillButton(
+            stringResource(if (guiding) R.string.fuel_add_stop else R.string.fuel_go),
+            MotoColors.Orange, { if (guiding) onAddStop(place) else onGo(place) },
+            Modifier.padding(6.dp), horizontalPadding = 14.dp,
+        )
     }
 }
 
