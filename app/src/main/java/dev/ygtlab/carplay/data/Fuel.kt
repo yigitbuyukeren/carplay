@@ -1,8 +1,13 @@
 package dev.ygtlab.carplay.data
 
+import android.util.Log
 import java.net.URLEncoder
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
@@ -23,7 +28,9 @@ object FuelMath {
     private fun around(radiusM: Int, points: List<GeoPoint>): String =
         "(around:$radiusM," + points.joinToString(",") { "%.5f,%.5f".format(Locale.US, it.lat, it.lon) } + ")"
 
-    private fun query(around: String) = "[out:json][timeout:15];nwr[\"amenity\"=\"fuel\"]$around;out center 80;"
+    // Nodes and ways only: relations make the public servers scan far more for no gain here.
+    private fun query(around: String) =
+        "[out:json][timeout:15];(node[\"amenity\"=\"fuel\"]$around;way[\"amenity\"=\"fuel\"]$around;);out center 80;"
 
     fun nearQuery(here: GeoPoint): String = query(around(NEAR_RADIUS_M, listOf(here)))
 
@@ -71,11 +78,48 @@ object FuelMath {
         }
         return found.sortedBy { it.distanceM }.distinctBy { it.place.point.lat to it.place.point.lon }.take(LIMIT)
     }
+
+    /** South, west, north, east. */
+    data class Box(val south: Double, val west: Double, val north: Double, val east: Double)
+
+    fun boundingBox(points: List<GeoPoint>, marginDeg: Double): Box = Box(
+        south = points.minOf { it.lat } - marginDeg,
+        west = points.minOf { it.lon } - marginDeg,
+        north = points.maxOf { it.lat } + marginDeg,
+        east = points.maxOf { it.lon } + marginDeg,
+    )
+
+    /** Nominatim answers "fuel" inside a box in well under a second, which the Overpass mirrors often cannot. */
+    fun nominatimUrl(box: Box): String =
+        "https://nominatim.openstreetmap.org/search?format=jsonv2&q=fuel&bounded=1&limit=40" +
+            "&viewbox=${"%.5f,%.5f,%.5f,%.5f".format(Locale.US, box.west, box.north, box.east, box.south)}"
+
+    fun parseNominatim(json: String, from: GeoPoint): List<FuelStation> {
+        val items = org.json.JSONArray(json)
+        val found = ArrayList<FuelStation>()
+        for (i in 0 until items.length()) {
+            val item = items.getJSONObject(i)
+            if (item.optString("type") != "fuel") continue
+            val point = GeoPoint(item.getDouble("lat"), item.getDouble("lon"))
+            found += FuelStation(Place(item.optString("name"), "", point), Geo.distance(from, point).toInt())
+        }
+        return found.sortedBy { it.distanceM }.take(LIMIT)
+    }
+
+    /** Keeps the stations within [maxM] of the line through [route]. */
+    fun alongRoute(stations: List<FuelStation>, route: List<GeoPoint>, maxM: Double = ROUTE_RADIUS_M * 1.4): List<FuelStation> {
+        if (route.size < 2) return stations.filter { s -> route.any { Geo.distance(it, s.place.point) <= maxM } }
+        return stations.filter { s ->
+            (0 until route.lastIndex).any { Geo.project(s.place.point, route[it], route[it + 1]).distanceM <= maxM }
+        }
+    }
 }
 
+
 /**
- * Overpass `amenity=fuel`. The public instances come and go, so each request walks the list of
- * mirrors and takes the first one that answers.
+ * Fuel stations from two free sources. The volunteer-run Overpass servers take turns being down or slow,
+ * so a search asks all of them at once and takes the first good answer; Nominatim is the quick fallback
+ * (and the first choice around the rider). Searches are rare, explicit taps.
  */
 class FuelRepository : FuelFinder {
     private val mirrors = listOf(
@@ -84,25 +128,71 @@ class FuelRepository : FuelFinder {
         "https://overpass.private.coffee/api/interpreter",
     )
 
-    override suspend fun near(here: GeoPoint): Result<List<FuelStation>> = run(FuelMath.nearQuery(here), here)
-
-    override suspend fun along(route: List<GeoPoint>, here: GeoPoint): Result<List<FuelStation>> =
-        run(FuelMath.routeQuery(route), here)
-
-    private suspend fun run(query: String, here: GeoPoint): Result<List<FuelStation>> = withContext(Dispatchers.IO) {
+    /** Around the rider: Nominatim first (fast), the Overpass mirrors when it finds nothing or fails. */
+    override suspend fun near(here: GeoPoint): Result<List<FuelStation>> = withContext(Dispatchers.IO) {
         safely("fuel") {
-            val body = "data=" + URLEncoder.encode(query, "UTF-8")
-            var failure: Exception? = null
-            for (url in mirrors) {
-                try {
-                    return@safely FuelMath.parse(Http.postForm(url, body, connectMs = 6_000, readMs = 15_000), here)
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    failure = e
-                }
+            val viaNominatim = try {
+                FuelMath.parseNominatim(Http.get(FuelMath.nominatimUrl(FuelMath.boundingBox(listOf(here), NEAR_BOX_DEG))), here)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("MotoDash", "nominatim fuel failed", e)
+                emptyList()
             }
-            throw failure ?: IllegalStateException("no Overpass mirror")
+            viaNominatim.ifEmpty { FuelMath.parse(firstAnswer(FuelMath.nearQuery(here)), here) }
         }
     }
+
+    /** Along the road ahead: the exact Overpass corridor first, a Nominatim box filtered to the corridor otherwise. */
+    override suspend fun along(route: List<GeoPoint>, here: GeoPoint): Result<List<FuelStation>> = withContext(Dispatchers.IO) {
+        safely("fuel") {
+            try {
+                FuelMath.parse(firstAnswer(FuelMath.routeQuery(route)), here)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // About the next 20 km: a box any wider returns whatever Nominatim ranks first, not what is ahead.
+                val ahead = route.take(FALLBACK_POINTS)
+                val box = FuelMath.boundingBox(ahead, ROUTE_BOX_MARGIN_DEG)
+                FuelMath.alongRoute(FuelMath.parseNominatim(Http.get(FuelMath.nominatimUrl(box)), here), ahead)
+            }
+        }
+    }
+
+    private suspend fun firstAnswer(body: String): String = firstAnswerOf(body, mirrors)
+
+    private companion object {
+        const val NEAR_BOX_DEG = 0.03
+        const val ROUTE_BOX_MARGIN_DEG = 0.01
+        const val FALLBACK_POINTS = 14
+    }
+}
+
+/** Asks every server at once with the same Overpass query and returns the first good reply. */
+private suspend fun firstAnswerOf(query: String, mirrors: List<String>): String = coroutineScope {
+    val body = "data=" + URLEncoder.encode(query, "UTF-8")
+    val results = Channel<Result<String>>(mirrors.size)
+    val requests = mirrors.map { url ->
+        launch(Dispatchers.IO) {
+            val outcome = try {
+                Result.success(Http.postForm(url, body, connectMs = 5_000, readMs = 10_000))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("MotoDash", "overpass mirror failed: $url ${e.message}")
+                Result.failure(e)
+            }
+            results.send(outcome)
+        }
+    }
+    var lastFailure: Throwable? = null
+    repeat(mirrors.size) {
+        val outcome = results.receive()
+        if (outcome.isSuccess) {
+            requests.forEach { it.cancel() }
+            return@coroutineScope outcome.getOrThrow()
+        }
+        lastFailure = outcome.exceptionOrNull()
+    }
+    throw lastFailure ?: IllegalStateException("no Overpass mirror")
 }

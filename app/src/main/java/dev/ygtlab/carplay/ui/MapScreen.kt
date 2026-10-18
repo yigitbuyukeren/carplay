@@ -287,6 +287,7 @@ fun MapScreen(
                     guiding = ui.navigating,
                     onGo = nav::selectPlace,
                     onAddStop = nav::detourVia,
+                    onRetry = nav::findFuel,
                     onClose = nav::closeFuel,
                 )
                 ui.navigating -> ManeuverBanner(ui)
@@ -586,6 +587,7 @@ private fun FuelPanel(
     guiding: Boolean,
     onGo: (Place) -> Unit,
     onAddStop: (Place) -> Unit,
+    onRetry: () -> Unit,
     onClose: () -> Unit,
 ) {
     GlassPanel(Modifier.fillMaxWidth()) {
@@ -604,7 +606,10 @@ private fun FuelPanel(
             }
             when {
                 fuel.loading -> Text(stringResource(R.string.fuel_searching), fontSize = 15.sp, color = MotoColors.Gray)
-                fuel.error != null -> Text(fuel.error, fontSize = 15.sp, color = MotoColors.Orange)
+                fuel.error != null -> {
+                    Text(fuel.error, fontSize = 15.sp, color = MotoColors.Orange)
+                    PillButton(stringResource(R.string.retry), MotoColors.Blue, onRetry, Modifier.fillMaxWidth())
+                }
                 else -> LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(fuel.stations) { station -> FuelRow(station, guiding, onGo, onAddStop) }
                 }

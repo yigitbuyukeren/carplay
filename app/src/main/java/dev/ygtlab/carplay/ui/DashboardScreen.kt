@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ygtlab.carplay.DashboardViewModel
 import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.CallPhase
+import dev.ygtlab.carplay.data.SosReason
 import dev.ygtlab.carplay.service.OverlayService
 import dev.ygtlab.carplay.util.Prefs
 import dev.ygtlab.carplay.util.openDialer
@@ -72,6 +73,10 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val thermalOn by vm.thermalEnabled.collectAsStateWithLifecycle()
     var heatDismissed by remember { mutableStateOf(false) }
     LaunchedEffect(thermal.warn) { if (!thermal.warn) heatDismissed = false }
+    val sosUi by vm.sos.ui.collectAsStateWithLifecycle()
+    val sosContacts by vm.sosContacts.collectAsStateWithLifecycle()
+    val sosCrash by vm.sosCrashEnabled.collectAsStateWithLifecycle()
+    val sosButton by vm.sosButtonEnabled.collectAsStateWithLifecycle()
     val weather by vm.weather.snapshot.collectAsStateWithLifecycle()
     val weatherOn by vm.weatherEnabled.collectAsStateWithLifecycle()
     val rainVoice by vm.rainVoice.collectAsStateWithLifecycle()
@@ -91,9 +96,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
     // Re-evaluated whenever the activity resumes (e.g. coming back from a system settings page).
     val settingItems = remember(resume) {
         listOf(
-            SettingItem(context.getString(R.string.trips_title), context.getString(R.string.trips_desc), false, context.getString(R.string.action_open)) {
-                showTrips = true
-            },
             SettingItem(context.getString(R.string.perm_location), context.getString(R.string.perm_location_desc), locationGranted(context), context.getString(R.string.action_allow)) {
                 permissionLauncher.launch(runtimePermissions())
             },
@@ -156,7 +158,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, obd = obdState.takeIf { obdEnabled }, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
+                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, obd = obdState.takeIf { obdEnabled }, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
                         Column(
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -194,6 +196,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 SettingsScreen(
                     items = settingItems,
                     toggles = toggles,
+                    onOpenTrips = { showSettings = false; showTrips = true },
                     lean = leanState,
                     leanEnabled = leanEnabled,
                     onLeanEnabled = vm::setLeanEnabled,
@@ -201,7 +204,19 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     themeMode = themeMode,
                     onThemeMode = vm.theme::setMode,
                     onClose = { showSettings = false },
-                    cards = {
+                    safetyCard = {
+                        SosSettingsCard(
+                            contacts = sosContacts,
+                            onAdd = vm::addSosContact,
+                            onRemove = vm::removeSosContact,
+                            crashEnabled = sosCrash,
+                            onCrashEnabled = vm::setSosCrashEnabled,
+                            buttonEnabled = sosButton,
+                            onButtonEnabled = vm::setSosButtonEnabled,
+                            onTest = { vm.sos.trigger(SosReason.TEST) },
+                        )
+                    },
+                    engineCard = {
                         ObdSettingsCard(
                             obd = vm.obd,
                             bluetooth = vm.bluetooth,
@@ -258,6 +273,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
             if (callState.phase != CallPhase.IDLE) {
                 CallScreen(callState, callerName, onAnswer = vm.call::answer, onHangUp = vm.call::hangUp)
             }
+
+            // Last, so nothing can cover an SOS countdown.
+            SosScreen(sosUi, sosContacts.map { it.name }, onCancel = vm.sos::cancel, onDismiss = vm.sos::dismiss)
         }
     }
 }

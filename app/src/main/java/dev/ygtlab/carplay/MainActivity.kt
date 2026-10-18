@@ -14,6 +14,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import dev.ygtlab.carplay.data.SosPhase
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import dev.ygtlab.carplay.ui.DashboardScreen
 import dev.ygtlab.carplay.ui.MotoTheme
@@ -28,8 +31,11 @@ class MainActivity : ComponentActivity() {
         // A hot phone dims itself (see ThermalGuard); a cool one keeps the system brightness.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.thermal.state.collect { thermal ->
-                    window.attributes = window.attributes.also { it.screenBrightness = thermal.brightness }
+                combine(viewModel.thermal.state, viewModel.sos.ui) { thermal, sos ->
+                    // Never leave a dimmed screen during an SOS countdown.
+                    if (sos.phase == SosPhase.COUNTDOWN) 1f else thermal.brightness
+                }.distinctUntilChanged().collect { brightness ->
+                    window.attributes = window.attributes.also { it.screenBrightness = brightness }
                 }
             }
         }

@@ -125,7 +125,8 @@ class WeatherController(
         scope.launch {
             while (true) {
                 tick()
-                delay(TICK_MS)
+                // Until the first forecast arrives, look again quickly so the chip shows up right after the first fix.
+                delay(if (_snapshot.value == null) FIRST_TICK_MS else TICK_MS)
             }
         }
     }
@@ -160,6 +161,7 @@ class WeatherController(
 
     private companion object {
         const val TICK_MS = 60_000L
+        const val FIRST_TICK_MS = 5_000L
         const val REFRESH_MS = 15 * 60_000L
         const val REFRESH_MOVE_M = 10_000.0
     }
