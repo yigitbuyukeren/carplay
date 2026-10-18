@@ -89,6 +89,17 @@ class NavigationController(
         }
     }
 
+    /** A spot picked on the map: routed at once under a generic name, renamed when its address arrives. */
+    fun selectPoint(point: GeoPoint) {
+        selectPlace(Place(text(R.string.selected_place), "", point))
+        scope.launch {
+            repo.reverse(point).onSuccess { named ->
+                if (named == null) return@onSuccess
+                _ui.update { if (it.destination?.point == point) it.copy(destination = named, query = named.name) else it }
+            }
+        }
+    }
+
     fun selectPlace(place: Place) {
         searchJob?.cancel()
         closeFuel()

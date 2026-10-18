@@ -10,3 +10,6 @@ captures/
 *.apk
 .claude/
 dist/
+keystore.properties
+*.jks
+*.keystore

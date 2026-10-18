@@ -3,7 +3,9 @@ package dev.ygtlab.carplay.data
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 /**
@@ -70,9 +72,20 @@ class ThermalGuard(
     private val _state = MutableStateFlow(ThermalState())
     val state: StateFlow<ThermalState> = _state
 
+    /**
+     * StateFlows only emit on change, and a bike standing still changes nothing, so without this
+     * beat the "still for a minute" timer would never advance.
+     */
+    private val beat = flow {
+        while (true) {
+            emit(Unit)
+            delay(BEAT_MS)
+        }
+    }
+
     init {
         scope.launch {
-            combine(battery, speedKmh, enabled) { b, speed, on -> Triple(b.tempC, speed, on) }
+            combine(battery, speedKmh, enabled, beat) { b, speed, on, _ -> Triple(b.tempC, speed, on) }
                 .collect { (temp, speed, on) ->
                     val prev = _state.value
                     val next = ThermalMath.next(prev, temp, speed, System.currentTimeMillis(), on)
@@ -80,5 +93,9 @@ class ThermalGuard(
                     if (next.warn && !prev.warn) onWarn()
                 }
         }
+    }
+
+    private companion object {
+        const val BEAT_MS = 5_000L
     }
 }
