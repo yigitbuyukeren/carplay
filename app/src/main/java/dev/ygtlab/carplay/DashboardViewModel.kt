@@ -1,7 +1,16 @@
 package dev.ygtlab.carplay
 
 import dev.ygtlab.carplay.data.LeanSensor
+import android.Manifest
+import dev.ygtlab.carplay.data.AndroidSmsSender
+import dev.ygtlab.carplay.data.AndroidSosAlarm
+import dev.ygtlab.carplay.data.CrashSensor
 import dev.ygtlab.carplay.data.Place
+import dev.ygtlab.carplay.data.SosContact
+import dev.ygtlab.carplay.data.SosController
+import dev.ygtlab.carplay.data.SosMath
+import dev.ygtlab.carplay.data.SosReason
+import dev.ygtlab.carplay.util.hasPermission
 import dev.ygtlab.carplay.data.ThermalGuard
 import dev.ygtlab.carplay.data.WeatherAlert
 import dev.ygtlab.carplay.data.WeatherController
@@ -188,6 +197,62 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         thermalEnabled.value = enabled
     }
 
+    val sosContacts = MutableStateFlow(SosMath.fromJson(Prefs.sosContacts(app)))
+    val sosCrashEnabled = MutableStateFlow(Prefs.sosCrash(app))
+    val sosButtonEnabled = MutableStateFlow(Prefs.sosButton(app))
+    val sos = SosController(
+        scope = viewModelScope,
+        location = location.state,
+        contacts = sosContacts,
+        sms = AndroidSmsSender(app),
+        alarm = AndroidSosAlarm(app),
+        smsAllowed = { app.hasPermission(Manifest.permission.SEND_SMS) },
+        speak = { reason, seconds ->
+            announcer.speak(
+                when (reason) {
+                    SosReason.AUTO -> app.getString(R.string.sos_voice_auto, seconds)
+                    SosReason.MANUAL -> app.getString(R.string.sos_voice_manual, seconds)
+                    SosReason.TEST -> app.getString(R.string.sos_voice_test)
+                }
+            )
+        },
+        message = { reason, link, stale ->
+            val head = app.getString(if (reason == SosReason.AUTO) R.string.sos_sms_auto else R.string.sos_sms_manual)
+            val where = when {
+                link == null -> app.getString(R.string.sos_loc_none)
+                stale -> app.getString(R.string.sos_loc_stale, link)
+                else -> app.getString(R.string.sos_loc, link)
+            }
+            "$head $where"
+        },
+    )
+    private val crashSensor = CrashSensor(app, speedKmh = { gps.value.speedKmh }) { sos.trigger(SosReason.AUTO) }
+
+    fun setSosCrashEnabled(enabled: Boolean) {
+        Prefs.setSosCrash(getApplication(), enabled)
+        sosCrashEnabled.value = enabled
+        if (enabled) crashSensor.start() else crashSensor.stop()
+    }
+
+    fun setSosButtonEnabled(enabled: Boolean) {
+        Prefs.setSosButton(getApplication(), enabled)
+        sosButtonEnabled.value = enabled
+    }
+
+    fun addSosContact(contact: SosContact) = updateSosContacts(SosMath.addContact(sosContacts.value, contact))
+
+    fun removeSosContact(contact: SosContact) = updateSosContacts(sosContacts.value - contact)
+
+    private fun updateSosContacts(list: List<SosContact>) {
+        sosContacts.value = list
+        Prefs.setSosContacts(getApplication(), SosMath.toJson(list))
+        // Without a contact there is nobody to alert, so the triggers switch themselves off.
+        if (list.isEmpty()) {
+            setSosCrashEnabled(false)
+            setSosButtonEnabled(false)
+        }
+    }
+
     init {
         weather.start()
         viewModelScope.launch { gps.collect { lean.moving = it.speedKmh >= LEAN_MIN_KMH } }
@@ -205,6 +270,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         media.start()
         theme.start()
         if (leanEnabled.value) lean.start()
+        if (sosCrashEnabled.value) crashSensor.start()
         call.start()
         obd.start()
         resumeTick.value++
@@ -223,6 +289,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onPause() {
+        crashSensor.stop()
         theme.stop()
         lean.stop()
     }

@@ -74,4 +74,38 @@ class FuelTest {
         assertTrue(FuelMath.nearQuery(here).contains("(around:5000,41.00000,29.00000)"))
         assertTrue(FuelMath.routeQuery(listOf(here, GeoPoint(41.1, 29.1))).contains("(around:500,41.00000,29.00000,41.10000,29.10000)"))
     }
+
+    @Test
+    fun parsesNominatimFuelResultsNearestFirst() {
+        val json = """[
+            {"lat":"41.0200","lon":"29.0","name":"Shell","type":"fuel"},
+            {"lat":"41.0050","lon":"29.0","name":"Opet","type":"fuel"},
+            {"lat":"41.0010","lon":"29.0","name":"Cafe","type":"cafe"}
+        ]"""
+        assertEquals(listOf("Opet", "Shell"), FuelMath.parseNominatim(json, here).map { it.place.name })
+    }
+
+    @Test
+    fun nominatimUrlPutsTheBoxInLeftTopRightBottomOrder() {
+        val url = FuelMath.nominatimUrl(FuelMath.Box(south = 40.98, west = 28.93, north = 41.04, east = 29.02))
+        assertTrue(url.contains("viewbox=28.93000,41.04000,29.02000,40.98000"))
+        assertTrue(url.contains("bounded=1"))
+    }
+
+    @Test
+    fun boundingBoxCoversEveryPointWithTheMargin() {
+        val box = FuelMath.boundingBox(listOf(GeoPoint(41.0, 29.0), GeoPoint(41.1, 29.2)), 0.01)
+        assertEquals(40.99, box.south, 1e-9)
+        assertEquals(28.99, box.west, 1e-9)
+        assertEquals(41.11, box.north, 1e-9)
+        assertEquals(29.21, box.east, 1e-9)
+    }
+
+    @Test
+    fun corridorFilterKeepsOnlyStationsBesideTheRoad() {
+        val road = listOf(GeoPoint(41.0, 29.0), GeoPoint(41.05, 29.0))
+        val beside = dev.ygtlab.carplay.data.FuelStation(dev.ygtlab.carplay.data.Place("Near", "", GeoPoint(41.02, 29.003)), 0)   // about 250 m east
+        val far = dev.ygtlab.carplay.data.FuelStation(dev.ygtlab.carplay.data.Place("Far", "", GeoPoint(41.02, 29.02)), 0)        // about 1.7 km east
+        assertEquals(listOf("Near"), FuelMath.alongRoute(listOf(beside, far), road).map { it.place.name })
+    }
 }

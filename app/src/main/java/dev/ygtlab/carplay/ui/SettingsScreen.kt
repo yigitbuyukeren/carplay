@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +27,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,10 +72,22 @@ fun runtimePermissions(): Array<String> {
 
 data class ToggleItem(val title: String, val description: String, val checked: Boolean, val onChange: (Boolean) -> Unit)
 
+private enum class SettingsTab(val label: Int) {
+    SETUP(R.string.settings_tab_setup),
+    RIDE(R.string.settings_tab_ride),
+    SAFETY(R.string.settings_tab_safety),
+    ENGINE(R.string.settings_tab_engine),
+}
+
+/**
+ * Settings in four tabs down the left side, so each page is a short list even on a 360dp-high phone:
+ * permissions, ride options, safety (SOS) and engine (OBD).
+ */
 @Composable
 fun SettingsScreen(
     items: List<SettingItem>,
     toggles: List<ToggleItem>,
+    onOpenTrips: () -> Unit,
     lean: LeanState,
     leanEnabled: Boolean,
     onLeanEnabled: (Boolean) -> Unit,
@@ -78,54 +95,84 @@ fun SettingsScreen(
     themeMode: ThemeMode,
     onThemeMode: (ThemeMode) -> Unit,
     onClose: () -> Unit,
-    cards: @Composable () -> Unit = {},
+    safetyCard: @Composable () -> Unit = {},
+    engineCard: @Composable () -> Unit = {},
 ) {
-    Box(modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.scrim).clickable(enabled = false) {}) {
+    val palette = LocalMotoPalette.current
+    // Start on the setup page while a permission is missing, otherwise on the everyday options.
+    var tab by rememberSaveable { mutableStateOf(if (items.any { !it.granted }) SettingsTab.SETUP else SettingsTab.RIDE) }
+    Box(modifier = Modifier.fillMaxSize().background(palette.scrim).clickable(enabled = false) {}) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.settings_title), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = LocalMotoPalette.current.text)
+                Text(stringResource(R.string.settings_title), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = palette.text)
                 Box(
                     modifier = Modifier.size(64.dp).clip(CircleShape).background(MotoColors.CardHigh).clickable(onClick = onClose),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Close, null, tint = LocalMotoPalette.current.text, modifier = Modifier.size(32.dp)) }
+                ) { Icon(Icons.Rounded.Close, null, tint = palette.text, modifier = Modifier.size(32.dp)) }
             }
-            LazyColumn(
-                modifier = Modifier.padding(top = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                items(items) { item -> SettingRow(item) }
-                items(toggles) { t -> ToggleRow(t) }
-                item { cards() }
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.lean_title), fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    stringResource(if (lean.supported) R.string.lean_desc else R.string.lean_unsupported),
-                                    fontSize = 15.sp, color = LocalMotoPalette.current.muted,
-                                )
-                            }
-                            Switch(checked = leanEnabled, onCheckedChange = onLeanEnabled, enabled = lean.supported)
-                        }
-                        if (leanEnabled && lean.supported) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                PillButton(stringResource(R.string.lean_calibrate), MotoColors.Blue, onLeanCalibrate)
-                                if (lean.calibrated) {
-                                    Text(stringResource(R.string.lean_calibrated), fontSize = 15.sp, color = MotoColors.Green)
-                                }
-                            }
-                        }
+            Row(modifier = Modifier.fillMaxSize().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                Column(modifier = Modifier.width(190.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SettingsTab.entries.forEach { t ->
+                        PillButton(
+                            stringResource(t.label),
+                            if (t == tab) MotoColors.Blue else palette.cardHigh,
+                            { tab = t },
+                            Modifier.fillMaxWidth(),
+                            textColor = if (t == tab) Color.White else palette.text,
+                            horizontalPadding = 8.dp,
+                        )
                     }
                 }
-                item { ThemeRow(themeMode, onThemeMode) }
+                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    when (tab) {
+                        SettingsTab.SETUP -> items(items) { item -> SettingRow(item) }
+                        SettingsTab.RIDE -> {
+                            item {
+                                SettingRow(
+                                    SettingItem(
+                                        stringResource(R.string.trips_title), stringResource(R.string.trips_desc), false,
+                                        stringResource(R.string.action_open), onOpenTrips,
+                                    )
+                                )
+                            }
+                            items(toggles) { t -> ToggleRow(t) }
+                            item { LeanRow(lean, leanEnabled, onLeanEnabled, onLeanCalibrate) }
+                            item { ThemeRow(themeMode, onThemeMode) }
+                        }
+                        SettingsTab.SAFETY -> item { safetyCard() }
+                        SettingsTab.ENGINE -> item { engineCard() }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LeanRow(lean: LeanState, enabled: Boolean, onEnabled: (Boolean) -> Unit, onCalibrate: () -> Unit) {
+    val palette = LocalMotoPalette.current
+    Column(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.lean_title), fontSize = 20.sp, color = palette.text, fontWeight = FontWeight.SemiBold)
+                Text(
+                    stringResource(if (lean.supported) R.string.lean_desc else R.string.lean_unsupported),
+                    fontSize = 15.sp, color = palette.muted,
+                )
+            }
+            Switch(checked = enabled, onCheckedChange = onEnabled, enabled = lean.supported)
+        }
+        if (enabled && lean.supported) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                PillButton(stringResource(R.string.lean_calibrate), MotoColors.Blue, onCalibrate)
+                if (lean.calibrated) Text(stringResource(R.string.lean_calibrated), fontSize = 15.sp, color = MotoColors.Green)
             }
         }
     }

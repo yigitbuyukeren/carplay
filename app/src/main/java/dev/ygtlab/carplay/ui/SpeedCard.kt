@@ -15,7 +15,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -50,6 +52,7 @@ fun SpeedCard(
     lean: LeanState?,
     onResetLeanPeaks: () -> Unit,
     obd: ObdState? = null,
+    onSos: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
@@ -111,7 +114,10 @@ fun SpeedCard(
             )
             Text(stringResource(R.string.speed_unit), fontSize = 22.sp, color = LocalMotoPalette.current.muted, fontWeight = FontWeight.Medium)
             if (rpm != null) {
-                Text(stringResource(R.string.obd_rpm_fmt, rpm), fontSize = 16.sp, color = LocalMotoPalette.current.muted)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GearChip(engine.gear)
+                    Text(stringResource(R.string.obd_rpm_fmt, rpm), fontSize = 16.sp, color = LocalMotoPalette.current.muted)
+                }
             }
             if (!gps.hasFix) {
                 Text(stringResource(R.string.gps_waiting), fontSize = 16.sp, color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
@@ -119,22 +125,16 @@ fun SpeedCard(
         }
         if (lean != null) LeanGauge(lean, onResetLeanPeaks, Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp))
         if (engine != null) EngineCorners(engine)
+        if (onSos != null) SosButton(onSos, Modifier.align(Alignment.TopStart).padding(16.dp))
         if (limit != null) SpeedLimitSign(limit, Modifier.align(Alignment.TopEnd).padding(16.dp), size = 76.dp)
     }
 }
 
-/** Gear (top left), temperature and voltage (bottom left), trouble codes (bottom right). */
+/** Temperature and voltage (bottom left), trouble codes (bottom right). */
 @Composable
 private fun BoxScope.EngineCorners(engine: ObdState) {
     val palette = LocalMotoPalette.current
     val d = engine.data
-    Column(
-        modifier = Modifier.align(Alignment.TopStart).padding(16.dp).size(68.dp).clip(RoundedCornerShape(16.dp)).background(palette.cardHigh),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(stringResource(R.string.obd_gear), fontSize = 11.sp, color = palette.muted, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
-        Text(engine.gear?.toString() ?: "–", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = palette.text)
-    }
     Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
         d.coolantC?.let { t ->
             val hot = t >= ObdAlerts.OVERHEAT_C
@@ -153,5 +153,19 @@ private fun BoxScope.EngineCorners(engine: ObdState) {
             fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MotoColors.Orange,
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         )
+    }
+}
+
+/** Estimated gear next to the revs; a dash until the gear table is learned. */
+@Composable
+private fun GearChip(gear: Int?) {
+    val palette = LocalMotoPalette.current
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(palette.cardHigh).padding(horizontal = 10.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(stringResource(R.string.obd_gear), fontSize = 10.sp, color = palette.muted, fontWeight = FontWeight.SemiBold)
+        Text(gear?.toString() ?: "–", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = palette.text)
     }
 }

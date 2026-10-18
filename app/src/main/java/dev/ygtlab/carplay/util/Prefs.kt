@@ -13,6 +13,9 @@ object Prefs {
     private const val KEY_LEAN_STATE = "lean_state"
     private const val KEY_THEME = "theme_mode"
     private const val KEY_PLACES = "saved_places"
+    private const val KEY_SOS_CONTACTS = "sos_contacts"
+    private const val KEY_SOS_CRASH = "sos_crash"
+    private const val KEY_SOS_BUTTON = "sos_button"
     private const val KEY_THERMAL = "thermal_guard"
     private const val KEY_WEATHER = "weather_enabled"
     private const val KEY_RAIN_VOICE = "rain_voice"
@@ -125,5 +128,26 @@ object Prefs {
 
     fun setThermalGuard(context: Context, enabled: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_THERMAL, enabled).apply()
+    }
+
+    fun sosContacts(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_SOS_CONTACTS, null)
+
+    fun setSosContacts(context: Context, json: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_SOS_CONTACTS, json).apply()
+    }
+
+    fun sosCrash(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_SOS_CRASH, false)
+
+    fun setSosCrash(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_SOS_CRASH, enabled).apply()
+    }
+
+    fun sosButton(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_SOS_BUTTON, false)
+
+    fun setSosButton(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_SOS_BUTTON, enabled).apply()
     }
 }
