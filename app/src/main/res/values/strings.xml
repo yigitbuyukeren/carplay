@@ -231,4 +231,18 @@
     <string name="route_updating">Rota güncelleniyor…</string>
     <string name="saved_parked">Park</string>
     <string name="go_parked">Park yerine git</string>
+    <string name="svc_oil">Motor yağı</string>
+    <string name="svc_chain">Zincir yağlama</string>
+    <string name="svc_air_filter">Hava filtresi</string>
+    <string name="svc_brakes">Fren balataları</string>
+    <string name="svc_tyres">Lastik kontrolü</string>
+    <string name="svc_title">Bakım takibi</string>
+    <string name="svc_desc">Yağ, zincir, filtre gibi bakımları sürülen kilometreye göre hatırlatır. Bakımı yapınca Yapıldı\'ya bas; aralıkları + ve − ile ayarla.</string>
+    <string name="svc_counted_fmt">Uygulamanın saydığı mesafe: %1$s km (motorun gerçek kilometre sayacı değil)</string>
+    <string name="svc_left_fmt">%1$s km kaldı</string>
+    <string name="svc_overdue_fmt">%1$s km geçti</string>
+    <string name="svc_every_fmt">%1$s km</string>
+    <string name="svc_done">Yapıldı</string>
+    <string name="svc_banner_overdue_fmt">Bakım zamanı: %1$s (%2$s km geçti)</string>
+    <string name="svc_banner_soon_fmt">Bakım yaklaşıyor: %1$s (%2$s km kaldı)</string>
 </resources>

@@ -231,4 +231,18 @@
     <string name="route_updating">Updating route…</string>
     <string name="saved_parked">Parked</string>
     <string name="go_parked">Go to my bike</string>
+    <string name="svc_oil">Engine oil</string>
+    <string name="svc_chain">Chain lube</string>
+    <string name="svc_air_filter">Air filter</string>
+    <string name="svc_brakes">Brake pads</string>
+    <string name="svc_tyres">Tyre check</string>
+    <string name="svc_title">Maintenance reminders</string>
+    <string name="svc_desc">Reminds you of oil, chain, filter and similar service by kilometres ridden. Press Done after a service; adjust the intervals with + and −.</string>
+    <string name="svc_counted_fmt">Distance counted by the app: %1$s km (not the bike\'s real odometer)</string>
+    <string name="svc_left_fmt">%1$s km left</string>
+    <string name="svc_overdue_fmt">%1$s km overdue</string>
+    <string name="svc_every_fmt">%1$s km</string>
+    <string name="svc_done">Done</string>
+    <string name="svc_banner_overdue_fmt">Service due: %1$s (%2$s km overdue)</string>
+    <string name="svc_banner_soon_fmt">Service coming up: %1$s (%2$s km left)</string>
 </resources>

@@ -13,6 +13,8 @@ object Prefs {
     private const val KEY_LEAN_STATE = "lean_state"
     private const val KEY_THEME = "theme_mode"
     private const val KEY_PLACES = "saved_places"
+    private const val KEY_ODOMETER = "odometer_m"
+    private const val KEY_SERVICE = "service_items"
     private const val KEY_AVOID_HIGHWAYS = "route_avoid_highways"
     private const val KEY_AVOID_TOLLS = "route_avoid_tolls"
     private const val KEY_SOS_CONTACTS = "sos_contacts"
@@ -162,5 +164,19 @@ object Prefs {
     fun setRouteOptions(context: Context, highways: Boolean, tolls: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_AVOID_HIGHWAYS, highways).putBoolean(KEY_AVOID_TOLLS, tolls).apply()
+    }
+
+    fun odometerM(context: Context): Double =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getLong(KEY_ODOMETER, 0L).toDouble()
+
+    fun setOdometerM(context: Context, meters: Double) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putLong(KEY_ODOMETER, meters.toLong()).apply()
+    }
+
+    fun service(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_SERVICE, null)
+
+    fun setService(context: Context, json: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_SERVICE, json).apply()
     }
 }

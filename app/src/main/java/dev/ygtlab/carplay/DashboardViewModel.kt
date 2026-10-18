@@ -6,7 +6,11 @@ import dev.ygtlab.carplay.data.AndroidSmsSender
 import dev.ygtlab.carplay.data.AndroidSosAlarm
 import dev.ygtlab.carplay.data.CrashSensor
 import dev.ygtlab.carplay.data.GeoPoint
+import dev.ygtlab.carplay.data.MaintenanceMath
+import dev.ygtlab.carplay.data.Odometer
 import dev.ygtlab.carplay.data.Place
+import dev.ygtlab.carplay.data.ServiceDue
+import dev.ygtlab.carplay.data.ServiceItem
 import dev.ygtlab.carplay.data.RouteOptions
 import dev.ygtlab.carplay.data.SosContact
 import dev.ygtlab.carplay.data.SosController
@@ -110,6 +114,21 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     fun setRainVoice(enabled: Boolean) {
         Prefs.setRainVoice(getApplication(), enabled)
         rainVoice.value = enabled
+    }
+
+    val odometer = Odometer(viewModelScope, location.state, Prefs.odometerM(app)) { Prefs.setOdometerM(app, it) }
+    val service = MutableStateFlow(MaintenanceMath.fromJson(Prefs.service(app)))
+    val serviceDue: StateFlow<ServiceDue?> =
+        combine(service, odometer.meters) { list, meters -> MaintenanceMath.mostUrgent(list, meters) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun serviceDone(item: ServiceItem) = updateService(MaintenanceMath.markDone(service.value, item, odometer.meters.value))
+
+    fun changeServiceInterval(item: ServiceItem, steps: Int) = updateService(MaintenanceMath.changeInterval(service.value, item, steps))
+
+    private fun updateService(list: List<dev.ygtlab.carplay.data.ServiceState>) {
+        service.value = list
+        Prefs.setService(getApplication(), MaintenanceMath.toJson(list))
     }
 
     val leanEnabled = MutableStateFlow(Prefs.leanEnabled(app))
@@ -298,6 +317,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onPause() {
+        odometer.flush()
         crashSensor.stop()
         theme.stop()
         lean.stop()
