@@ -169,4 +169,15 @@
     <string name="rain_voice_now">Yağmur başlıyor, dikkat</string>
     <string name="ice_banner_fmt">Buzlanma riski: %1$d°C</string>
     <string name="ice_voice_fmt">Hava %1$d derece, yol buzlanabilir</string>
+    <string name="stop_arrived">Ara durağa ulaştınız</string>
+    <string name="continue_trip">Yola devam</string>
+    <string name="fuel_title">Benzinlikler</string>
+    <string name="fuel_searching">Benzinlikler aranıyor…</string>
+    <string name="fuel_none">Yakında benzinlik bulunamadı</string>
+    <string name="fuel_failed">Benzinlikler alınamadı. İnternet bağlantısını kontrol et.</string>
+    <string name="fuel_ahead">Rotanın üzerinde</string>
+    <string name="fuel_nearby">Yakınında (5 km)</string>
+    <string name="fuel_unnamed">Benzinlik</string>
+    <string name="fuel_add_stop">Ara durak</string>
+    <string name="fuel_go">Git</string>
 </resources>

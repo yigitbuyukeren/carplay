@@ -60,7 +60,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     val callerName: StateFlow<String?> = CallBridge.callerName
 
     val locationState: StateFlow<LocationState> = location.state
-    val nav = NavigationController(app, viewModelScope, location.state)
+    val nav = NavigationController(app::getString, viewModelScope, location.state, Voice(app))
 
     val places = MutableStateFlow(SavedPlaces.fromJson(Prefs.savedPlaces(app)))
 
