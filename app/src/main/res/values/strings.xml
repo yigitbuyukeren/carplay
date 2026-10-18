@@ -159,4 +159,14 @@
     <string name="search_locked">Sürerken arama kilitli. Kayıtlı yerlerden seç veya haritaya uzun bas.</string>
     <string name="go_home">Eve git</string>
     <string name="go_work">İşe git</string>
+    <string name="weather_title">Hava durumu</string>
+    <string name="weather_desc">Dashboard\'da sıcaklık ve yağmur beklentisi. Yaklaşık konumun (1 km hassasiyetle) Open-Meteo sunucusuna gönderilir.</string>
+    <string name="rain_voice_title">Sesli yağmur ve buzlanma uyarısı</string>
+    <string name="rain_voice_desc">Yağmur yaklaşırken veya hava 3 derece ve altına inince bir kez söyler.</string>
+    <string name="rain_banner_fmt">%1$d dk içinde yağmur bekleniyor</string>
+    <string name="rain_banner_now">Yağmur başlıyor</string>
+    <string name="rain_voice_fmt">Yaklaşık %1$d dakika içinde yağmur başlıyor</string>
+    <string name="rain_voice_now">Yağmur başlıyor, dikkat</string>
+    <string name="ice_banner_fmt">Buzlanma riski: %1$d°C</string>
+    <string name="ice_voice_fmt">Hava %1$d derece, yol buzlanabilir</string>
 </resources>

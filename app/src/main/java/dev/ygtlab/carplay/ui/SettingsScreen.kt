@@ -65,25 +65,20 @@ fun runtimePermissions(): Array<String> {
     return list.toTypedArray()
 }
 
+data class ToggleItem(val title: String, val description: String, val checked: Boolean, val onChange: (Boolean) -> Unit)
+
 @Composable
 fun SettingsScreen(
     items: List<SettingItem>,
-    overlayEnabled: Boolean,
-    onOverlayToggle: (Boolean) -> Unit,
+    toggles: List<ToggleItem>,
     lean: LeanState,
     leanEnabled: Boolean,
     onLeanEnabled: (Boolean) -> Unit,
     onLeanCalibrate: () -> Unit,
-    speedLimit: Boolean,
-    onSpeedLimit: (Boolean) -> Unit,
-    recordTrips: Boolean,
-    onRecordTrips: (Boolean) -> Unit,
-    autoRead: Boolean,
-    onAutoRead: (Boolean) -> Unit,
     themeMode: ThemeMode,
     onThemeMode: (ThemeMode) -> Unit,
     onClose: () -> Unit,
-    obdCard: @Composable () -> Unit = {},
+    cards: @Composable () -> Unit = {},
 ) {
     Box(modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.scrim).clickable(enabled = false) {}) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 16.dp)) {
@@ -103,19 +98,8 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(items) { item -> SettingRow(item) }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.msg_auto_title), fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
-                            Text(stringResource(R.string.msg_auto_desc), fontSize = 15.sp, color = LocalMotoPalette.current.muted)
-                        }
-                        Switch(checked = autoRead, onCheckedChange = onAutoRead)
-                    }
-                }
-                item { obdCard() }
+                items(toggles) { t -> ToggleRow(t) }
+                item { cards() }
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
@@ -141,45 +125,23 @@ fun SettingsScreen(
                         }
                     }
                 }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.speed_limit_title), fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
-                            Text(stringResource(R.string.speed_limit_desc), fontSize = 15.sp, color = LocalMotoPalette.current.muted)
-                        }
-                        Switch(checked = speedLimit, onCheckedChange = onSpeedLimit)
-                    }
-                }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.record_trips_title), fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
-                            Text(stringResource(R.string.record_trips_desc), fontSize = 15.sp, color = LocalMotoPalette.current.muted)
-                        }
-                        Switch(checked = recordTrips, onCheckedChange = onRecordTrips)
-                    }
-                }
                 item { ThemeRow(themeMode, onThemeMode) }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.overlay_title), fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
-                            Text(stringResource(R.string.overlay_desc), fontSize = 15.sp, color = LocalMotoPalette.current.muted)
-                        }
-                        Switch(checked = overlayEnabled, onCheckedChange = onOverlayToggle)
-                    }
-                }
             }
         }
+    }
+}
+
+@Composable
+private fun ToggleRow(t: ToggleItem) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(t.title, fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
+            Text(t.description, fontSize = 15.sp, color = LocalMotoPalette.current.muted)
+        }
+        Switch(checked = t.checked, onCheckedChange = t.onChange)
     }
 }
 

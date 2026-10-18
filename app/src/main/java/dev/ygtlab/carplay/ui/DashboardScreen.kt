@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ygtlab.carplay.DashboardViewModel
@@ -66,6 +68,15 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showNowPlaying by remember { mutableStateOf(false) }
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
     val places by vm.places.collectAsStateWithLifecycle()
+    val weather by vm.weather.snapshot.collectAsStateWithLifecycle()
+    val weatherOn by vm.weatherEnabled.collectAsStateWithLifecycle()
+    val rainVoice by vm.rainVoice.collectAsStateWithLifecycle()
+    var rainDismissed by remember { mutableStateOf(false) }
+    var iceDismissed by remember { mutableStateOf(false) }
+    val raining = weather?.rainInMin != null
+    val icy = weather?.iceRisk == true
+    LaunchedEffect(raining) { if (!raining) rainDismissed = false }
+    LaunchedEffect(icy) { if (!icy) iceDismissed = false }
     var showSettings by remember { mutableStateOf(!locationGranted(context)) }
     var overlayEnabled by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
 
@@ -146,7 +157,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
                             NavCard(
-                                context, navUi, places,
+                                context, navUi, places, weather.takeIf { weatherOn },
                                 onOpenMap = { showMap = true },
                                 onGoTo = { vm.nav.selectPlace(it); showMap = true },
                                 modifier = Modifier.weight(1f).fillMaxSize())
@@ -164,24 +175,27 @@ fun DashboardScreen(vm: DashboardViewModel) {
             }
 
             if (showSettings) {
+                val toggles = listOf(
+                    ToggleItem(stringResource(R.string.msg_auto_title), stringResource(R.string.msg_auto_desc), autoRead, vm::setReadMessagesAloud),
+                    ToggleItem(stringResource(R.string.weather_title), stringResource(R.string.weather_desc), weatherOn, vm::setWeatherEnabled),
+                    ToggleItem(stringResource(R.string.rain_voice_title), stringResource(R.string.rain_voice_desc), rainVoice, vm::setRainVoice),
+                    ToggleItem(stringResource(R.string.speed_limit_title), stringResource(R.string.speed_limit_desc), speedLimitOn, vm::setSpeedLimitEnabled),
+                    ToggleItem(stringResource(R.string.record_trips_title), stringResource(R.string.record_trips_desc), recordTrips, vm::setRecordTrips),
+                    ToggleItem(stringResource(R.string.overlay_title), stringResource(R.string.overlay_desc), overlayEnabled) { enabled ->
+                        overlayEnabled = toggleOverlay(context, enabled)
+                    },
+                )
                 SettingsScreen(
                     items = settingItems,
-                    overlayEnabled = overlayEnabled,
-                    onOverlayToggle = { enabled -> overlayEnabled = toggleOverlay(context, enabled) },
+                    toggles = toggles,
                     lean = leanState,
                     leanEnabled = leanEnabled,
                     onLeanEnabled = vm::setLeanEnabled,
                     onLeanCalibrate = vm.lean::calibrate,
-                    speedLimit = speedLimitOn,
-                    onSpeedLimit = vm::setSpeedLimitEnabled,
-                    recordTrips = recordTrips,
-                    onRecordTrips = vm::setRecordTrips,
-                    autoRead = autoRead,
-                    onAutoRead = vm::setReadMessagesAloud,
                     themeMode = themeMode,
                     onThemeMode = vm.theme::setMode,
                     onClose = { showSettings = false },
-                    obdCard = {
+                    cards = {
                         ObdSettingsCard(
                             obd = vm.obd,
                             bluetooth = vm.bluetooth,
@@ -208,6 +222,25 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     onDismiss = { dismissedMessageId = shownMessage.id },
                     modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
                 )
+            }
+
+            if (!showSettings && callState.phase == CallPhase.IDLE && shownMessage == null) {
+                val w = weather
+                val rainIn = w?.rainInMin
+                when {
+                    weatherOn && w != null && rainIn != null && !rainDismissed -> AlertStrip(
+                        text = if (rainIn > 0) stringResource(R.string.rain_banner_fmt, rainIn) else stringResource(R.string.rain_banner_now),
+                        accent = MotoColors.Blue,
+                        onDismiss = { rainDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
+                    weatherOn && w != null && w.iceRisk && !iceDismissed -> AlertStrip(
+                        text = stringResource(R.string.ice_banner_fmt, w.tempC),
+                        accent = MotoColors.Cyan,
+                        onDismiss = { iceDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
+                }
             }
 
             if (callState.phase != CallPhase.IDLE) {
