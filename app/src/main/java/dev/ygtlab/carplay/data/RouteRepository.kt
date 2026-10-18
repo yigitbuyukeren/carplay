@@ -36,6 +36,28 @@ data class Route(
 interface Routing {
     suspend fun route(from: GeoPoint, to: GeoPoint): Result<Route>
     suspend fun search(query: String, near: GeoPoint?): Result<List<Place>>
+
+    /** The address of a spot picked on the map; null when there is nothing worth naming. */
+    suspend fun reverse(point: GeoPoint): Result<Place?> = Result.success(null)
+}
+
+object PlaceNames {
+    /** Nominatim `reverse` reply to a short name and a one-line detail, e.g. "Cadde 12" / "Fatih, İstanbul". */
+    fun fromReverse(json: String, at: GeoPoint): Place? {
+        val root = JSONObject(json)
+        if (root.has("error")) return null
+        val address = root.optJSONObject("address")
+        val road = address?.optString("road").orEmpty()
+        val number = address?.optString("house_number").orEmpty()
+        val name = root.optString("name").ifBlank { listOf(road, number).filter { it.isNotBlank() }.joinToString(" ") }
+        if (name.isBlank()) return null
+        val detail = listOfNotNull(
+            address?.optString("suburb")?.takeIf { it.isNotBlank() } ?: address?.optString("neighbourhood")?.takeIf { it.isNotBlank() },
+            address?.optString("city")?.takeIf { it.isNotBlank() } ?: address?.optString("town")?.takeIf { it.isNotBlank() }
+                ?: address?.optString("county")?.takeIf { it.isNotBlank() },
+        ).filter { it != name }.joinToString(", ")
+        return Place(name, detail, at)
+    }
 }
 
 /** Valhalla (OSM) motorcycle routing and Nominatim geocoding, both public no-key services. */
@@ -71,6 +93,14 @@ class RouteRepository : Routing {
                 distanceM = summary.getDouble("length") * 1000,
                 durationS = summary.getDouble("time"),
             )
+        }
+    }
+
+    override suspend fun reverse(point: GeoPoint): Result<Place?> = withContext(Dispatchers.IO) {
+        safely("reverse") {
+            val url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=${Locale.getDefault().language}" +
+                "&lat=${"%.6f".format(Locale.US, point.lat)}&lon=${"%.6f".format(Locale.US, point.lon)}"
+            PlaceNames.fromReverse(Http.get(url), point)
         }
     }
 

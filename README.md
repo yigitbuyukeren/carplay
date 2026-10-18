@@ -10,15 +10,35 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 | Rota | Navigasyon |
 |---|---|
 | ![Rota](docs/screenshots/route.png) | ![Navigasyon](docs/screenshots/navigation.png) |
+| **Benzinlikler** | **SOS geri sayımı** |
+| ![Benzinlikler](docs/screenshots/fuel.png) | ![SOS](docs/screenshots/sos.png) |
 
 ## Özellikler
-- GPS hız göstergesi, saat/tarih, pil ve sıcaklık uyarısı
-- Müzik kontrolü (Spotify, YouTube Music vb.; bildirim erişimi gerekir)
-- Gelen arama ekranı (büyük Cevapla/Reddet)
-- Gömülü harita ve navigasyon: MapLibre + OpenStreetMap (OpenFreeMap karoları), Nominatim arama, Valhalla motosiklet rotası, Türkçe sesli yönlendirme, rota dışına çıkınca yeniden hesaplama
+**Gösterge ve sürüş**
+- GPS hız göstergesi, saat, pil ve telefon sıcaklığı; gündüz/gece teması (ortam ışığına göre otomatik)
+- Eğim göstergesi: telefonun sensörleriyle yatış açısı ve en yüksek sol/sağ değerleri
+- Yolculuk kaydı: otomatik, geçmiş ekranı, GPX paylaşma
+- Türkçe ve İngilizce arayüz
+
+**Navigasyon**
+- Gömülü harita ve sesli yönlendirme: MapLibre + OpenStreetMap (OpenFreeMap), Nominatim arama, Valhalla motosiklet rotası, rota dışına çıkınca yeniden hesaplama
+- Kayıtlı yerler: Ev, İş ve favoriler; büyük karolarla tek dokunuşla rota, dashboard'da "Eve git"
+- Benzinlikler: yakınında veya rotanın üzerinde; navigasyon sırasında tek dokunuşla **ara durak** ekle, varınca "Yola devam"
+- Yolun hız limiti ve aşınca sesli uyarı
+- Sürerken arama kutusu kilitlenir (sürüş kuralı: hareket halindeyken yazı girişi yok); hedefi kayıtlı yerlerden veya haritaya uzun basarak seç
 - Google Haritalar / Waze / Yandex kısayolları
-- Diğer uygulamaların üstünde hız/saat şeridi (overlay)
-- Ana ekran (HOME) launcher olarak ayarlanabilir
+
+**Motor (isteğe bağlı)**
+- OBD: ELM327 Bluetooth adaptörden devir, tahmini vites, motor sıcaklığı, akü voltajı ve Türkçe açıklamalı arıza kodları (emülatör için sahte OBD modu var)
+
+**Güvenlik**
+- Hava durumu: sıcaklık, 1 saat içinde yağmur ve buzlanma uyarısı (şerit + sesli)
+- Isınma koruması: telefon 42°C'yi aşınca ekran kısılır ve harita yavaşlar, motor durunca ekran kararır
+- SOS (varsayılan kapalı): otomatik kaza algılama (sert darbe + hareketsizlik) veya uzun basmalı düğme; geri sayımdan sonra en fazla 3 kişiye konum linkli **tek** SMS, arama yok
+
+**Telefon ve medya**
+- Müzik kontrolü ve Now Playing (bildirim erişimi gerekir), gelen arama ekranı, mesajları sesli okuma
+- Diğer uygulamaların üstünde hız/saat şeridi; ana ekran (HOME) launcher olarak ayarlanabilir
 
 ## Derleme
 ```bash
@@ -28,6 +48,13 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 `local.properties` içinde `sdk.dir` ayarlı olmalı (dosya git'e girmez).
 
+Sürüm APK'sı (R8 ile küçültülmüş, ~24 MB): kök dizine `keystore.properties` koy (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`; dosya git'e girmez) ve `./gradlew assembleRelease` çalıştır. Dosya yoksa APK imzasız çıkar.
+
+## Gizlilik ve izinler
+Hesap ve sunucu yok; veriler telefonda kalır. Dışarı giden tek şey, aşağıdaki genel servislere giden sorgulardır: arama metni (Nominatim, yalnızca Ara'ya basınca), rota uç noktaları ve hız limiti için son konum noktaları (Valhalla), yaklaşık konum (hava durumu için 1 km hassasiyetle, Open-Meteo), çevre veya rota boyunca benzinlik sorgusu (Nominatim / Overpass).
+
+SOS yalnızca sen açarsan çalışır ve `SEND_SMS` izni ister; kişiler telefonun kişi seçicisinden eklenir (rehber izni gerekmez). Kaza algılama yalnızca uygulama ekrandayken çalışır; Android arka plandaki sensörleri kısıtlar. Operatörün SMS ücreti uygulanabilir. Bu özellik bir güvenlik garantisi değildir.
+
 ## Güvenlik notu
 Bu uygulama sürüş sırasında dikkat dağıtabilir. Telefonu sabitle, ayarları park halindeyken yap ve trafik kurallarına uy. Yazılım garantisiz sunulur (Apache 2.0).
 
@@ -36,11 +63,13 @@ Bu uygulama sürüş sırasında dikkat dağıtabilir. Telefonu sabitle, ayarlar
 - Harita karoları: [OpenFreeMap](https://openfreemap.org); harita motoru: [MapLibre Native](https://maplibre.org)
 - Adres arama: [Nominatim](https://nominatim.org) (genel sunucu; kullanım politikasına uygun olarak yalnızca Ara'ya basınca sorgular)
 - Rota: [Valhalla](https://github.com/valhalla/valhalla) genel sunucusu (`valhalla1.openstreetmap.de`)
+- Hava durumu: [Open-Meteo](https://open-meteo.com) (ücretsiz, anahtarsız; ticari olmayan kullanım)
+- Benzinlikler: [Overpass API](https://overpass-api.de) genel sunucuları (birkaçına birden sorulur) ve Nominatim
 
 Bunlar ücretsiz, garantisiz genel servislerdir. Yoğun veya ticari kullanım için kendi sunucunu kur.
 
 ## Katkı
-Issue ve PR'lar açık. Başlamak için [CONTRIBUTING.md](CONTRIBUTING.md) dosyasına ve `good first issue` etiketli konulara bak. Fikirler: gündüz teması, hız limiti, çevrimdışı harita, yolculuk kaydı.
+Issue ve PR'lar açık. Başlamak için [CONTRIBUTING.md](CONTRIBUTING.md) dosyasına ve `good first issue` etiketli konulara bak. Fikirler: çevrimdışı harita ve rota (#5), yeni dil çevirileri, ek OBD adaptörleri (BLE).
 
 ## Lisans
 [Apache 2.0](LICENSE)

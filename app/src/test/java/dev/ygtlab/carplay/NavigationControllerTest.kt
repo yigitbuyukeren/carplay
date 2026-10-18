@@ -44,6 +44,8 @@ private class FakeRouting(private val routes: ArrayDeque<Route>) : Routing {
         return Result.success(routes.removeFirstOrNull() ?: straightRoute(from))
     }
     override suspend fun search(query: String, near: GeoPoint?): Result<List<Place>> = Result.success(emptyList())
+    var address: Place? = null
+    override suspend fun reverse(point: GeoPoint): Result<Place?> = Result.success(address)
 }
 
 private class RecordingSpeaker : Speaker {
@@ -107,6 +109,21 @@ class NavigationControllerTest {
         assertNotNull(nav.ui.value.route)
         assertEquals(start to dest.point, routing.requests.single())
         assertFalse(nav.ui.value.navigating)
+    }
+
+    @Test
+    fun aPickedPointIsRenamedWhenItsAddressArrives() {
+        routing.address = Place("Cadde 12", "Fatih, İstanbul", dest.point)
+        nav.selectPoint(dest.point)
+        assertEquals("Cadde 12", nav.ui.value.destination?.name)
+        assertEquals("Cadde 12", nav.ui.value.query)
+        assertNotNull(nav.ui.value.route)
+    }
+
+    @Test
+    fun aPickedPointWithoutAnAddressKeepsTheGenericName() {
+        nav.selectPoint(dest.point)
+        assertEquals("t${R.string.selected_place}", nav.ui.value.destination?.name)
     }
 
     @Test

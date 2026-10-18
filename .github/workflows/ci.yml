@@ -15,8 +15,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Unit tests and debug build
-        run: ./gradlew testDebugUnitTest assembleDebug
+      - name: Unit tests, debug build and minified release build
+        run: ./gradlew testDebugUnitTest assembleDebug assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: MotoDash-debug-apk

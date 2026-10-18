@@ -262,7 +262,7 @@ fun MapScreen(
                         map = m
                         m.uiSettings.isRotateGesturesEnabled = true
                         m.addOnMapLongClickListener { latLng ->
-                            nav.selectPlace(Place(context.getString(R.string.selected_place), "", GeoPoint(latLng.latitude, latLng.longitude)))
+                            nav.selectPoint(GeoPoint(latLng.latitude, latLng.longitude))
                             true
                         }
                     }
