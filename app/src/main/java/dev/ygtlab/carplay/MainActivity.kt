@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -7,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
+import androidx.core.content.IntentCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -28,6 +31,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (savedInstanceState == null) handleGpxIntent(intent)
         // A hot phone dims itself (see ThermalGuard); a cool one keeps the system brightness.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -43,6 +47,22 @@ class MainActivity : ComponentActivity() {
             val isDay by viewModel.theme.isDay.collectAsStateWithLifecycle()
             MotoTheme(isDay) { DashboardScreen(viewModel) }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleGpxIntent(intent)
+    }
+
+    /** A GPX file arrives as a view or share intent; the HOME and launcher intents carry no file. */
+    private fun handleGpxIntent(intent: Intent?) {
+        val uri = when (intent?.action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+            else -> null
+        } ?: return
+        viewModel.openGpx(uri)
     }
 
     override fun onResume() {

@@ -8,6 +8,20 @@ import org.xml.sax.helpers.DefaultHandler
 
 data class GpxTrack(val name: String, val points: List<GeoPoint>)
 
+/** Refuses to hand out more than [limit] bytes, so a huge or endless file fails instead of filling memory. */
+class BoundedInputStream(input: InputStream, private val limit: Long) : java.io.FilterInputStream(input) {
+    private var read = 0L
+
+    override fun read(): Int = super.read().also { if (it >= 0) count(1) }
+
+    override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) count(it.toLong()) }
+
+    private fun count(n: Long) {
+        read += n
+        if (read > limit) throw java.io.IOException("file larger than $limit bytes")
+    }
+}
+
 object GpxImport {
     /** Far more than any real ride; stops a hostile file from eating the phone's memory. */
     private const val MAX_POINTS = 300_000

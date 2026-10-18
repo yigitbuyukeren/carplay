@@ -68,6 +68,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showMap by remember { mutableStateOf(false) }
     var showNowPlaying by remember { mutableStateOf(false) }
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
+    val mapRequests by vm.mapRequests.collectAsStateWithLifecycle()
     val places by vm.places.collectAsStateWithLifecycle()
     val thermal by vm.thermal.state.collectAsStateWithLifecycle()
     val thermalOn by vm.thermalEnabled.collectAsStateWithLifecycle()
@@ -119,6 +120,16 @@ fun DashboardScreen(vm: DashboardViewModel) {
         )
     }
 
+    // A GPX file opened from outside brings the map up front.
+    LaunchedEffect(mapRequests) {
+        if (mapRequests > 0) {
+            showMap = true
+            showNowPlaying = false
+            showSettings = false
+            showTrips = false
+        }
+    }
+
     BackHandler(enabled = showMap || showNowPlaying || showTrips) {
         showTrips = false
         showMap = false
@@ -154,6 +165,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         places = places,
                         onSavePlace = vm::savePlace,
                         onRemovePlace = vm::removePlace,
+                        onOpenGpx = vm::openGpx,
                         onClose = { showMap = false },
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )

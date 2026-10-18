@@ -5,7 +5,9 @@ import android.Manifest
 import dev.ygtlab.carplay.data.AndroidSmsSender
 import dev.ygtlab.carplay.data.AndroidSosAlarm
 import dev.ygtlab.carplay.data.CrashSensor
+import dev.ygtlab.carplay.data.BoundedInputStream
 import dev.ygtlab.carplay.data.GeoPoint
+import dev.ygtlab.carplay.data.GpxImport
 import dev.ygtlab.carplay.data.MaintenanceMath
 import dev.ygtlab.carplay.data.Odometer
 import dev.ygtlab.carplay.data.Place
@@ -59,6 +61,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class GpsUi(val speedKmh: Int = 0, val hasFix: Boolean = false)
 
@@ -129,6 +132,26 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private fun updateService(list: List<dev.ygtlab.carplay.data.ServiceState>) {
         service.value = list
         Prefs.setService(getApplication(), MaintenanceMath.toJson(list))
+    }
+
+    /** Bumped when something outside the map (a GPX file) needs the map screen on top. */
+    val mapRequests = MutableStateFlow(0)
+
+    /** A GPX file opened from a file manager, a share sheet or the picker in the map. */
+    fun openGpx(uri: android.net.Uri) {
+        mapRequests.value++
+        viewModelScope.launch {
+            val ctx = getApplication<Application>()
+            val track = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    ctx.contentResolver.openInputStream(uri)?.use { GpxImport.parse(BoundedInputStream(it, MAX_GPX_BYTES)) }
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            if (track == null) nav.reportError(ctx.getString(R.string.gpx_unreadable))
+            else nav.followTrack(track.name.ifBlank { ctx.getString(R.string.gpx_title) }, track.points)
+        }
     }
 
     val leanEnabled = MutableStateFlow(Prefs.leanEnabled(app))
@@ -337,5 +360,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         const val FIX_TIMEOUT_MS = 5000L
         const val FRESH_MESSAGE_MS = 30_000L
         const val LEAN_MIN_KMH = 15
+        const val MAX_GPX_BYTES = 20L * 1024 * 1024
     }
 }
