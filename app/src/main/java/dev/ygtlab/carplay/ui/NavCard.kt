@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,10 +87,16 @@ fun NavCard(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.nav_title), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     // One tap from the dashboard to a route home or to work.
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                         places.filter { it.kind != PlaceKind.FAVORITE }.forEach { sp ->
                             PillButton(
-                                stringResource(if (sp.kind == PlaceKind.HOME) R.string.go_home else R.string.go_work),
+                                stringResource(
+                                    when (sp.kind) {
+                                        PlaceKind.HOME -> R.string.go_home
+                                        PlaceKind.WORK -> R.string.go_work
+                                        else -> R.string.go_parked
+                                    }
+                                ),
                                 Color(0x33FFFFFF), { onGoTo(sp.place) },
                                 horizontalPadding = 16.dp,
                             )

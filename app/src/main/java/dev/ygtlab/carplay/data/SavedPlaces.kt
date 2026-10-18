@@ -3,7 +3,8 @@ package dev.ygtlab.carplay.data
 import org.json.JSONArray
 import org.json.JSONObject
 
-enum class PlaceKind { HOME, WORK, FAVORITE }
+/** Where the bike was left is saved by the trip recorder, never by the rider. */
+enum class PlaceKind { HOME, WORK, PARKED, FAVORITE }
 
 data class SavedPlace(val kind: PlaceKind, val place: Place)
 
@@ -13,13 +14,13 @@ object SavedPlaces {
     private const val SAME_SPOT_M = 30.0
 
     /**
-     * Home and Work are single slots (a new one replaces the old one). Favorites are unlimited up to
-     * [MAX_FAVORITES]; saving a spot that is already a favorite just keeps it once. Home first,
-     * then Work, then favorites in the order they were added.
+     * Home, Work and Parked are single slots (a new one replaces the old one). Favorites are unlimited
+     * up to [MAX_FAVORITES]; saving a spot that is already a favorite just keeps it once. Order: Home,
+     * Work, Parked, then favorites in the order they were added.
      */
     fun put(list: List<SavedPlace>, new: SavedPlace): List<SavedPlace> {
         val rest = when (new.kind) {
-            PlaceKind.HOME, PlaceKind.WORK -> list.filter { it.kind != new.kind }
+            PlaceKind.HOME, PlaceKind.WORK, PlaceKind.PARKED -> list.filter { it.kind != new.kind }
             PlaceKind.FAVORITE -> list.filterNot {
                 it.kind == PlaceKind.FAVORITE && Geo.distance(it.place.point, new.place.point) < SAME_SPOT_M
             }
