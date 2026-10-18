@@ -49,6 +49,10 @@ interface Routing {
     suspend fun route(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<Route>
     suspend fun search(query: String, near: GeoPoint?): Result<List<Place>>
 
+    /** Snaps a recorded or planned track to the roads and returns it as a route with turn instructions. */
+    suspend fun traceRoute(points: List<GeoPoint>, options: RouteOptions): Result<Route> =
+        Result.failure(UnsupportedOperationException("trace_route"))
+
     /** The address of a spot picked on the map; null when there is nothing worth naming. */
     suspend fun reverse(point: GeoPoint): Result<Place?> = Result.success(null)
 }
@@ -84,6 +88,21 @@ class RouteRepository : Routing {
                 .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", "kilometers"))
             options.costingOptions()?.let { body.put("costing_options", it) }
             parseTrip(Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString()))
+        }
+    }
+
+    override suspend fun traceRoute(points: List<GeoPoint>, options: RouteOptions): Result<Route> = withContext(Dispatchers.IO) {
+        safely("trace_route") {
+            val shape = JSONArray().also { arr -> points.forEach { arr.put(JSONObject().put("lat", it.lat).put("lon", it.lon)) } }
+            val body = JSONObject()
+                .put("shape", shape)
+                .put("costing", "motorcycle")
+                .put("shape_match", "map_snap")
+                .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", "kilometers"))
+                // Wide enough for tracks recorded every few kilometres, such as route-planner exports.
+                .put("trace_options", JSONObject().put("search_radius", 50).put("gps_accuracy", 10).put("breakage_distance", 3000))
+            options.costingOptions()?.let { body.put("costing_options", it) }
+            parseTrip(Http.postJson("https://valhalla1.openstreetmap.de/trace_route", body.toString(), readMs = 40_000))
         }
     }
 

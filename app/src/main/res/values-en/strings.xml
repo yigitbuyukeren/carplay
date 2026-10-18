@@ -245,4 +245,13 @@
     <string name="svc_done">Done</string>
     <string name="svc_banner_overdue_fmt">Service due: %1$s (%2$s km overdue)</string>
     <string name="svc_banner_soon_fmt">Service coming up: %1$s (%2$s km left)</string>
+    <string name="gpx_failed">The GPX file could not be matched to roads. It may be too long (over 200 km), damaged or far from the road network.</string>
+    <string name="gpx_unreadable">The GPX file could not be read</string>
+    <string name="gpx_join_point">Start of the route</string>
+    <string name="gpx_joined">You are on the route, you can continue</string>
+    <string name="gpx_off_track">You left the route</string>
+    <string name="gpx_off_chip">Off the route</string>
+    <string name="gpx_open">Open GPX</string>
+    <string name="gpx_continue">Follow the route</string>
+    <string name="gpx_title">GPX route</string>
 </resources>
