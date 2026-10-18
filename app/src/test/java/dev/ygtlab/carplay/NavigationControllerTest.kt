@@ -8,6 +8,7 @@ import dev.ygtlab.carplay.data.Maneuver
 import dev.ygtlab.carplay.data.NavigationController
 import dev.ygtlab.carplay.data.Place
 import dev.ygtlab.carplay.data.Route
+import dev.ygtlab.carplay.data.RouteOptions
 import dev.ygtlab.carplay.data.Routing
 import dev.ygtlab.carplay.data.Speaker
 import kotlinx.coroutines.CoroutineScope
@@ -39,8 +40,10 @@ private fun straightRoute(from: GeoPoint = GeoPoint(41.0, 29.0), points: Int = 2
 
 private class FakeRouting(private val routes: ArrayDeque<Route>) : Routing {
     val requests = mutableListOf<Pair<GeoPoint, GeoPoint>>()
-    override suspend fun route(from: GeoPoint, to: GeoPoint): Result<Route> {
+    val optionsSeen = mutableListOf<RouteOptions>()
+    override suspend fun route(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<Route> {
         requests += from to to
+        optionsSeen += options
         return Result.success(routes.removeFirstOrNull() ?: straightRoute(from))
     }
     override suspend fun search(query: String, near: GeoPoint?): Result<List<Place>> = Result.success(emptyList())
@@ -124,6 +127,40 @@ class NavigationControllerTest {
     fun aPickedPointWithoutAnAddressKeepsTheGenericName() {
         nav.selectPoint(dest.point)
         assertEquals("t${R.string.selected_place}", nav.ui.value.destination?.name)
+    }
+
+    @Test
+    fun changingTheOptionsInThePreviewRoutesAgainWithThem() {
+        val saved = mutableListOf<RouteOptions>()
+        nav = NavigationController(text, scope, location, speaker, routing, fuel, onOptionsChanged = { saved += it })
+        nav.selectPlace(dest)
+        assertEquals(RouteOptions(), routing.optionsSeen.last())
+
+        nav.setOptions(RouteOptions(avoidHighways = true))
+        assertEquals(2, routing.requests.size)
+        assertEquals(RouteOptions(avoidHighways = true), routing.optionsSeen.last())
+        assertEquals(listOf(RouteOptions(avoidHighways = true)), saved)
+        assertFalse(nav.ui.value.loading)
+
+        nav.setOptions(RouteOptions(avoidHighways = true)) // no change, no new request
+        assertEquals(2, routing.requests.size)
+    }
+
+    @Test
+    fun optionsChosenBeforeRoutingAreUsedForTheFirstRoute() {
+        nav = NavigationController(text, scope, location, speaker, routing, fuel, initialOptions = RouteOptions(avoidTolls = true))
+        nav.selectPlace(dest)
+        assertEquals(RouteOptions(avoidTolls = true), routing.optionsSeen.single())
+    }
+
+    @Test
+    fun optionsChangedWhileGuidingApplyToTheNextRerouteOnly() {
+        startGuidance()
+        nav.setOptions(RouteOptions(avoidTolls = true))
+        assertEquals(1, routing.requests.size) // guidance is not interrupted
+        val off = GeoPoint(start.lat + 5 * STEP, start.lon + 0.003)
+        repeat(4) { location.value = fixAt(off) }
+        assertEquals(RouteOptions(avoidTolls = true), routing.optionsSeen.last())
     }
 
     @Test

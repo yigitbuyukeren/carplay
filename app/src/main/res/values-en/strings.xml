@@ -226,4 +226,7 @@
     <string name="settings_tab_safety">Safety</string>
     <string name="settings_tab_engine">Engine</string>
     <string name="fuel_nearby">Nearby</string>
+    <string name="opt_no_highway">No highways</string>
+    <string name="opt_no_toll">No tolls</string>
+    <string name="route_updating">Updating route…</string>
 </resources>

@@ -51,7 +51,13 @@ class NavigationController(
     private val voice: Speaker,
     private val repo: Routing = RouteRepository(),
     private val fuelFinder: FuelFinder = FuelRepository(),
+    initialOptions: RouteOptions = RouteOptions(),
+    private val onOptionsChanged: (RouteOptions) -> Unit = {},
 ) {
+    private val _options = MutableStateFlow(initialOptions)
+    val options: StateFlow<RouteOptions> = _options
+    private var routeJob: Job? = null
+
     private val _ui = MutableStateFlow(NavUi())
     val ui: StateFlow<NavUi> = _ui
 
@@ -109,10 +115,32 @@ class NavigationController(
             return
         }
         _ui.update { it.copy(destination = place, finalDestination = null, query = place.name, results = emptyList(), loading = true, error = null) }
-        scope.launch {
-            repo.route(from, place.point)
+        routeJob?.cancel()
+        routeJob = scope.launch {
+            repo.route(from, place.point, _options.value)
                 .onSuccess { route -> _ui.update { it.copy(route = route, loading = false) } }
                 .onFailure { _ui.update { s -> s.copy(loading = false, destination = null, error = text(R.string.route_failed)) } }
+        }
+    }
+
+    /**
+     * Avoid-highways / avoid-tolls. While a route is only being previewed it is recomputed at once;
+     * during guidance the new choice applies to the next re-route.
+     */
+    fun setOptions(options: RouteOptions) {
+        if (options == _options.value) return
+        _options.value = options
+        onOptionsChanged(options)
+        val state = _ui.value
+        val dest = state.destination
+        val from = here()
+        if (dest == null || from == null || state.route == null || state.navigating) return
+        _ui.update { it.copy(loading = true, error = null) }
+        routeJob?.cancel()
+        routeJob = scope.launch {
+            repo.route(from, dest.point, options)
+                .onSuccess { route -> _ui.update { it.copy(route = route, loading = false) } }
+                .onFailure { _ui.update { s -> s.copy(loading = false, error = text(R.string.route_failed)) } }
         }
     }
 
@@ -180,7 +208,7 @@ class NavigationController(
         closeFuel()
         _ui.update { it.copy(rerouting = true) }
         scope.launch {
-            repo.route(from, stop.point)
+            repo.route(from, stop.point, _options.value)
                 .onSuccess { route ->
                     progressIndex = 0
                     offRouteFixes = 0
@@ -202,7 +230,7 @@ class NavigationController(
         val from = here() ?: return
         _ui.update { it.copy(loading = true, arrived = false) }
         scope.launch {
-            repo.route(from, final.point)
+            repo.route(from, final.point, _options.value)
                 .onSuccess { route ->
                     _ui.update { it.copy(destination = final, finalDestination = null, route = route, loading = false) }
                     startNavigation()
@@ -276,7 +304,7 @@ class NavigationController(
         _ui.update { it.copy(rerouting = true) }
         voice.speak(text(R.string.rerouting_voice))
         scope.launch {
-            repo.route(from, dest.point)
+            repo.route(from, dest.point, _options.value)
                 .onSuccess { route ->
                     progressIndex = 0
                     offRouteFixes = 0
