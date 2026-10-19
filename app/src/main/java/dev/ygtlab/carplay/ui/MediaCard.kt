@@ -92,19 +92,7 @@ fun MediaCard(
                             .clip(RoundedCornerShape(16.dp)).background(MotoColors.CardHigh),
                         contentAlignment = Alignment.Center,
                     ) {
-                        AnimatedContent(
-                            targetState = Triple(state.title, state.artist, state.art),
-                            transitionSpec = { trackTransition(media.skipDirection) },
-                            label = "cardCover",
-                        ) { (_, _, art) ->
-                            if (art != null) {
-                                Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                            } else {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(34.dp))
-                                }
-                            }
-                        }
+                        TrackCover(state.title, state.artist, state.art, { media.skipDirection }, 34.dp)
                     }
                     AnimatedContent(
                         targetState = state.title to state.artist,

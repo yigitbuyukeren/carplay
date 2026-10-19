@@ -167,20 +167,7 @@ private fun Cover(state: MediaState, direction: () -> Int, onNext: () -> Unit, o
             },
         contentAlignment = Alignment.Center,
     ) {
-        // Keyed on the track, not the picture, so a swap always slides the whole cover.
-        AnimatedContent(
-            targetState = Triple(state.title, state.artist, state.art),
-            transitionSpec = { trackTransition(direction()) },
-            label = "cover",
-        ) { (_, _, art) ->
-            if (art != null) {
-                Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            } else {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(72.dp))
-                }
-            }
-        }
+        TrackCover(state.title, state.artist, state.art, direction, 72.dp)
     }
 }
 
