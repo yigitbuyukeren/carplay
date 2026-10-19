@@ -194,7 +194,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     NowPlayingScreen(
                         state = mediaState,
                         media = vm.media,
-                        onOpenMusicApp = { context.openMusicApp(mediaState.packageName) },
+                        onOpenApp = { context.openMusicApp(it ?: mediaState.packageName) },
                         onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )

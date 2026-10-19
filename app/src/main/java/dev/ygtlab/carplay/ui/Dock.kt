@@ -64,10 +64,10 @@ private val STATUS_HEIGHT = 78.dp
 private fun DockTile(icon: ImageVector, color: Color, tile: Dp, onClick: () -> Unit) {
     Box(
         modifier = Modifier
+            .pressClickable(onClick = onClick)
             .size(tile)
             .clip(RoundedCornerShape(18.dp))
-            .background(Brush.verticalGradient(listOf(lerp(color, Color.White, 0.28f), color)))
-            .clickable(onClick = onClick),
+            .background(Brush.verticalGradient(listOf(lerp(color, Color.White, 0.28f), color))),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(tile * 0.55f))

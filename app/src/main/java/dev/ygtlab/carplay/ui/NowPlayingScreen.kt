@@ -1,7 +1,38 @@
 package dev.ygtlab.carplay.ui
 
 import android.os.SystemClock
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import dev.ygtlab.carplay.util.MUSIC_APPS
+import dev.ygtlab.carplay.util.isInstalled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,7 +52,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -59,13 +89,12 @@ import kotlinx.coroutines.delay
 fun NowPlayingScreen(
     state: MediaState,
     media: MediaRepository,
-    onOpenMusicApp: () -> Unit,
+    onOpenApp: (String?) -> Unit,
     onGrantAccess: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val palette = LocalMotoPalette.current
-    val tint = remember(state.art, palette) { mediaTint(state.art, palette) }
+    val tint by animateColorAsState(remember(state.art, palette) { mediaTint(state.art, palette) }, tween(600), label = "tint")
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(28.dp))
@@ -80,61 +109,140 @@ fun NowPlayingScreen(
             modifier = Modifier.fillMaxSize().padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(MotoColors.CardHigh),
-                contentAlignment = Alignment.Center,
-            ) {
-                val art = state.art
-                if (art != null) {
-                    Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                } else {
-                    Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(72.dp))
-                }
-            }
+            Cover(state, onNext = { media.next() }, onPrevious = { media.previous() })
             Spacer(Modifier.width(24.dp))
             Column(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Column {
-                    Text(
-                        if (state.hasSession) state.title.ifBlank { stringResource(R.string.unknown_track) } else stringResource(R.string.media_not_playing),
-                        fontSize = 28.sp, fontWeight = FontWeight.Bold, color = palette.text,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    )
-                    if (state.artist.isNotBlank()) {
-                        Text(
-                            state.artist,
-                            fontSize = 19.sp, color = palette.textSecondary,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-                if (state.hasSession) Progress(state)
+                TrackTitle(state)
+                SourceRow(state, media, onOpenApp)
+                if (state.hasSession) Progress(state, media::seekTo)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RoundButton(Icons.Rounded.SkipPrevious, 76, Color.Transparent, enabled = state.hasSession) { media.previous() }
+                    RoundButton(Icons.AutoMirrored.Rounded.VolumeDown, 60, palette.track, onClick = media::volumeDown)
+                    RoundButton(Icons.Rounded.SkipPrevious, 68, Color.Transparent, enabled = state.hasSession) { media.previous() }
                     RoundButton(
                         if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         84, palette.strong, dark = true, enabled = state.hasSession, onClick = media::togglePlay,
                     )
-                    RoundButton(Icons.Rounded.SkipNext, 76, Color.Transparent, enabled = state.hasSession) { media.next() }
-                    RoundButton(Icons.AutoMirrored.Rounded.OpenInNew, 76, palette.track, onClick = onOpenMusicApp)
+                    RoundButton(Icons.Rounded.SkipNext, 68, Color.Transparent, enabled = state.hasSession) { media.next() }
+                    RoundButton(Icons.AutoMirrored.Rounded.VolumeUp, 60, palette.track, onClick = media::volumeUp)
                 }
             }
         }
     }
 }
 
+/** Album art: swipe it sideways for the next or previous track; it eases back and shrinks a little while paused. */
 @Composable
-private fun Progress(state: MediaState) {
+private fun Cover(state: MediaState, onNext: () -> Unit, onPrevious: () -> Unit) {
+    val palette = LocalMotoPalette.current
+    var drag by remember { mutableFloatStateOf(0f) }
+    val offset by animateFloatAsState(drag, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium), label = "swipe")
+    val scale by animateFloatAsState(if (state.playing) 1f else 0.93f, spring(stiffness = Spring.StiffnessLow), label = "cover")
+    val threshold = with(LocalDensity.current) { 80.dp.toPx() }
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .aspectRatio(1f)
+            .graphicsLayer { translationX = offset; scaleX = scale; scaleY = scale }
+            .clip(RoundedCornerShape(24.dp))
+            .background(MotoColors.CardHigh)
+            .pointerInput(state.hasSession) {
+                if (!state.hasSession) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        when {
+                            drag <= -threshold -> onNext()
+                            drag >= threshold -> onPrevious()
+                        }
+                        drag = 0f
+                    },
+                    onDragCancel = { drag = 0f },
+                ) { _, delta -> drag = (drag + delta).coerceIn(-threshold * 1.5f, threshold * 1.5f) }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Crossfade(state.art, animationSpec = tween(500), label = "art") { art ->
+            if (art != null) {
+                Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            } else {
+                Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(72.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrackTitle(state: MediaState) {
+    val palette = LocalMotoPalette.current
+    Row(verticalAlignment = Alignment.Top) {
+        AnimatedContent(
+            targetState = state.title to state.artist,
+            transitionSpec = { (fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 4 }) togetherWith fadeOut(tween(200)) },
+            modifier = Modifier.weight(1f),
+            label = "title",
+        ) { (title, artist) ->
+            Column {
+                Text(
+                    if (state.hasSession) title.ifBlank { stringResource(R.string.unknown_track) } else stringResource(R.string.media_not_playing),
+                    fontSize = 28.sp, fontWeight = FontWeight.Bold, color = palette.text,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis,
+                )
+                if (artist.isNotBlank()) {
+                    Text(artist, fontSize = 19.sp, color = palette.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        if (state.playing) Equalizer(modifier = Modifier.padding(start = 12.dp, top = 8.dp))
+    }
+}
+
+/** Three bars that bounce while music plays. */
+@Composable
+private fun Equalizer(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "eq")
+    val color = LocalMotoPalette.current.text
+    Row(modifier.height(24.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+        listOf(420, 560, 700).forEachIndexed { i, ms ->
+            val h by transition.animateFloat(
+                0.25f, 1f,
+                infiniteRepeatable(tween(ms, easing = LinearEasing), RepeatMode.Reverse, StartOffset(i * 120)),
+                label = "bar$i",
+            )
+            Box(Modifier.width(5.dp).fillMaxHeight(h).clip(RoundedCornerShape(3.dp)).background(color))
+        }
+    }
+}
+
+/** The music apps that are installed: the one on screen is lit, a tap switches to it or opens it if it has not started. */
+@Composable
+private fun SourceRow(state: MediaState, media: MediaRepository, onOpenApp: (String?) -> Unit) {
+    val context = LocalContext.current
+    val palette = LocalMotoPalette.current
+    val apps = remember { MUSIC_APPS.filter { context.isInstalled(it.packageName) } }
+    if (apps.isEmpty()) return
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        apps.forEach { app ->
+            val selected = state.packageName == app.packageName
+            val bg by animateColorAsState(if (selected) MotoColors.Blue else palette.track, tween(250), label = "source")
+            Box(
+                modifier = Modifier
+                    .pressClickable { if (!media.select(app.packageName)) onOpenApp(app.packageName) }
+                    .height(56.dp).clip(RoundedCornerShape(28.dp)).background(bg).padding(horizontal = 22.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text(app.label, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = if (selected) Color.White else palette.text) }
+        }
+    }
+}
+
+/** A bar you can tap or drag to jump to a point in the track; it grows a handle while touched. */
+@Composable
+private fun Progress(state: MediaState, onSeek: (Long) -> Unit) {
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     LaunchedEffect(state.playing) {
         while (state.playing) {
@@ -145,14 +253,49 @@ private fun Progress(state: MediaState) {
     }
     val position = if (state.playing) state.positionMs + ((now - state.positionAt) * state.speed).toLong() else state.positionMs
     val clamped = if (state.durationMs > 0) position.coerceIn(0, state.durationMs) else position.coerceAtLeast(0)
-    val fraction = if (state.durationMs > 0) clamped.toFloat() / state.durationMs else 0f
+    val playedFraction = if (state.durationMs > 0) clamped.toFloat() / state.durationMs else 0f
+    val palette = LocalMotoPalette.current
+    var touched by remember { mutableStateOf<Float?>(null) }
+    val fraction = touched ?: playedFraction
+    val thickness by animateDpAsState(if (touched != null) 14.dp else 8.dp, label = "bar")
+    val seekable = state.durationMs > 0
     Column {
-        Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(LocalMotoPalette.current.track)) {
-            Box(modifier = Modifier.fillMaxWidth(fraction).fillMaxHeight().background(LocalMotoPalette.current.text))
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth().height(44.dp)
+                .pointerInput(seekable, state.durationMs) {
+                    if (!seekable) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        touched = (down.position.x / size.width).coerceIn(0f, 1f)
+                        var last = touched
+                        do {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+                            last = (change.position.x / size.width).coerceIn(0f, 1f)
+                            touched = last
+                            change.consume()
+                        } while (event.changes.any { it.pressed })
+                        last?.let { onSeek((it * state.durationMs).toLong()) }
+                        touched = null
+                    }
+                },
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Box(modifier = Modifier.fillMaxWidth().height(thickness).clip(CircleShape).background(palette.track)) {
+                Box(modifier = Modifier.fillMaxWidth(fraction).fillMaxHeight().background(palette.text))
+            }
+            if (seekable) {
+                val knob = 22.dp
+                Box(
+                    Modifier.offset(x = (maxWidth - knob) * fraction).size(knob).graphicsLayer { alpha = if (touched != null) 1f else 0f }
+                        .clip(CircleShape).background(palette.text),
+                )
+            }
         }
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(clock(clamped), fontSize = 14.sp, color = LocalMotoPalette.current.textTertiary)
-            if (state.durationMs > 0) Text(clock(state.durationMs), fontSize = 14.sp, color = LocalMotoPalette.current.textTertiary)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            val shown = if (touched != null) (touched!! * state.durationMs).toLong() else clamped
+            Text(clock(shown), fontSize = 14.sp, color = palette.textTertiary)
+            if (state.durationMs > 0) Text(clock(state.durationMs), fontSize = 14.sp, color = palette.textTertiary)
         }
     }
 }
@@ -173,17 +316,19 @@ private fun RoundButton(
 ) {
     Box(
         modifier = Modifier
+            .pressClickable(enabled = enabled, onClick = onClick)
             .size(size.dp)
             .clip(CircleShape)
-            .background(background)
-            .clickable(enabled = enabled, onClick = onClick),
+            .background(background),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            icon, null,
-            tint = (if (dark) LocalMotoPalette.current.onStrong else LocalMotoPalette.current.text).copy(alpha = if (enabled) 1f else 0.35f),
-            modifier = Modifier.size((size * 0.55f).dp),
-        )
+        Crossfade(icon, animationSpec = tween(200), label = "icon") { shown ->
+            Icon(
+                shown, null,
+                tint = (if (dark) LocalMotoPalette.current.onStrong else LocalMotoPalette.current.text).copy(alpha = if (enabled) 1f else 0.35f),
+                modifier = Modifier.size((size * 0.55f).dp),
+            )
+        }
     }
 }
 

@@ -337,6 +337,23 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     /** True between onResume and onPause: messages are only read aloud while MotoDash is the app on screen. */
     @Volatile private var onScreen = false
 
+    init {
+        // Music that was playing before a call goes on afterwards, for apps that do not resume by themselves.
+        viewModelScope.launch {
+            var resumeAfter = false
+            var previous = CallPhase.IDLE
+            call.state.collect { c ->
+                if (previous == CallPhase.IDLE && c.phase != CallPhase.IDLE) resumeAfter = media.isPlaying
+                if (previous != CallPhase.IDLE && c.phase == CallPhase.IDLE && resumeAfter) {
+                    resumeAfter = false
+                    delay(RESUME_AFTER_CALL_MS)
+                    if (!media.isPlaying) media.play()
+                }
+                previous = c.phase
+            }
+        }
+    }
+
     fun onResume() {
         onScreen = true
         location.start()
@@ -383,6 +400,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val FIX_TIMEOUT_MS = 5000L
         const val FRESH_MESSAGE_MS = 30_000L
+        const val RESUME_AFTER_CALL_MS = 1500L
         const val LEAN_MIN_KMH = 15
         const val MAX_GPX_BYTES = 20L * 1024 * 1024
     }
