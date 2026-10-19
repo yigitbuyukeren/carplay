@@ -94,7 +94,7 @@ fun CallScreen(
             ) {
                 Avatar(initial, pulsing = call.phase != CallPhase.ACTIVE)
                 Text(
-                    name, fontSize = 38.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                    name, fontSize = if (name.count { it.isDigit() } > name.length / 2) 30.sp else 38.sp, fontWeight = FontWeight.Bold, color = Color.White,
                     maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
                 )
                 when (call.phase) {
