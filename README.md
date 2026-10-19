@@ -3,7 +3,7 @@
 [![CI](https://github.com/yigitbuyukeren/carplay/actions/workflows/ci.yml/badge.svg)](https://github.com/yigitbuyukeren/carplay/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda yatay ekran dashboard'a çevirir.
+Motosiklet, araba ve bisiklet için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidona veya torpido üstüne takınca hız, harita, müzik ve telefon tek ekranda toplanır. İlk açılışta aracını seçersin (Ayarlar'dan değişir); rota, uyarılar ve düzen ona göre ayarlanır.
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
@@ -18,6 +18,12 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 | ![SOS](docs/screenshots/sos.png) |
 
 ## Özellikler
+**Araç profilleri**
+- İlk açılışta Motosiklet / Araba / Bisiklet seçimi; Ayarlar > Kurulum'dan değişir, kendi ayarların korunur
+- Rota araca göre: Valhalla `motorcycle`, `auto` veya `bicycle`; bisiklette yokuşsuz, düz zemin ve bisiklet tipi (yol / şehir / dağ)
+- ⛽ düğmesi: motosiklette benzinlik, arabada benzinlik ve şarj istasyonu, bisiklette tamir noktası, bisiklet dükkânı ve içme suyu
+- Kaza algılama eşikleri ve hız göstergesi ölçeği araca göre; bisiklette rüzgâr uyarısı ve dik ekran desteği (ana ekran, müzik, telefon, ayarlar dikey de çalışır)
+
 **Gösterge ve sürüş**
 - GPS hız göstergesi, saat, pil ve telefon sıcaklığı; gündüz/gece teması (ortam ışığına göre otomatik)
 - Yolculuk kaydı: otomatik, geçmiş ekranı
@@ -25,20 +31,20 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 - Türkçe ve İngilizce arayüz
 
 **Navigasyon**
-- Gömülü harita ve sesli yönlendirme: MapLibre + OpenStreetMap (OpenFreeMap), Nominatim arama, Valhalla motosiklet rotası, rota dışına çıkınca yeniden hesaplama
-- Rota seçenekleri: otoyolsuz ve ücretsiz yol (Valhalla), seçim hatırlanır
+- Gömülü harita ve sesli yönlendirme: MapLibre + OpenStreetMap (OpenFreeMap), Nominatim arama, Valhalla araç rotası, rota dışına çıkınca yeniden hesaplama
+- Rota seçenekleri: otoyolsuz ve ücretsiz yol (bisiklette yokuşsuz ve düz zemin), seçim hatırlanır
 - Kayıtlı yerler: Ev, İş ve favoriler; büyük karolarla tek dokunuşla rota, dashboard'da "Eve git"
-- Park yeri: yolculuk bittiğinde motorun bırakıldığı yer otomatik kaydedilir ("Park yerine git")
-- Benzinlikler: yakınında veya rotanın üzerinde; navigasyon sırasında tek dokunuşla **ara durak** ekle, varınca "Yola devam"
+- Park yeri: yolculuk bittiğinde aracın bırakıldığı yer otomatik kaydedilir ("Park yerine git"); eski bir gün ise tarihiyle görünür
+- Duraklar (benzinlik, şarj, tamirci, su): yakınında veya rotanın üzerinde; navigasyon sırasında tek dokunuşla **ara durak** ekle, varınca "Yola devam"
 - Yolun hız limiti ve aşınca sesli uyarı
 - Sürerken arama kutusu kilitlenir (sürüş kuralı: hareket halindeyken yazı girişi yok); hedefi kayıtlı yerlerden veya haritaya uzun basarak seç
 - Navigasyon sürerken ana ekranda canlı mini harita, sıradaki dönüş, kalan mesafe ve varış saati
 - Arama kutusu için uygulamanın kendi Türkçe klavyesi
 
 **Güvenlik**
-- Hava durumu: sıcaklık, 1 saat içinde yağmur ve buzlanma uyarısı (şerit + sesli)
-- Isınma koruması: telefon 42°C'yi aşınca ekran kısılır ve harita yavaşlar, motor durunca ekran kararır
-- SOS (varsayılan kapalı): otomatik kaza algılama (sert darbe + hareketsizlik) veya uzun basmalı düğme; geri sayımdan sonra en fazla 3 kişiye konum linkli **tek** SMS, arama yok
+- Hava durumu: sıcaklık, 1 saat içinde yağmur ve buzlanma uyarısı, bisiklette sert rüzgâr (şerit + sesli)
+- Isınma koruması: telefon 42°C'yi aşınca ekran kısılır ve harita yavaşlar, araç durunca ekran kararır
+- SOS (varsayılan kapalı): otomatik kaza algılama (sert darbe + hareketsizlik; iki tekerlekte telefonun yönü de değişmiş olmalı, çukur ve kırmızı ışık alarm vermez) veya uzun basmalı düğme; geri sayımdan sonra en fazla 3 kişiye konum linkli **tek** SMS, arama yok
 
 **Telefon ve medya**
 - Uygulama içi telefon: son aramalar, tüm rehber ve tuş takımı (eşleşen kişi önerisi, yapıştır, `0` uzun basınca `+`); sürerken tuş takımı kilitli
@@ -76,7 +82,7 @@ Bu uygulama sürüş sırasında dikkat dağıtabilir. Telefonu sabitle, ayarlar
 Bunlar ücretsiz, garantisiz genel servislerdir. Yoğun veya ticari kullanım için kendi sunucunu kur.
 
 ## Katkı
-Issue ve PR'lar açık. Başlamak için [CONTRIBUTING.md](CONTRIBUTING.md) dosyasına ve `good first issue` etiketli konulara bak. Fikirler: çevrimdışı harita ve rota (#5), yeni dil çevirileri, ek OBD adaptörleri (BLE).
+Issue ve PR'lar açık. Başlamak için [CONTRIBUTING.md](CONTRIBUTING.md) dosyasına ve [docs/STATUS.md](docs/STATUS.md) içindeki "Sıradaki işler" listesine bak. Fikirler: yeni dil çevirileri, çevrimdışı harita ve rota (büyük iş), tablet ve katlanabilir ekran düzenleri.
 
 ## Lisans
 [Apache 2.0](LICENSE)

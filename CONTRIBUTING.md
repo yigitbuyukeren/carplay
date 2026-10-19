@@ -19,13 +19,15 @@ MotoDash'e katkılarını bekliyoruz. Kod, hata bildirimi, fikir ve çeviri heps
 - Kod stili: Kotlin resmi stili, çevredeki kodun diliyle uyumlu ol.
 - PR'ın CI'dan (derleme ve test) geçmeli.
 
-## Motor için tasarım ilkeleri
-- Sürüş sırasında yazı girişi yok. Büyük dokunma hedefleri (en az 56dp), eldivenle kullanılabilir.
+## Sürüş için tasarım ilkeleri
+- Motosiklet, araba ve bisiklet için tasarlıyoruz: sürüş sırasında yazı girişi yok. Büyük dokunma hedefleri (en az 56dp), eldivenle kullanılabilir.
+- Araca göre değişen her şey (rota türü, eşikler, durak türleri) `ProfileConfig` içinde durur; yeni davranışı koda `if` serpiştirmeden oraya ekle.
+- Yeni ekranlar yatay ve dik çalışmalı (`isNarrowScreen()` ile dar ekranda alt alta diz) ve sistem yazı boyutu büyükken taşmamalı (sabit alanlarda `cappedSp`).
 - Düşük dikkat gerektirir: kısa metin, yüksek kontrast, tek dokunuşla işlem.
 - Ağ servisleri ücretsiz ve anahtarsız olmalı. Yeni bir harici servis eklemeden önce issue'da tartış.
 
 ## Nereden başlamalı?
-`good first issue` etiketli issue'lara bak.
+Açık issue yoksa [docs/STATUS.md](docs/STATUS.md) içindeki "Sıradaki işler" ve "Bilinen sorunlar" listelerinden birini seç, başlamadan bir issue aç.
 
 ## Davranış kuralları
 Saygılı ol. Bkz. [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

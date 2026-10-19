@@ -5,11 +5,12 @@ Her gün sonunda güncellenir (bkz. [WORKFLOW.md](WORKFLOW.md)).
 **Son güncelleme:** 2026-10-19
 
 ## Şu anki durum
-- Her şey `main`'de (PR #9 ve ardından bu turdaki 20'den fazla commit); `feature/obd` dalı eskidi, kullanılmıyor. 121 birim testi geçiyor, lint hatasız, release (R8) derleniyor, debug APK ~42 MB. Sürüm numarası `0.3.0` (`versionCode` 3); **etiketlenmedi, yayınlanmadı.**
+- Her şey `main`'de, açık dal ve açık issue yok. 156 birim testi geçiyor, lint hatasız, release (R8) derleniyor, debug APK ~42 MB. Sürüm numarası `0.3.0` (`versionCode` 3); **etiketlenmedi, yayınlanmadı.**
+- Son turda: **araç profilleri** (motosiklet, araba, bisiklet, dik ekran dahil) ve tarama listesindeki **33 hatanın düzeltmesi** (aşağıdaki iki bölüm). Debug APK telefona yüklendi, emülatörde dik ekranlar, SOS, 360 dp ve büyük yazı görüldü.
 - Bu turda eklenen: uygulama içi telefon (Son aramalar, Rehber, tuş takımı), MotoDash'in kendi arama ekranı (varsayılan telefon uygulaması seçilirse), eldivene göre büyütülmüş dokunma hedefleri, müzik ekranı yeniden (sesli, ilerleme çubuğu, kapak kaydırma, yön animasyonları, "Oynat" ile son müziği başlatma), navigasyon kartında canlı mini harita, uygulamaya gömülü Türkçe arama klavyesi, hız kartında rakım ve GPS durumu.
 - Bu turda çıkarılan: OBD, bakım takibi, eğim göstergesi, GPX.
 - **Gerçek cihazda denenmedi / eksik doğrulama:** arama sırasında MotoDash varsayılan telefon uygulamasıyken ses yolu, sessiz, tuş takımı ve ses tuşları; müzik kapalıyken Oynat'ın uygulamayı uyandırması; gerçek SMS gönderimi; kaza algılama eşikleri; gidonda ısınma; canlı mini haritanın pil ve ısı etkisi. Son yapılan kapak animasyonu düzeltmesi telefona yüklendi ama yeniden izlenmedi.
-- Açık issue: #5 (çevrimdışı harita ve rota).
+- Issue'lar: yedisi de kapalı. #5 (çevrimdışı harita ve rota) 2026-10-19'da "planlanmıyor" diye kapatıldı; fikir olarak aşağıda duruyor.
 
 ## Yapılanlar (kronolojik)
 - **v0.2**: harita arama kutusu 5 km/sa üstünde kilitli, `User-Agent` sürümlü ve iletişim adresli (`Http.kt`, tek HTTP yardımcısı), README ve ekran görüntüleri yenilendi.
@@ -61,7 +62,8 @@ Tarama listesindeki 33 maddenin hepsi ele alındı (numaralar taramadaki sırad�
 1. **Telefonda dene** (üstteki "denenmedi" listesi): önce bir arama, Oynat, kapak kaydırma, klavye ile adres arama, canlı mini harita.
 2. **SOS eşiklerini sahada ayarla**: `CrashDetector.IMPACT_G` (4 g) ve 8 sn hareketsizlik yalnızca sentetik verilerle test edildi. Gidonda yanlış alarm olursa önce eşiği artır. Gerçek SIM ile bir test SMS'i (kendi numarana) gönder.
 3. **v0.3.0 yayını**: release anahtarını oluştur (`keytool`), `keystore.properties` yaz, `assembleRelease`, etiketle, `gh release create`. Ekran görüntülerini (özellikle yeni telefon, müzik ve klavye ekranları) Türkçe arayüzle yenile.
-4. #5 çevrimdışı harita ve rota (büyük iş, ayrı planlanmalı: MapLibre çevrimdışı bölgeler + yerel Valhalla/GraphHopper karşılığı düşünülmeli).
+4. Çevrimdışı harita ve rota (eski #5, şimdilik planlanmıyor): büyük iş, MapLibre çevrimdışı bölgeler + yerel Valhalla/GraphHopper karşılığı gerekir.
+5. Telefonda **araç profilini** dene: arabada şarj istasyonu listesi, bisiklette dik düzen ve durak aramaları, gezinirken araç değiştirme, kaza eşiklerinde eğim şartı (25°) ve iki kat darbe eşiği.
 
 ### Kararlaştırıldı, yapılmayacak
 - Gidon kumandası desteği, yakıt menzili hesabı, TPMS, grup sürüşü/canlı konum paylaşımı (donanım veya sunucu gerektiriyor, anahtarsız/ücretsiz ilkesine uymuyor).
@@ -84,3 +86,4 @@ Tarama listesindeki 33 maddenin hepsi ele alındı (numaralar taramadaki sırad�
 - **2026-10-18 (ikinci tur)**: benzer projeler incelendi; rota seçenekleri, GPX takip, bakım hatırlatıcıları ve park yeri eklendi; lint hataları (Android 8–9 mesaj okuma çökmesi dahil) giderildi.
 - **2026-10-18**: v0.2, v0.3 ve v0.4 planındaki işlerin hepsi tek dalda tamamlandı; emülatörde doğrulandı (yukarıya bak). Overpass güvenilmez çıktığı için benzinlikte Nominatim yedeği eklendi.
 - **2026-10-19**: telefon, arama, müzik, klavye, mini harita ve kaldırma turları (ayrıntı yukarıda); tüm işler `main`'e alındı, `feature/obd` dalı kullanımdan kalktı.
+- **2026-10-19 (akşam)**: araç profilleri eklendi (ilk açılışta seçim, dik bisiklet düzeni, araca göre rota, duraklar, eşikler); ardından tüm kod tarandı ve bulunan 33 hata düzeltildi (yeniden rota yarışı ve ses tekrarı, yolculuk mesafesi, kaza algılamada eğim şartı, arama bildirimi, hız şeridi, durak araması, dik ekranlar). Commit geçmişi ortak yazar satırlarından temizlendi (içerik ve yazar aynı), #5 kapatıldı. Tüm belgeler güncellendi.

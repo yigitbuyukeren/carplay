@@ -22,7 +22,7 @@ Her geliştirme oturumunun başında ve sonunda bu listeyi uygula. Güncel durum
    ```
    Gelen PR ve issue'lar yeni işten önce gelir: yanıtla, etiketle, gözden geçir.
 4. **Bugünün işini seç**: `STATUS.md` içindeki "Sıradaki işler" listesinden bir tane. Tek oturumda bitecek boyutta olsun.
-5. **Dal aç**: `git switch -c feature/<kisa-ad>` (main'e doğrudan commit atma).
+5. **Dal**: kendi küçük işlerini doğrudan `main`'e commit'le; riskli veya büyük işlerde `git switch -c feature/<kisa-ad>` aç. Topluluk PR'ları dalda gelir.
 6. Arayüz işi yapılacaksa emülatörü aç: `$ANDROID_HOME/emulator/emulator -avd moto -no-snapshot`
 
 ## Günü kapatırken
@@ -31,10 +31,10 @@ Her geliştirme oturumunun başında ve sonunda bu listeyi uygula. Güncel durum
 2. **Yeni mantık eklendiyse testi de eklendi mi?** (`app/src/test/...`)
 3. **Arayüz değiştiyse** emülatörde kontrol et; gerekirse `docs/screenshots/` güncelle.
 4. **Sürüş kuralları korunuyor mu?** Sürerken yazı girişi yok, dokunma alanları ≥56dp, yüksek kontrast, yeni metinler hem `values/strings.xml` hem `values-en/strings.xml` içinde.
-5. **Commit ve push**: yarım iş bile olsa dalda commit'lenip push'lanır, yerelde bırakılmaz. Bitmişse PR aç (`Closes #<issue>` ile), bitmemişse taslak PR.
+5. **Commit ve push**: yarım iş bile olsa commit'lenip push'lanır, yerelde bırakılmaz. Dalda çalışıyorsan bitmişse PR aç (`Closes #<issue>` ile), bitmemişse taslak PR.
 6. **Belgeleri güncelle**
    - `STATUS.md`: bugün yapılanlar, yarım kalan, sıradaki işler, bilinen sorunlar
    - Özellik eklendiyse `README.md` özellik listesi
-   - Mimari değiştiyse 
+   - Mimari değiştiyse README'deki ve STATUS'taki ilgili bölümler
 7. **Sürüm zamanı mı?** Kullanıcıya görünür birkaç özellik birikmişse:
    `app/build.gradle.kts` içinde `versionCode` +1 ve `versionName` artır, etiketle, `gh release create` ile APK'yı yayınla.
