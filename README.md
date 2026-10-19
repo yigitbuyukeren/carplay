@@ -21,6 +21,7 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 **Gösterge ve sürüş**
 - GPS hız göstergesi, saat, pil ve telefon sıcaklığı; gündüz/gece teması (ortam ışığına göre otomatik)
 - Yolculuk kaydı: otomatik, geçmiş ekranı
+- Hız kartında rakım ve GPS durumu; büyük, eldivenle basılan tuşlar
 - Türkçe ve İngilizce arayüz
 
 **Navigasyon**
@@ -31,7 +32,8 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 - Benzinlikler: yakınında veya rotanın üzerinde; navigasyon sırasında tek dokunuşla **ara durak** ekle, varınca "Yola devam"
 - Yolun hız limiti ve aşınca sesli uyarı
 - Sürerken arama kutusu kilitlenir (sürüş kuralı: hareket halindeyken yazı girişi yok); hedefi kayıtlı yerlerden veya haritaya uzun basarak seç
-- Google Haritalar / Waze / Yandex kısayolları
+- Navigasyon sürerken ana ekranda canlı mini harita, sıradaki dönüş, kalan mesafe ve varış saati
+- Arama kutusu için uygulamanın kendi Türkçe klavyesi
 
 **Güvenlik**
 - Hava durumu: sıcaklık, 1 saat içinde yağmur ve buzlanma uyarısı (şerit + sesli)
@@ -39,7 +41,10 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 - SOS (varsayılan kapalı): otomatik kaza algılama (sert darbe + hareketsizlik) veya uzun basmalı düğme; geri sayımdan sonra en fazla 3 kişiye konum linkli **tek** SMS, arama yok
 
 **Telefon ve medya**
-- Müzik kontrolü ve Now Playing (bildirim erişimi gerekir), gelen arama ekranı, mesajları sesli okuma
+- Uygulama içi telefon: son aramalar, tüm rehber ve tuş takımı (eşleşen kişi önerisi, yapıştır, `0` uzun basınca `+`); sürerken tuş takımı kilitli
+- MotoDash'i varsayılan telefon uygulaması yaparsan arama ekranı da uygulamanın içinde: sessiz, ses yolu (telefon, hoparlör, Bluetooth), ses seviyesi, görüşme tuş takımı
+- Müzik: yalnızca müzik uygulamalarının oturumu, ilerleme çubuğu, kapağı kaydırarak şarkı geçme, ses tuşları; hiçbir şey çalmıyorken Oynat son müziği başlatır (bildirim erişimi gerekir)
+- Mesajları sesli okuma (yalnızca MotoDash ekrandayken)
 - Diğer uygulamaların üstünde hız/saat şeridi; ana ekran (HOME) launcher olarak ayarlanabilir
 
 ## Derleme

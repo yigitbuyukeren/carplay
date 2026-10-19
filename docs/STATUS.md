@@ -2,16 +2,16 @@
 
 Her gün sonunda güncellenir (bkz. [WORKFLOW.md](WORKFLOW.md)).
 
-**Son güncelleme:** 2026-10-18
+**Son güncelleme:** 2026-10-19
 
 ## Şu anki durum
-- `feature/obd` dalında v0.2 ve v0.3 işleri ile v0.4 işlerinin tamamı bitti; `main`'e henüz birleşmedi (PR açık).
-- 155 birim testi geçiyor, lint hatasız, debug APK ~41 MB, R8 ile küçültülmüş release APK ~24 MB. Sürüm numarası `0.3.0` (`versionCode` 3); **etiketlenmedi, yayınlanmadı.**
-- Emülatörde elle doğrulandı: gösterge, hava çipi, harita, kayıtlı yerler, adres adlandırma, benzinlik listesi, ara durak ve "yola devam", ısınma koruması (parlaklık ve kararma), SOS test geri sayımı, sekmeli ayarlar, küçültülmüş release, GPX açma (dosya seçici), GPX rotasından çıkma ve rotaya yaklaşma, bakım uyarısı ve kartı.
-- **Gerçek cihazda denenmedi:** gerçek SMS gönderimi, kaza algılama eşikleri, gidonda ısınma.
+- Her şey `main`'de (PR #9 ve ardından bu turdaki 20'den fazla commit); `feature/obd` dalı eskidi, kullanılmıyor. 121 birim testi geçiyor, lint hatasız, release (R8) derleniyor, debug APK ~42 MB. Sürüm numarası `0.3.0` (`versionCode` 3); **etiketlenmedi, yayınlanmadı.**
+- Bu turda eklenen: uygulama içi telefon (Son aramalar, Rehber, tuş takımı), MotoDash'in kendi arama ekranı (varsayılan telefon uygulaması seçilirse), eldivene göre büyütülmüş dokunma hedefleri, müzik ekranı yeniden (sesli, ilerleme çubuğu, kapak kaydırma, yön animasyonları, "Oynat" ile son müziği başlatma), navigasyon kartında canlı mini harita, uygulamaya gömülü Türkçe arama klavyesi, hız kartında rakım ve GPS durumu.
+- Bu turda çıkarılan: OBD, bakım takibi, eğim göstergesi, GPX.
+- **Gerçek cihazda denenmedi / eksik doğrulama:** arama sırasında MotoDash varsayılan telefon uygulamasıyken ses yolu, sessiz, tuş takımı ve ses tuşları; müzik kapalıyken Oynat'ın uygulamayı uyandırması; gerçek SMS gönderimi; kaza algılama eşikleri; gidonda ısınma; canlı mini haritanın pil ve ısı etkisi. Son yapılan kapak animasyonu düzeltmesi telefona yüklendi ama yeniden izlenmedi.
 - Açık issue: #5 (çevrimdışı harita ve rota).
 
-## Bu dalda yapılanlar
+## Yapılanlar (kronolojik)
 - **v0.2**: harita arama kutusu 5 km/sa üstünde kilitli, `User-Agent` sürümlü ve iletişim adresli (`Http.kt`, tek HTTP yardımcısı), README ve ekran görüntüleri yenilendi.
 - **Kayıtlı yerler**: Ev / İş / favoriler, arama sonucunda ve rota kartında ☆, harita panelinde büyük karolar, dashboard'da "Eve git / İşe git". Haritaya uzun basılan nokta adresiyle adlandırılır (Nominatim reverse).
 - **Hava durumu** (Open-Meteo): navigasyon kartında sıcaklık çipi, 1 saat içinde yağmur ve ≤3°C buzlanma uyarısı (şerit + isteğe bağlı sesli).
@@ -44,10 +44,10 @@ Bakılanlar: DMD2, Calimoto, Kurviger, Scenic, REVER, RISER, Motolog, AndrOBD, O
 - **2026-10-19, üçüncü tur**: uygulamaya gömülü Türkçe arama klavyesi (`SearchKeyboard`, sistem klavyesi yok, ekranı yeniden boyutlandırmaz, "Ara" hep görünür, uzun basınca sil, 123/sembol sayfası, İ/ı büyük-küçük kuralı); harita ekranında logo ve (i) kalktı, yerine küçük atıf yazısı (`MapCredit`), sağ düğmeler tek sütunda eşit aralıklı; dönüş talimatındaki "Caddesi caddesine" tekrarı temizlenir (`InstructionText`); hız kartında rakım ve GPS durumu (doğruluk yarıçapından iyi/orta/zayıf); müzikte kapak ve başlık "sonraki" ile sola, "önceki" ile sağa kayar, ana ekran müzik kartında da aynı animasyon, nefes alan kapak ve ekolayzer. Gerçek telefonda denenmedi.
 
 ## Sıradaki işler
+1. **Telefonda dene** (üstteki "denenmedi" listesi): önce bir arama, Oynat, kapak kaydırma, klavye ile adres arama, canlı mini harita.
 2. **SOS eşiklerini sahada ayarla**: `CrashDetector.IMPACT_G` (4 g) ve 8 sn hareketsizlik yalnızca sentetik verilerle test edildi. Gidonda yanlış alarm olursa önce eşiği artır. Gerçek SIM ile bir test SMS'i (kendi numarana) gönder.
-3. **Küçük ekran kontrolü**: dock (4 karo + durum) 360 dp yükseklikte sığıyor mu? Sığmıyorsa dock'u kaydırılabilir yap.
-4. **v0.3.0 yayını**: release anahtarını oluştur (`keytool`), `keystore.properties` yaz, `assembleRelease`, etiketle, `gh release create`. Ekran görüntülerini Türkçe arayüzle yenile.
-6. #5 çevrimdışı harita ve rota (büyük iş, ayrı planlanmalı: MapLibre çevrimdışı bölgeler + yerel Valhalla/GraphHopper karşılığı düşünülmeli).
+3. **v0.3.0 yayını**: release anahtarını oluştur (`keytool`), `keystore.properties` yaz, `assembleRelease`, etiketle, `gh release create`. Ekran görüntülerini (özellikle yeni telefon, müzik ve klavye ekranları) Türkçe arayüzle yenile.
+4. #5 çevrimdışı harita ve rota (büyük iş, ayrı planlanmalı: MapLibre çevrimdışı bölgeler + yerel Valhalla/GraphHopper karşılığı düşünülmeli).
 
 ### Kararlaştırıldı, yapılmayacak
 - Gidon kumandası desteği, yakıt menzili hesabı, TPMS, grup sürüşü/canlı konum paylaşımı (donanım veya sunucu gerektiriyor, anahtarsız/ücretsiz ilkesine uymuyor).
@@ -60,6 +60,7 @@ Bakılanlar: DMD2, Calimoto, Kurviger, Scenic, REVER, RISER, Motolog, AndrOBD, O
 
 ## Bilinen sorunlar ve riskler
 - Genel Overpass sunucuları sık 500/502 veriyor veya 30 sn sürüyor; benzinlik araması bu yüzden birkaçına birden soruyor ve Nominatim'e düşüyor. Yine de rota boyunca arama yedek yolda daha az isabetli (ilk ~20 km, 700 m koridor).
+- Arayan şirket adı (rehberde olmayan numaralar) Google Telefon'un kendi sorgusundan geliyordu; MotoDash varsayılan telefon uygulamasıyken sadece rehberdeki ad, operatörün gönderdiği ad veya numara görünür (arama geçmişindeki kayıtlı ad tuş takımı önerilerinde kullanılır).
 - Sistem çubukları ilk açılışta kısa süre görünüp düzeni kaydırabiliyor (emülatörde gözlendi, eskiden de vardı).
 - SOS ve kaza algılama bir güvenlik garantisi değildir; README'de belirtildi.
 
@@ -68,3 +69,4 @@ Bakılanlar: DMD2, Calimoto, Kurviger, Scenic, REVER, RISER, Motolog, AndrOBD, O
 - **2026-10-16**: Benzer projelerle (DMD2, Calimoto, Sygic, MOTO-HUB vb.) karşılaştırma yapıldı; v0.3 ve v0.4 özellik planı kararlaştırıldı.
 - **2026-10-18 (ikinci tur)**: benzer projeler incelendi; rota seçenekleri, GPX takip, bakım hatırlatıcıları ve park yeri eklendi; lint hataları (Android 8–9 mesaj okuma çökmesi dahil) giderildi.
 - **2026-10-18**: v0.2, v0.3 ve v0.4 planındaki işlerin hepsi tek dalda tamamlandı; emülatörde doğrulandı (yukarıya bak). Overpass güvenilmez çıktığı için benzinlikte Nominatim yedeği eklendi.
+- **2026-10-19**: telefon, arama, müzik, klavye, mini harita ve kaldırma turları (ayrıntı yukarıda); tüm işler `main`'e alındı, `feature/obd` dalı kullanımdan kalktı.
