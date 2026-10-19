@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,12 +55,11 @@ fun MediaCard(
     state: MediaState,
     media: MediaRepository,
     onGrantAccess: () -> Unit,
-    onOpenMusicApp: () -> Unit,
     onOpenNowPlaying: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalMotoPalette.current
-    val tint = remember(state.art, palette) { mediaTint(state.art, palette) }
+    val tint by animateColorAsState(remember(state.art, palette) { mediaTint(state.art, palette) }, tween(600), label = "tint")
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(28.dp))
@@ -66,49 +68,55 @@ fun MediaCard(
     ) {
         when {
             !state.hasAccess -> Prompt(stringResource(R.string.media_grant_prompt), stringResource(R.string.grant_access), onGrantAccess)
-            !state.hasSession -> Prompt(stringResource(R.string.media_not_playing), stringResource(R.string.open_music_app), onOpenMusicApp)
-            else -> Row(
-                modifier = Modifier.fillMaxSize().padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            // Nothing running: one tap starts the last music app where it stopped.
+            !state.hasSession -> Prompt(stringResource(R.string.media_not_playing), stringResource(R.string.play), media::resumeLast)
+            else -> Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Box(
-                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(16.dp)).background(MotoColors.CardHigh)
-                        .clickable(onClick = onOpenNowPlaying),
-                    contentAlignment = Alignment.Center,
+                // Top: cover, title and artist; a tap on any of it opens the full music screen.
+                Row(
+                    modifier = Modifier.fillMaxWidth().pressClickable(onClick = onOpenNowPlaying),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val art = state.art
-                    if (art != null) {
-                        Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    } else {
-                        Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(44.dp))
+                    Box(
+                        modifier = Modifier.size(68.dp).clip(RoundedCornerShape(16.dp)).background(MotoColors.CardHigh),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val art = state.art
+                        if (art != null) {
+                            Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        } else {
+                            Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(34.dp))
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
+                        Text(
+                            state.title.ifBlank { stringResource(R.string.unknown_track) },
+                            fontSize = 22.sp, fontWeight = FontWeight.Bold, color = palette.text,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            state.artist,
+                            fontSize = 16.sp, color = palette.textSecondary,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        state.title.ifBlank { stringResource(R.string.unknown_track) },
-                        fontSize = 22.sp, fontWeight = FontWeight.Bold, color = palette.text,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                // Bottom: volume, previous, play, next, volume across the whole card width.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ControlButton(Icons.AutoMirrored.Rounded.VolumeDown, 52, soft = true, onClick = media::volumeDown)
+                    ControlButton(Icons.Rounded.SkipPrevious, 60, onClick = { media.previous() })
+                    ControlButton(
+                        if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        76, filled = true, onClick = media::togglePlay,
                     )
-                    Text(
-                        state.artist,
-                        fontSize = 16.sp, color = palette.textSecondary,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ControlButton(Icons.AutoMirrored.Rounded.VolumeDown, 52, onClick = media::volumeDown)
-                        ControlButton(Icons.Rounded.SkipPrevious, 58, onClick = { media.previous() })
-                        ControlButton(
-                            if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            72, filled = true, onClick = media::togglePlay,
-                        )
-                        ControlButton(Icons.Rounded.SkipNext, 58, onClick = { media.next() })
-                        ControlButton(Icons.AutoMirrored.Rounded.VolumeUp, 52, onClick = media::volumeUp)
-                    }
+                    ControlButton(Icons.Rounded.SkipNext, 60, onClick = { media.next() })
+                    ControlButton(Icons.AutoMirrored.Rounded.VolumeUp, 52, soft = true, onClick = media::volumeUp)
                 }
             }
         }
@@ -116,13 +124,13 @@ fun MediaCard(
 }
 
 @Composable
-private fun ControlButton(icon: ImageVector, size: Int, filled: Boolean = false, onClick: () -> Unit) {
+private fun ControlButton(icon: ImageVector, size: Int, filled: Boolean = false, soft: Boolean = false, onClick: () -> Unit) {
     Box(
         modifier = Modifier
+            .pressClickable(onClick = onClick)
             .size(size.dp)
             .clip(CircleShape)
-            .background(if (filled) LocalMotoPalette.current.strong else Color.Transparent)
-            .clickable(onClick = onClick),
+            .background(if (filled) LocalMotoPalette.current.strong else if (soft) LocalMotoPalette.current.track else Color.Transparent),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, null, tint = if (filled) LocalMotoPalette.current.onStrong else LocalMotoPalette.current.text, modifier = Modifier.size((size * 0.62f).dp))

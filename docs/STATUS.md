@@ -25,11 +25,9 @@ Her gün sonunda güncellenir (bkz. [WORKFLOW.md](WORKFLOW.md)).
 ## İkinci tur: rakip ve benzer projelerden eklenenler
 Bakılanlar: DMD2, Calimoto, Kurviger, Scenic, REVER, RISER, Motolog, AndrOBD, OpenDash, Headunit Revived / Open Launcher. Çıkan ortak beklentiler ve kararlar:
 - **Eklendi, rota seçenekleri**: otoyolsuz ve ücretsiz yol (Valhalla `use_highways` / `use_tolls`), rota kartında iki düğme, seçim kalıcı.
-- **Eklendi, GPX içe aktarma ve takip** (Kurviger, Scenic, DMD2'nin ortak özelliği): dosya seçici, paylaş menüsü ve dosya yöneticisinden açılır; Valhalla `trace_route` (harita eşleme) ile yollara oturtulur ve normal rota gibi dönüş talimatı verir. Yakınsa oradan başlar, uzaksa önce rotaya götürür; rotadan çıkınca yeniden rota çizmez (izi çöpe atmaz), rotaya dönünce devam eder. Benzinlik ara durağı izi bozmaz.
 - **Eklendi, park yeri**: yolculuk bitince son hareketli nokta otomatik "Park" karosu olur.
 - **Düzeltildi (lint)**: Android 8–9'da mesaj okuma çökebilirdi (API 28/30 çağrıları, artık androidx uyumluluk sınıfı), hız şeridi İngilizcede de "km/sa" yazıyordu, manifest GPX filtresinde host eksikti, kullanılmayan 4 string silindi. CI artık `lintDebug` de çalıştırıyor.
 - **Eklenmedi**: viraj ağırlıklı rota (Calimoto/Kurviger'in asıl farkı; Valhalla'da anahtarsız karşılığı yok), radar uyarısı (veri ve yasal durum belirsiz), grup takibi ve canlı konum (sunucu gerekir), mph/mil birimi (hız limiti tabelaları ve her yerde sabit km varsayımı; ayrı iş olarak değerlendirilebilir), yakıt günlüğü (sayı girişi gerekir, sürerken olmaz), TPMS ve gidon kumandası (donanım).
-- **Sınır**: GPX eşleme genel Valhalla sunucusunun sınırlarına tabi (yaklaşık 200 km üstü reddedilebilir); hata mesajı bunu söyler.
 
 ## Uygulama içi telefon ekranı (2026-10-19)
 - Dock'taki telefon tuşu artık sistem çeviricisini açmaz; `PhoneScreen` (CarPlay tarzı) açılır: Son aramalar (aynı numaranın art arda kayıtları birleşir, cevapsızlar kırmızı), Favoriler (rehberde yıldızlı kişiler), Tuş takımı. Satıra dokununca doğrudan aranır (`TelecomManager.placeCall`, izin yoksa çeviriciye numarayla düşer).
@@ -41,11 +39,12 @@ Bakılanlar: DMD2, Calimoto, Kurviger, Scenic, REVER, RISER, Motolog, AndrOBD, O
 
 - **2026-10-19, kaldırıldı**: OBD (ELM327, devir yayı, vites, arıza kodları, Bluetooth izinleri) ve bakım takibi (kilometre sayacı, hatırlatıcılar, uyarı şeridi) tamamen çıkarıldı; ayarlarda "Motor" sekmesi yok. Ana ekran müzik kartı sığacak şekilde küçüldü, SOS düğmesi hız kartının sol altına taşındı, SOS ekranı tam ekran, navigasyon kartı yönlendirme sırasında canlı mini harita, kalan mesafe ve varış saatini gösterir (Google düğmesi kalktı, kartın tamamı haritayı açar).
 
+- **2026-10-19, ikinci kaldırma ve düzenlemeler**: eğim (viraj) göstergesi ve GPX (içe aktarma, takip, yolculuk paylaşımı) tamamen çıkarıldı. Müzik: kaynak seçici yok, yalnızca müzik uygulamalarının oturumu gösterilir; hiçbir şey çalmıyorken "Oynat" son müzik uygulamasını başlatır (önce medya tuşu, olmazsa uygulamayı açar). Ana ekran müzik kartı yeniden düzenlendi. Navigasyon kartı: canlı haritanın üstünde tek dokunuşla harita, atıf sağ altta, dönüş yazısı iki satır. Telefon: tuş takımı yeniden kuruldu (numara ipucu, eşleşen kişi önerisi, uzun basınca tümünü sil, 0'a uzun basınca +, yapıştır, kenarlıklı tuşlar), sayfa düğmeleri inceldi. Gerçek telefonda denenmedi.
+
 ## Sıradaki işler
 2. **SOS eşiklerini sahada ayarla**: `CrashDetector.IMPACT_G` (4 g) ve 8 sn hareketsizlik yalnızca sentetik verilerle test edildi. Gidonda yanlış alarm olursa önce eşiği artır. Gerçek SIM ile bir test SMS'i (kendi numarana) gönder.
 3. **Küçük ekran kontrolü**: dock (4 karo + durum) 360 dp yükseklikte sığıyor mu? Sığmıyorsa dock'u kaydırılabilir yap.
 4. **v0.3.0 yayını**: release anahtarını oluştur (`keytool`), `keystore.properties` yaz, `assembleRelease`, etiketle, `gh release create`. Ekran görüntülerini Türkçe arayüzle yenile.
-5. GPX için: rota planlayıcıdan gerçek bir dosya (Kurviger, Calimoto dışa aktarımı) ile dene; çok uzun izleri parçalara bölüp eşlemek gerekebilir.
 6. #5 çevrimdışı harita ve rota (büyük iş, ayrı planlanmalı: MapLibre çevrimdışı bölgeler + yerel Valhalla/GraphHopper karşılığı düşünülmeli).
 
 ### Kararlaştırıldı, yapılmayacak

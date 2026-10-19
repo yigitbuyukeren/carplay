@@ -7,7 +7,6 @@
     <string name="speed_unit">km/sa</string>
     <string name="gps_waiting">GPS bekleniyor…</string>
     <string name="nav_title">Navigasyon</string>
-    <string name="nav_back_to_map">Haritaya dön</string>
     <string name="nav_map_and_route">Harita ve rota</string>
     <string name="perm_location">Konum</string>
     <string name="perm_location_desc">Hız göstergesi için GPS</string>
@@ -69,21 +68,12 @@
     <string name="stat_duration">Süre</string>
     <string name="stat_avg">Ortalama hız</string>
     <string name="stat_max">En yüksek hız</string>
-    <string name="trip_share_gpx">GPX paylaş</string>
     <string name="trip_delete">Sil</string>
-    <string name="trip_gpx_name">MotoDash %1$s</string>
     <string name="record_trips_title">Yolculukları kaydet</string>
     <string name="record_trips_desc">Sürüşler otomatik kaydedilir ve yalnızca bu telefonda saklanır.</string>
     <string name="speed_limit_title">Hız limiti göstergesi</string>
     <string name="speed_limit_desc">Navigasyon sırasında yolun hız limitini gösterir, aşınca uyarır. Konumun OpenStreetMap (Valhalla) sunucusuna gönderilir.</string>
     <string name="speed_limit_warning">Hız limiti %1$d, yavaşla</string>
-    <string name="lean_title">Eğim göstergesi</string>
-    <string name="lean_desc">Telefonun sensörleriyle motorun yatışını gösterir. Motor dikken kalibre et, sonra birkaç viraj al.</string>
-    <string name="lean_calibrate">Kalibre et (motor dik)</string>
-    <string name="lean_calibrated">Kalibre edildi</string>
-    <string name="lean_learning">Viraj bekleniyor…</string>
-    <string name="lean_needs_calibration">Kalibre et</string>
-    <string name="lean_unsupported">Bu telefonda gerekli sensörler yok</string>
     <string name="saved_home">Ev</string>
     <string name="saved_work">İş</string>
     <string name="saved_favorite">Favori</string>
@@ -163,14 +153,6 @@
     <string name="route_updating">Rota güncelleniyor…</string>
     <string name="saved_parked">Park</string>
     <string name="go_parked">Park yerine git</string>
-    <string name="gpx_failed">GPX dosyası eşleştirilemedi. Çok uzun (200 km üstü), bozuk veya yol ağından uzak olabilir.</string>
-    <string name="gpx_unreadable">GPX dosyası okunamadı</string>
-    <string name="gpx_join_point">Rotanın başlangıcı</string>
-    <string name="gpx_joined">Rotaya ulaştınız, devam edebilirsiniz</string>
-    <string name="gpx_off_track">Rotadan çıktınız</string>
-    <string name="gpx_off_chip">Rotanın dışındasın</string>
-    <string name="gpx_open">GPX aç</string>
-    <string name="gpx_title">GPX rotası</string>
     <string name="overlay_speed_fmt">%1$d km/sa</string>
     <string name="phone_recents">Son aramalar</string>
     <string name="phone_favorites">Favoriler</string>
@@ -200,4 +182,7 @@
     <string name="call_keys">Tuş takımı</string>
     <string name="call_keys_hide">Gizle</string>
     <string name="call_volume">Ses</string>
+    <string name="play">Oynat</string>
+    <string name="phone_enter_number">Numara gir</string>
+    <string name="phone_paste">Yapıştır</string>
 </resources>

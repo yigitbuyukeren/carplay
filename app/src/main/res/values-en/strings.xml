@@ -7,7 +7,6 @@
     <string name="speed_unit">km/h</string>
     <string name="gps_waiting">Waiting for GPS…</string>
     <string name="nav_title">Navigation</string>
-    <string name="nav_back_to_map">Back to map</string>
     <string name="nav_map_and_route">Map and route</string>
     <string name="perm_location">Location</string>
     <string name="perm_location_desc">GPS for the speedometer</string>
@@ -69,21 +68,12 @@
     <string name="stat_duration">Duration</string>
     <string name="stat_avg">Average speed</string>
     <string name="stat_max">Top speed</string>
-    <string name="trip_share_gpx">Share GPX</string>
     <string name="trip_delete">Delete</string>
-    <string name="trip_gpx_name">MotoDash %1$s</string>
     <string name="record_trips_title">Record trips</string>
     <string name="record_trips_desc">Rides are recorded automatically and stay on this phone.</string>
     <string name="speed_limit_title">Speed limit display</string>
     <string name="speed_limit_desc">Shows the road\'s speed limit during navigation and warns when you go over. Your position is sent to the OpenStreetMap (Valhalla) server.</string>
     <string name="speed_limit_warning">Speed limit %1$d, slow down</string>
-    <string name="lean_title">Lean angle</string>
-    <string name="lean_desc">Shows how far the bike leans using the phone\'s sensors. Calibrate while the bike stands upright, then ride a few corners.</string>
-    <string name="lean_calibrate">Calibrate (bike upright)</string>
-    <string name="lean_calibrated">Calibrated</string>
-    <string name="lean_learning">Waiting for corners…</string>
-    <string name="lean_needs_calibration">Calibrate</string>
-    <string name="lean_unsupported">This phone lacks the required sensors</string>
     <string name="saved_home">Home</string>
     <string name="saved_work">Work</string>
     <string name="saved_favorite">Favorite</string>
@@ -163,14 +153,6 @@
     <string name="route_updating">Updating route…</string>
     <string name="saved_parked">Parked</string>
     <string name="go_parked">Go to my bike</string>
-    <string name="gpx_failed">The GPX file could not be matched to roads. It may be too long (over 200 km), damaged or far from the road network.</string>
-    <string name="gpx_unreadable">The GPX file could not be read</string>
-    <string name="gpx_join_point">Start of the route</string>
-    <string name="gpx_joined">You are on the route, you can continue</string>
-    <string name="gpx_off_track">You left the route</string>
-    <string name="gpx_off_chip">Off the route</string>
-    <string name="gpx_open">Open GPX</string>
-    <string name="gpx_title">GPX route</string>
     <string name="overlay_speed_fmt">%1$d km/h</string>
     <string name="phone_recents">Recents</string>
     <string name="phone_favorites">Favorites</string>
@@ -200,4 +182,7 @@
     <string name="call_keys">Keypad</string>
     <string name="call_keys_hide">Hide</string>
     <string name="call_volume">Volume</string>
+    <string name="play">Play</string>
+    <string name="phone_enter_number">Enter a number</string>
+    <string name="phone_paste">Paste</string>
 </resources>

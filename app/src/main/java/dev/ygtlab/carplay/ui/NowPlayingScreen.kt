@@ -89,7 +89,6 @@ import kotlinx.coroutines.delay
 fun NowPlayingScreen(
     state: MediaState,
     media: MediaRepository,
-    onOpenApp: (String?) -> Unit,
     onGrantAccess: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -109,15 +108,16 @@ fun NowPlayingScreen(
             modifier = Modifier.fillMaxSize().padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Cover(state, onNext = { media.next() }, onPrevious = { media.previous() })
-            Spacer(Modifier.width(24.dp))
+            Box(Modifier.fillMaxHeight().aspectRatio(0.88f), contentAlignment = Alignment.Center) {
+                Cover(state, onNext = { media.next() }, onPrevious = { media.previous() })
+            }
+            Spacer(Modifier.width(28.dp))
             Column(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 TrackTitle(state)
-                SourceRow(state, media, onOpenApp)
-                if (state.hasSession) Progress(state, media::seekTo)
+                if (state.hasSession) Progress(state, media::seekTo) else Spacer(Modifier.height(1.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -127,7 +127,7 @@ fun NowPlayingScreen(
                     RoundButton(Icons.Rounded.SkipPrevious, 68, Color.Transparent, enabled = state.hasSession) { media.previous() }
                     RoundButton(
                         if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        84, palette.strong, dark = true, enabled = state.hasSession, onClick = media::togglePlay,
+                        84, palette.strong, dark = true, onClick = media::togglePlay,
                     )
                     RoundButton(Icons.Rounded.SkipNext, 68, Color.Transparent, enabled = state.hasSession) { media.next() }
                     RoundButton(Icons.AutoMirrored.Rounded.VolumeUp, 60, palette.track, onClick = media::volumeUp)
@@ -147,7 +147,7 @@ private fun Cover(state: MediaState, onNext: () -> Unit, onPrevious: () -> Unit)
     val threshold = with(LocalDensity.current) { 80.dp.toPx() }
     Box(
         modifier = Modifier
-            .fillMaxHeight()
+            .fillMaxHeight(0.86f)
             .aspectRatio(1f)
             .graphicsLayer { translationX = offset; scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(24.dp))
@@ -184,7 +184,7 @@ private fun TrackTitle(state: MediaState) {
         AnimatedContent(
             targetState = state.title to state.artist,
             transitionSpec = { (fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 4 }) togetherWith fadeOut(tween(200)) },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f, fill = false),
             label = "title",
         ) { (title, artist) ->
             Column {
@@ -198,7 +198,7 @@ private fun TrackTitle(state: MediaState) {
                 }
             }
         }
-        if (state.playing) Equalizer(modifier = Modifier.padding(start = 12.dp, top = 8.dp))
+        if (state.playing) Equalizer(modifier = Modifier.padding(start = 14.dp, top = 10.dp))
     }
 }
 
@@ -215,27 +215,6 @@ private fun Equalizer(modifier: Modifier = Modifier) {
                 label = "bar$i",
             )
             Box(Modifier.width(5.dp).fillMaxHeight(h).clip(RoundedCornerShape(3.dp)).background(color))
-        }
-    }
-}
-
-/** The music apps that are installed: the one on screen is lit, a tap switches to it or opens it if it has not started. */
-@Composable
-private fun SourceRow(state: MediaState, media: MediaRepository, onOpenApp: (String?) -> Unit) {
-    val context = LocalContext.current
-    val palette = LocalMotoPalette.current
-    val apps = remember { MUSIC_APPS.filter { context.isInstalled(it.packageName) } }
-    if (apps.isEmpty()) return
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        apps.forEach { app ->
-            val selected = state.packageName == app.packageName
-            val bg by animateColorAsState(if (selected) MotoColors.Blue else palette.track, tween(250), label = "source")
-            Box(
-                modifier = Modifier
-                    .pressClickable { if (!media.select(app.packageName)) onOpenApp(app.packageName) }
-                    .height(56.dp).clip(RoundedCornerShape(28.dp)).background(bg).padding(horizontal = 22.dp),
-                contentAlignment = Alignment.Center,
-            ) { Text(app.label, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = if (selected) Color.White else palette.text) }
         }
     }
 }
@@ -261,7 +240,7 @@ private fun Progress(state: MediaState, onSeek: (Long) -> Unit) {
     val seekable = state.durationMs > 0
     Column {
         BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth().height(44.dp)
+            modifier = Modifier.fillMaxWidth().height(36.dp)
                 .pointerInput(seekable, state.durationMs) {
                     if (!seekable) return@pointerInput
                     awaitEachGesture {

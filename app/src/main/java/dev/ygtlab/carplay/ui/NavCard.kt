@@ -70,6 +70,8 @@ fun NavCard(
         if (guiding) {
             // Live map while guiding: the same route the full map shows, at a glance.
             MiniMap(nav.route, nav.destination, me, isDay, lowPower)
+            // The map view swallows touches; this clear layer on top passes a tap on to the card.
+            Box(Modifier.fillMaxSize().pressClickable(onClick = onOpenMap))
             Box(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(listOf(Color(0xCC000000), Color.Transparent, Color.Transparent, Color(0xB3000000)))
@@ -93,7 +95,7 @@ fun NavCard(
                     Icon(maneuverIcon(maneuver.type), null, tint = Color.White, modifier = Modifier.size(52.dp))
                     Column(modifier = Modifier.padding(start = 12.dp)) {
                         Text(formatDistance(nav.distToNextM), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text(maneuver.instruction, fontSize = 14.sp, color = Color(0xE6FFFFFF), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(maneuver.instruction.trimEnd('.'), fontSize = 13.sp, lineHeight = 16.sp, color = Color(0xE6FFFFFF), maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 val arrival = remember(nav.remainingS) {

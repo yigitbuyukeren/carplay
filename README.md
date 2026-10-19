@@ -10,8 +10,9 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 | Rota | Navigasyon |
 |---|---|
 | ![Rota](docs/screenshots/route.png) | ![Navigasyon](docs/screenshots/navigation.png) |
-| **Benzinlikler** | **GPX rotası** |
-| ![Benzinlikler](docs/screenshots/fuel.png) | ![GPX](docs/screenshots/gpx.png) |
+| **Benzinlikler** |
+|---|
+| ![Benzinlikler](docs/screenshots/fuel.png) |
 | **SOS geri sayımı** |
 |---|
 | ![SOS](docs/screenshots/sos.png) |
@@ -19,14 +20,12 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 ## Özellikler
 **Gösterge ve sürüş**
 - GPS hız göstergesi, saat, pil ve telefon sıcaklığı; gündüz/gece teması (ortam ışığına göre otomatik)
-- Eğim göstergesi: telefonun sensörleriyle yatış açısı ve en yüksek sol/sağ değerleri
-- Yolculuk kaydı: otomatik, geçmiş ekranı, GPX paylaşma
+- Yolculuk kaydı: otomatik, geçmiş ekranı
 - Türkçe ve İngilizce arayüz
 
 **Navigasyon**
 - Gömülü harita ve sesli yönlendirme: MapLibre + OpenStreetMap (OpenFreeMap), Nominatim arama, Valhalla motosiklet rotası, rota dışına çıkınca yeniden hesaplama
 - Rota seçenekleri: otoyolsuz ve ücretsiz yol (Valhalla), seçim hatırlanır
-- GPX: Kurviger, Calimoto gibi planlayıcılardan gelen veya kendi kaydettiğin GPX dosyasını aç (dosya seçici, paylaş menüsü veya dosya yöneticisi), yollara eşlenir ve dönüş dönüş takip edilir; uzaktaysan önce rotaya götürür, rotadan çıkınca bekler ve geri döndüğünde devam eder
 - Kayıtlı yerler: Ev, İş ve favoriler; büyük karolarla tek dokunuşla rota, dashboard'da "Eve git"
 - Park yeri: yolculuk bittiğinde motorun bırakıldığı yer otomatik kaydedilir ("Park yerine git")
 - Benzinlikler: yakınında veya rotanın üzerinde; navigasyon sırasında tek dokunuşla **ara durak** ekle, varınca "Yola devam"

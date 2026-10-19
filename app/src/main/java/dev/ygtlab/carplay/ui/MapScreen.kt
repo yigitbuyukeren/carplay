@@ -138,7 +138,6 @@ fun MapScreen(
     places: List<SavedPlace>,
     onSavePlace: (PlaceKind, Place) -> Unit,
     onRemovePlace: (SavedPlace) -> Unit,
-    onOpenGpx: (Uri) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -157,8 +156,6 @@ fun MapScreen(
     var styleReady by remember { mutableStateOf(false) }
     var centeredOnce by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf<Place?>(null) }
-    // GPX files carry no reliable MIME type in file managers, so the picker accepts any file.
-    val gpxPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) onOpenGpx(uri) }
 
     // A hot phone gets a calmer map: fewer frames per second.
     LaunchedEffect(lowPower) { mapView.setMaximumFps(if (lowPower) LOW_POWER_FPS else FULL_FPS) }
@@ -303,7 +300,6 @@ fun MapScreen(
                 ui.navigating -> ManeuverBanner(ui)
                 ui.arrived -> ArrivedCard(
                     next = ui.finalDestination,
-                    joiningTrack = ui.joiningTrack,
                     onContinue = nav::continueToFinal,
                     onDone = nav::stopNavigation,
                 )
@@ -311,7 +307,6 @@ fun MapScreen(
                     ui, options, onOptions = nav::setOptions,
                     onStart = nav::startNavigation, onCancel = nav::stopNavigation,
                     saved = ui.destination?.let { d -> places.any { Geo.distance(it.place.point, d.point) < SAVED_SPOT_M } } == true,
-                    isTrack = ui.track != null,
                     onSave = { ui.destination?.let { saving = it } },
                 )
                 else -> SearchPanel(
@@ -323,11 +318,9 @@ fun MapScreen(
                     onSelect = nav::selectPlace,
                     onSave = { saving = it },
                     onRemovePlace = onRemovePlace,
-                    onPickGpx = if (speedKmh >= SEARCH_LOCK_KMH) null else ({ gpxPicker.launch(arrayOf("*/*")) }),
                 )
             }
             if (ui.rerouting) Chip(stringResource(R.string.rerouting_chip), MotoColors.Orange)
-            if (ui.offTrack) Chip(stringResource(R.string.gpx_off_chip), MotoColors.Orange)
         }
 
         if (ui.navigating) {
@@ -421,7 +414,6 @@ private fun SearchPanel(
     onSelect: (Place) -> Unit,
     onSave: (Place) -> Unit,
     onRemovePlace: (SavedPlace) -> Unit,
-    onPickGpx: (() -> Unit)?,
 ) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -463,7 +455,7 @@ private fun SearchPanel(
                     Text(stringResource(if (places.isEmpty()) R.string.saved_hint else R.string.hint_long_press), fontSize = 14.sp, color = MotoColors.Gray)
             }
             if (ui.results.isEmpty() && !ui.loading) {
-                SavedTiles(places, onGo = onSelect, onRemove = onRemovePlace, onPickGpx = onPickGpx)
+                SavedTiles(places, onGo = onSelect, onRemove = onRemovePlace)
             }
             if (ui.results.isNotEmpty()) {
                 LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -496,23 +488,10 @@ private fun SearchPanel(
 /** Home, work and favorites as big tiles: one tap to route, long press then tap again to delete. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SavedTiles(places: List<SavedPlace>, onGo: (Place) -> Unit, onRemove: (SavedPlace) -> Unit, onPickGpx: (() -> Unit)?) {
+private fun SavedTiles(places: List<SavedPlace>, onGo: (Place) -> Unit, onRemove: (SavedPlace) -> Unit) {
     var confirm by remember { mutableStateOf<SavedPlace?>(null) }
     LaunchedEffect(confirm) { if (confirm != null) { delay(3000); confirm = null } }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        item {
-            Row(
-                modifier = Modifier.height(68.dp).clip(RoundedCornerShape(16.dp)).background(MotoColors.PanelHigh)
-                    .clickable(enabled = onPickGpx != null) { onPickGpx?.invoke() }.padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Rounded.FolderOpen, null, tint = if (onPickGpx != null) Color.White else MotoColors.Gray, modifier = Modifier.size(26.dp))
-                Text(
-                    stringResource(R.string.gpx_open), fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
-                    color = if (onPickGpx != null) Color.White else MotoColors.Gray, modifier = Modifier.padding(start = 10.dp),
-                )
-            }
-        }
         items(places) { sp ->
             val pending = confirm == sp
             Row(
@@ -579,7 +558,6 @@ private fun RouteCard(
     options: RouteOptions,
     onOptions: (RouteOptions) -> Unit,
     saved: Boolean,
-    isTrack: Boolean,
     onSave: () -> Unit,
     onStart: () -> Unit,
     onCancel: () -> Unit,
@@ -590,7 +568,7 @@ private fun RouteCard(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                if (!isTrack) Box(Modifier.size(68.dp).clickable(onClick = onSave), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(68.dp).clickable(onClick = onSave), contentAlignment = Alignment.Center) {
                     Icon(
                         if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
                         tint = if (saved) MotoColors.Orange else MotoColors.Gray, modifier = Modifier.size(28.dp),
@@ -602,7 +580,7 @@ private fun RouteCard(
                 else "${formatDistance(route.distanceM.toInt())} · ${formatDuration(LocalContext.current, route.durationS.toInt())} · ${stringResource(R.string.arrival_fmt, eta)}",
                 fontSize = 16.sp, color = MotoColors.Gray,
             )
-            if (!isTrack) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OptionChip(stringResource(R.string.opt_no_highway), options.avoidHighways, { onOptions(options.copy(avoidHighways = !options.avoidHighways)) }, Modifier.weight(1f))
                 OptionChip(stringResource(R.string.opt_no_toll), options.avoidTolls, { onOptions(options.copy(avoidTolls = !options.avoidTolls)) }, Modifier.weight(1f))
             }
@@ -627,11 +605,11 @@ private fun OptionChip(label: String, selected: Boolean, onClick: () -> Unit, mo
 }
 
 @Composable
-private fun ArrivedCard(next: Place?, joiningTrack: Boolean, onContinue: () -> Unit, onDone: () -> Unit) {
+private fun ArrivedCard(next: Place?, onContinue: () -> Unit, onDone: () -> Unit) {
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                stringResource(if (joiningTrack) R.string.gpx_joined else if (next != null) R.string.stop_arrived else R.string.arrived),
+                stringResource(if (next != null) R.string.stop_arrived else R.string.arrived),
                 fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White,
             )
             if (next != null) {

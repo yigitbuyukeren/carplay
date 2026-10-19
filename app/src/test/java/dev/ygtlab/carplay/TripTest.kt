@@ -2,7 +2,6 @@ package dev.ygtlab.carplay
 
 import dev.ygtlab.carplay.data.TripMath
 import dev.ygtlab.carplay.data.TripPoint
-import dev.ygtlab.carplay.util.Gpx
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,12 +40,4 @@ class TripTest {
         assertEquals(0, stats.maxKmh)
     }
 
-    @Test
-    fun gpxContainsPointsInUtc() {
-        val gpx = Gpx.write("A & B", listOf(TripPoint(0L, 41.0, 29.0, 36)))
-        assertTrue(gpx.contains("<name>A &amp; B</name>"))
-        assertTrue(gpx.contains("lat=\"41.000000\" lon=\"29.000000\""))
-        assertTrue(gpx.contains("<time>1970-01-01T00:00:00Z</time>"))
-        assertTrue(gpx.contains("<speed>10.00</speed>"))
-    }
 }

@@ -1,6 +1,5 @@
 package dev.ygtlab.carplay.ui
 
-import dev.ygtlab.carplay.data.LeanState
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
@@ -44,8 +43,6 @@ private const val MAX_SPEED = 200f
 fun SpeedCard(
     gps: GpsUi,
     limit: Int?,
-    lean: LeanState?,
-    onResetLeanPeaks: () -> Unit,
     onSos: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
@@ -88,7 +85,6 @@ fun SpeedCard(
                 Text(stringResource(R.string.gps_waiting), fontSize = 16.sp, color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
             }
         }
-        if (lean != null) LeanGauge(lean, onResetLeanPeaks, Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp))
         if (onSos != null) SosButton(onSos, Modifier.align(Alignment.BottomStart).padding(16.dp))
         if (limit != null) SpeedLimitSign(limit, Modifier.align(Alignment.TopEnd).padding(16.dp), size = 76.dp)
     }

@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.sp
 import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.Trip
 import dev.ygtlab.carplay.data.TripRecorder
-import dev.ygtlab.carplay.util.shareGpx
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
@@ -108,16 +107,6 @@ fun TripsScreen(trips: TripRecorder, onClose: () -> Unit) {
                         TripDetail(
                             trip = selected,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
-                            onShare = {
-                                scope.launch {
-                                    val points = trips.points(selected.id)
-                                    context.shareGpx(
-                                        context.getString(R.string.trip_gpx_name, dateFormat.format(Date(selected.startedAt))),
-                                        "trip-${selected.id}.gpx",
-                                        points,
-                                    )
-                                }
-                            },
                             onDelete = {
                                 scope.launch {
                                     trips.delete(selected.id)
@@ -133,7 +122,7 @@ fun TripsScreen(trips: TripRecorder, onClose: () -> Unit) {
 }
 
 @Composable
-private fun TripDetail(trip: Trip, onShare: () -> Unit, onDelete: () -> Unit, modifier: Modifier = Modifier) {
+private fun TripDetail(trip: Trip, onDelete: () -> Unit, modifier: Modifier = Modifier) {
     val palette = LocalMotoPalette.current
     val context = LocalContext.current
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -147,7 +136,6 @@ private fun TripDetail(trip: Trip, onShare: () -> Unit, onDelete: () -> Unit, mo
         }
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            PillButton(stringResource(R.string.trip_share_gpx), MotoColors.Blue, onShare, Modifier.weight(1f))
             PillButton(stringResource(R.string.trip_delete), MotoColors.Red, onDelete, Modifier.weight(1f))
         }
     }

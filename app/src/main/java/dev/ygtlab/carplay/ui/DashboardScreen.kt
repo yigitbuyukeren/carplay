@@ -51,8 +51,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val callerName by vm.callerName.collectAsStateWithLifecycle()
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
-    val leanEnabled by vm.leanEnabled.collectAsStateWithLifecycle()
-    val leanState by vm.lean.state.collectAsStateWithLifecycle()
     val speedLimitOn by vm.speedLimitEnabled.collectAsStateWithLifecycle()
     val speedLimit by vm.speedLimit.limit.collectAsStateWithLifecycle()
     val recordTrips by vm.recordTrips.collectAsStateWithLifecycle()
@@ -69,7 +67,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val recents by vm.phone.recents.collectAsStateWithLifecycle()
     val contacts by vm.phone.contacts.collectAsStateWithLifecycle()
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
-    val mapRequests by vm.mapRequests.collectAsStateWithLifecycle()
     val places by vm.places.collectAsStateWithLifecycle()
     val thermal by vm.thermal.state.collectAsStateWithLifecycle()
     val thermalOn by vm.thermalEnabled.collectAsStateWithLifecycle()
@@ -135,17 +132,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
         )
     }
 
-    // A GPX file opened from outside brings the map up front.
-    LaunchedEffect(mapRequests) {
-        if (mapRequests > 0) {
-            showMap = true
-            showNowPlaying = false
-            showPhone = false
-            showSettings = false
-            showTrips = false
-        }
-    }
-
     BackHandler(enabled = showMap || showNowPlaying || showPhone || showTrips) {
         showTrips = false
         showPhone = false
@@ -188,7 +174,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     NowPlayingScreen(
                         state = mediaState,
                         media = vm.media,
-                        onOpenApp = { context.openMusicApp(it ?: mediaState.packageName) },
                         onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )
@@ -203,7 +188,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         places = places,
                         onSavePlace = vm::savePlace,
                         onRemovePlace = vm::removePlace,
-                        onOpenGpx = vm::openGpx,
                         onClose = { showMap = false },
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )
@@ -212,7 +196,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
+                        SpeedCard(gps, speedLimit, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
                         Column(
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -227,7 +211,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
                                 state = mediaState,
                                 media = vm.media,
                                 onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
-                                onOpenMusicApp = { context.openMusicApp(null) },
                                 onOpenNowPlaying = { showNowPlaying = true },
                                 modifier = Modifier.weight(1f).fillMaxSize(),
                             )
@@ -291,10 +274,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     items = settingItems,
                     toggles = toggles,
                     onOpenTrips = { showSettings = false; showTrips = true },
-                    lean = leanState,
-                    leanEnabled = leanEnabled,
-                    onLeanEnabled = vm::setLeanEnabled,
-                    onLeanCalibrate = vm.lean::calibrate,
                     themeMode = themeMode,
                     onThemeMode = vm.theme::setMode,
                     onClose = { showSettings = false },

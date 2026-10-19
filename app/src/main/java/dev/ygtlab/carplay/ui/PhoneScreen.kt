@@ -3,6 +3,18 @@ package dev.ygtlab.carplay.ui
 import android.text.format.DateFormat
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.composed
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.animateFloatAsState
+import android.content.ClipboardManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
@@ -112,7 +124,7 @@ fun PhoneScreen(
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when {
-                tab == PhoneTab.KEYPAD -> Keypad(keypadLocked, initialNumber.orEmpty(), onDial)
+                tab == PhoneTab.KEYPAD -> Keypad(keypadLocked, initialNumber.orEmpty(), contacts, recents, onDial)
                 !hasAccess -> Notice(stringResource(R.string.phone_need_perm), stringResource(R.string.phone_allow), onGrantAccess)
                 tab == PhoneTab.RECENTS -> RecentsList(recents, onDial)
                 else -> ContactsList(contacts, onDial)
@@ -207,16 +219,20 @@ private fun PagedList(content: androidx.compose.foundation.lazy.LazyListScope.(L
     val scope = rememberCoroutineScope()
     val palette = LocalMotoPalette.current
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
-        LazyColumn(state = state, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f).fillMaxHeight()) {
+        LazyColumn(
+            state = state, verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 28.dp),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        ) {
             content(state)
         }
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(TAP)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(56.dp)) {
             listOf(Icons.Rounded.KeyboardArrowUp to -1, Icons.Rounded.KeyboardArrowDown to 1).forEach { (icon, dir) ->
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)
-                        .clickable { scope.launch { state.animateScrollBy(dir * state.layoutInfo.viewportSize.height * 0.85f) } },
+                        .pressClickable { scope.launch { state.animateScrollBy(dir * state.layoutInfo.viewportSize.height * 0.85f) } },
                     contentAlignment = Alignment.Center,
-                ) { Icon(icon, null, tint = palette.text, modifier = Modifier.size(40.dp)) }
+                ) { Icon(icon, null, tint = palette.text, modifier = Modifier.size(34.dp)) }
             }
         }
     }
@@ -253,34 +269,87 @@ private fun ContactRow(
 
 private val KEY_ROWS = listOf("123", "456", "789", "*0#")
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Keypad(locked: Boolean, initial: String, onDial: (String, String?) -> Unit) {
+private fun Keypad(
+    locked: Boolean,
+    initial: String,
+    contacts: List<Contact>,
+    recents: List<RecentCall>,
+    onDial: (String, String?) -> Unit,
+) {
     var number by remember(initial) { mutableStateOf(PhoneMath.dialable(initial)) }
+    var name by remember(initial) { mutableStateOf<String?>(null) }
     val palette = LocalMotoPalette.current
+    val clipboard = LocalContext.current.getSystemService(ClipboardManager::class.java)
+    val suggestions = remember(number, contacts, recents) { PhoneMath.matches(number, contacts, recents) }
+    val canCall = !locked && PhoneMath.dialable(number).isNotEmpty()
     Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Column(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-        ) {
-            Text(
-                number, fontSize = 36.sp, fontWeight = FontWeight.Bold, color = palette.text, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth().height(48.dp),
-            )
-            if (locked) Text(stringResource(R.string.phone_keypad_locked), fontSize = 15.sp, color = MotoColors.Orange)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                val canCall = !locked && PhoneMath.dialable(number).isNotEmpty()
-                Box(
+        Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // What has been typed; it shrinks for long numbers and says what to do while empty.
+            Box(modifier = Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.CenterStart) {
+                if (number.isEmpty()) {
+                    Text(stringResource(R.string.phone_enter_number), fontSize = 28.sp, color = palette.muted)
+                } else {
+                    Text(
+                        number,
+                        fontSize = when {
+                            number.length <= 10 -> 44.sp
+                            number.length <= 14 -> 36.sp
+                            else -> 28.sp
+                        },
+                        fontWeight = FontWeight.Bold, color = palette.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (locked) {
+                Text(stringResource(R.string.phone_keypad_locked), fontSize = 15.sp, color = MotoColors.Orange)
+            } else {
+                // People whose number matches what is typed: a tap fills in the whole number.
+                suggestions.forEach { c ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(16.dp)).background(palette.card)
+                            .pressClickable { number = PhoneMath.dialable(c.number); name = c.name }.padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(c.name, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = palette.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        Text(c.number, fontSize = 14.sp, color = palette.textSecondary, maxLines = 1)
+                    }
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                if (number.isEmpty() && !locked) {
+                    KeypadAction(Icons.Rounded.ContentPaste, stringResource(R.string.phone_paste), palette.card) {
+                        val text = clipboard?.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
+                        number = PhoneMath.dialable(text).take(PhoneMath.MAX_DIGITS)
+                        name = null
+                    }
+                } else {
+                    // Tap deletes one digit, a long press clears the lot.
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp).clip(CircleShape).background(palette.card)
+                            .combinedClickable(
+                                enabled = !locked && number.isNotEmpty(),
+                                onClick = { number = PhoneMath.backspace(number); name = null },
+                                onLongClick = { number = ""; name = null },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.AutoMirrored.Rounded.Backspace, stringResource(R.string.phone_delete), tint = palette.text, modifier = Modifier.size(32.dp)) }
+                }
+                Row(
                     modifier = Modifier
-                        .size(88.dp).clip(CircleShape).background(if (canCall) MotoColors.Green else palette.track)
-                        .clickable(enabled = canCall) { onDial(number, null) },
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Call, stringResource(R.string.phone_call), tint = Color.White, modifier = Modifier.size(44.dp)) }
-                Box(
-                    modifier = Modifier
-                        .size(72.dp).clip(CircleShape).background(palette.card)
-                        .clickable(enabled = !locked && number.isNotEmpty()) { number = PhoneMath.backspace(number) },
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.AutoMirrored.Rounded.Backspace, stringResource(R.string.phone_delete), tint = palette.text, modifier = Modifier.size(26.dp)) }
+                        .weight(1f).height(72.dp).clip(RoundedCornerShape(36.dp))
+                        .background(if (canCall) MotoColors.Green else palette.track)
+                        .pressClickable(enabled = canCall) { onDial(number, name) },
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Rounded.Call, null, tint = Color.White, modifier = Modifier.size(34.dp))
+                    Text(stringResource(R.string.phone_call), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
             }
         }
         Column(modifier = Modifier.weight(1.2f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -290,8 +359,14 @@ private fun Keypad(locked: Boolean, initial: String, onDial: (String, String?) -
                         Box(
                             modifier = Modifier
                                 .weight(1f).fillMaxHeight().defaultMinSize(minHeight = 60.dp).clip(RoundedCornerShape(20.dp))
-                                .background(if (locked) palette.track else palette.card)
-                                .clickable(enabled = !locked) { number = PhoneMath.append(number, key) },
+                                .background(if (locked) palette.track else palette.cardHigh)
+                                .border(1.dp, palette.border, RoundedCornerShape(20.dp))
+                                .pressKey(
+                                    enabled = !locked,
+                                    onClick = { number = PhoneMath.append(number, key); name = null },
+                                    // Hold 0 for +, as on the phone's own keypad.
+                                    onLongClick = if (key == '0') ({ number = PhoneMath.append(number, '+'); name = null }) else null,
+                                ),
                             contentAlignment = Alignment.Center,
                         ) { Text(key.toString(), fontSize = 34.sp, fontWeight = FontWeight.SemiBold, color = if (locked) palette.muted else palette.text) }
                     }
@@ -299,6 +374,28 @@ private fun Keypad(locked: Boolean, initial: String, onDial: (String, String?) -
             }
         }
     }
+}
+
+@Composable
+private fun KeypadAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, background: Color, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier.size(72.dp).clip(CircleShape).background(background).pressClickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(icon, null, tint = LocalMotoPalette.current.text, modifier = Modifier.size(26.dp))
+        Text(label, fontSize = 11.sp, color = LocalMotoPalette.current.textSecondary)
+    }
+}
+
+/** A key that squeezes while pressed, with an optional long-press action. */
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.pressKey(enabled: Boolean, onClick: () -> Unit, onLongClick: (() -> Unit)?): Modifier = composed {
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "key")
+    this.graphicsLayer { scaleX = scale; scaleY = scale }
+        .combinedClickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick, onLongClick = onLongClick)
 }
 
 @Composable

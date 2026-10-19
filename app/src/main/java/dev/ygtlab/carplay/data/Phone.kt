@@ -69,6 +69,27 @@ object PhoneMath {
             .distinctBy { it.name to dialable(it.number) }
             .sortedWith(compareByDescending<Contact> { it.starred }.thenComparator { x, y -> collator.compare(x.name, y.name) })
 
+    /** Digits with the country prefix and the national leading zero dropped, so 0532 and +90 532 compare equal. */
+    fun key(number: String): String {
+        var d = number.filter { it.isDigit() }
+        if (d.startsWith("0090")) d = d.drop(4) else if (d.startsWith("90") && d.length >= 12) d = d.drop(2)
+        return d.trimStart('0')
+    }
+
+    /**
+     * People whose number contains what has been typed so far (at least three digits), best matches
+     * first: those that start with it, then the rest. Names known from recent calls count too.
+     */
+    fun matches(typed: String, contacts: List<Contact>, recents: List<RecentCall>, limit: Int = 2): List<Contact> {
+        val q = key(typed)
+        if (q.length < 3) return emptyList()
+        val pool = contacts + recents.mapNotNull { r -> r.name?.let { Contact(it, r.number) } }
+        return pool.filter { key(it.number).contains(q) }
+            .distinctBy { key(it.number) }
+            .sortedByDescending { key(it.number).startsWith(q) }
+            .take(limit)
+    }
+
     /** The letter a contact is filed under in the list; anything that is not a letter goes under '#'. */
     fun initialOf(name: String): Char = name.trim().firstOrNull()?.takeIf { it.isLetter() }?.uppercaseChar() ?: '#'
 }

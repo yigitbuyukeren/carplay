@@ -1,6 +1,5 @@
 package dev.ygtlab.carplay.ui
 
-import dev.ygtlab.carplay.data.LeanState
 import android.Manifest
 import android.content.Context
 import android.os.Build
@@ -111,10 +110,6 @@ fun SettingsScreen(
     items: List<SettingItem>,
     toggles: List<ToggleItem>,
     onOpenTrips: () -> Unit,
-    lean: LeanState,
-    leanEnabled: Boolean,
-    onLeanEnabled: (Boolean) -> Unit,
-    onLeanCalibrate: () -> Unit,
     themeMode: ThemeMode,
     onThemeMode: (ThemeMode) -> Unit,
     onClose: () -> Unit,
@@ -163,38 +158,11 @@ fun SettingsScreen(
                                 )
                             }
                             items(toggles) { t -> ToggleRow(t) }
-                            item { LeanRow(lean, leanEnabled, onLeanEnabled, onLeanCalibrate) }
                             item { ThemeRow(themeMode, onThemeMode) }
                         }
                         SettingsTab.SAFETY -> item { safetyCard() }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LeanRow(lean: LeanState, enabled: Boolean, onEnabled: (Boolean) -> Unit, onCalibrate: () -> Unit) {
-    val palette = LocalMotoPalette.current
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.lean_title), fontSize = 20.sp, color = palette.text, fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(if (lean.supported) R.string.lean_desc else R.string.lean_unsupported),
-                    fontSize = 15.sp, color = palette.muted,
-                )
-            }
-            Switch(checked = enabled, onCheckedChange = onEnabled, enabled = lean.supported)
-        }
-        if (enabled && lean.supported) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PillButton(stringResource(R.string.lean_calibrate), MotoColors.Blue, onCalibrate)
-                if (lean.calibrated) Text(stringResource(R.string.lean_calibrated), fontSize = 15.sp, color = MotoColors.Green)
             }
         }
     }

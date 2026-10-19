@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        if (savedInstanceState == null) handleGpxIntent(intent)
+        if (savedInstanceState == null) handleDialIntent(intent)
         // A hot phone dims itself (see ThermalGuard); a cool one keeps the system brightness.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -52,21 +52,14 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleGpxIntent(intent)
+        handleDialIntent(intent)
     }
 
-    /** A GPX file arrives as a view or share intent; the HOME and launcher intents carry no file. */
-    private fun handleGpxIntent(intent: Intent?) {
+    /** Another app's tel: link: the phone screen opens with the number on the keypad. */
+    private fun handleDialIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_DIAL && intent.data?.scheme == "tel") {
             viewModel.dialRequest.value = intent.data?.schemeSpecificPart.orEmpty()
-            return
         }
-        val uri = when (intent?.action) {
-            Intent.ACTION_VIEW -> intent.data
-            Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-            else -> null
-        } ?: return
-        viewModel.openGpx(uri)
     }
 
     override fun onResume() {

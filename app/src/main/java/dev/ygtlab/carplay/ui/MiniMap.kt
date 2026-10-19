@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import android.view.Gravity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -126,6 +127,10 @@ fun MiniMap(
                 mv.getMapAsync { m ->
                     // A glance, not a control: taps and drags go to the card, which opens the full map.
                     m.uiSettings.setAllGesturesEnabled(false)
+                    // The required data attribution stays, small, bottom right; the optional MapLibre logo goes.
+                    m.uiSettings.isLogoEnabled = false
+                    m.uiSettings.attributionGravity = Gravity.BOTTOM or Gravity.END
+                    m.uiSettings.setAttributionMargins(0, 0, 8, 8)
                     map = m
                 }
             }

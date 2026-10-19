@@ -68,4 +68,31 @@ class PhoneTest {
         assertEquals('#', PhoneMath.initialOf("1-800"))
         assertEquals('#', PhoneMath.initialOf(""))
     }
+
+    @Test fun keyIgnoresCountryPrefixAndLeadingZero() {
+        assertEquals(PhoneMath.key("0532 123 45 67"), PhoneMath.key("+90 532 123 45 67"))
+        assertEquals("5321234567", PhoneMath.key("0090 532 123 45 67"))
+    }
+
+    @Test fun matchesNeedAtLeastThreeDigits() {
+        assertEquals(emptyList<Contact>(), PhoneMath.matches("05", listOf(Contact("Ali", "0532 111 22 33")), emptyList()))
+    }
+
+    @Test fun matchesPutNumbersStartingWithTheTypedDigitsFirst() {
+        val out = PhoneMath.matches(
+            "532",
+            listOf(Contact("Zeki", "0212 532 00 00"), Contact("Ali", "0532 111 22 33")),
+            emptyList(),
+        )
+        assertEquals(listOf("Ali", "Zeki"), out.map { it.name })
+    }
+
+    @Test fun matchesUseNamesFromRecentCallsAndDropDuplicates() {
+        val out = PhoneMath.matches(
+            "850",
+            listOf(Contact("Ofis", "0850 302 94 40")),
+            listOf(RecentCall("+908503029440", "Kalyoncu", CallKind.OUTGOING, 1L), RecentCall("0850111", "Banka", CallKind.INCOMING, 2L)),
+        )
+        assertEquals(listOf("Ofis", "Banka"), out.map { it.name })
+    }
 }

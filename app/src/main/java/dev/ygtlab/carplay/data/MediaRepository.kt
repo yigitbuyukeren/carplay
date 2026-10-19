@@ -2,6 +2,10 @@ package dev.ygtlab.carplay.data
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.view.KeyEvent
 import android.graphics.Bitmap
 import android.media.AudioManager
 import android.media.MediaMetadata
@@ -10,6 +14,10 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import androidx.core.app.NotificationManagerCompat
 import dev.ygtlab.carplay.service.CarNotificationListener
+import dev.ygtlab.carplay.util.MUSIC_APPS
+import dev.ygtlab.carplay.util.Prefs
+import dev.ygtlab.carplay.util.isInstalled
+import dev.ygtlab.carplay.util.launchPackage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -26,8 +34,6 @@ data class MediaState(
     /** SystemClock.elapsedRealtime() at which [positionMs] was sampled. */
     val positionAt: Long = 0,
     val speed: Float = 1f,
-    /** Packages of every music app that currently has a session, so the screen can offer switching between them. */
-    val sources: List<String> = emptyList(),
 )
 
 class MediaRepository(private val context: Context) {
@@ -35,12 +41,20 @@ class MediaRepository(private val context: Context) {
     private val audio = context.getSystemService(AudioManager::class.java)
     private val listenerComponent = ComponentName(context, CarNotificationListener::class.java)
 
+    private val handler = Handler(Looper.getMainLooper())
+
+    /** Apps that count as music players: the well known ones plus anything that declares itself a music app. */
+    private val musicPackages: Set<String> by lazy {
+        val declared = context.packageManager
+            .queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MUSIC), 0)
+            .map { it.activityInfo.packageName }
+        (MUSIC_APPS.map { it.packageName } + declared).toSet()
+    }
+
     private val _state = MutableStateFlow(MediaState())
     val state: StateFlow<MediaState> = _state
 
     private var controller: MediaController? = null
-    private var allSessions: List<MediaController> = emptyList()
-    private var preferred: String? = null
     private var registered = false
 
     private val callback = object : MediaController.Callback() {
@@ -78,10 +92,9 @@ class MediaRepository(private val context: Context) {
     }
 
     private fun pick(list: List<MediaController>) {
-        allSessions = list
-        // A source the rider picked by hand wins until it goes away or another app starts playing on its own.
-        val chosen = list.firstOrNull { it.packageName == preferred }
-        val best = chosen ?: list.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: list.firstOrNull()
+        // Only music apps count: a video, a browser or a game holding a media session is not what this screen is for.
+        val music = list.filter { it.packageName in musicPackages }
+        val best = music.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: music.firstOrNull()
         if (best?.sessionToken != controller?.sessionToken) {
             controller?.unregisterCallback(callback)
             controller = best
@@ -96,6 +109,7 @@ class MediaRepository(private val context: Context) {
             _state.value = MediaState(hasAccess = true)
             return
         }
+        if (Prefs.lastMusicApp(context) != c.packageName) Prefs.setLastMusicApp(context, c.packageName)
         val meta = c.metadata
         val art = meta?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             ?: meta?.getBitmap(MediaMetadata.METADATA_KEY_ART)
@@ -112,22 +126,17 @@ class MediaRepository(private val context: Context) {
             positionMs = c.playbackState?.position ?: 0,
             positionAt = c.playbackState?.lastPositionUpdateTime ?: 0,
             speed = c.playbackState?.playbackSpeed ?: 1f,
-            sources = allSessions.map { it.packageName }.distinct(),
         )
     }
 
     fun togglePlay() {
-        val c = controller ?: return
+        val c = controller
+        if (c == null) {
+            resumeLast()
+            return
+        }
         if (c.playbackState?.state == PlaybackState.STATE_PLAYING) c.transportControls.pause()
         else c.transportControls.play()
-    }
-
-    /** Shows and controls the session of [packageName]; false when that app has none yet (the caller opens it instead). */
-    fun select(packageName: String): Boolean {
-        if (allSessions.none { it.packageName == packageName }) return false
-        preferred = packageName
-        pick(allSessions)
-        return true
     }
 
     fun play() {
@@ -140,9 +149,35 @@ class MediaRepository(private val context: Context) {
         controller?.transportControls?.seekTo(ms.coerceAtLeast(0))
     }
 
+    /**
+     * Nothing is playing and no music app has a session: start the last one. First a plain "play" media
+     * key, which wakes most players where they stopped without opening them; if no session shows up, the
+     * app is launched and asked to play.
+     */
+    fun resumeLast() {
+        val pkg = Prefs.lastMusicApp(context) ?: musicPackages.firstOrNull { context.isInstalled(it) } ?: return
+        sendPlayKey()
+        handler.postDelayed({
+            if (controller == null) {
+                context.launchPackage(pkg)
+                handler.postDelayed(::sendPlayKey, LAUNCH_PLAY_DELAY_MS)
+            }
+        }, WAKE_WAIT_MS)
+    }
+
+    private fun sendPlayKey() {
+        audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY))
+        audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY))
+    }
+
     fun next() = controller?.transportControls?.skipToNext()
     fun previous() = controller?.transportControls?.skipToPrevious()
 
     fun volumeUp() = audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
     fun volumeDown() = audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+
+    private companion object {
+        const val WAKE_WAIT_MS = 2500L
+        const val LAUNCH_PLAY_DELAY_MS = 2500L
+    }
 }

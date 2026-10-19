@@ -1,13 +1,10 @@
 package dev.ygtlab.carplay
 
-import dev.ygtlab.carplay.data.LeanSensor
 import android.Manifest
 import dev.ygtlab.carplay.data.AndroidSmsSender
 import dev.ygtlab.carplay.data.AndroidSosAlarm
 import dev.ygtlab.carplay.data.CrashSensor
-import dev.ygtlab.carplay.data.BoundedInputStream
 import dev.ygtlab.carplay.data.GeoPoint
-import dev.ygtlab.carplay.data.GpxImport
 import dev.ygtlab.carplay.data.Place
 import dev.ygtlab.carplay.data.RouteOptions
 import dev.ygtlab.carplay.data.SosContact
@@ -131,35 +128,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     /** A number handed over by another app's dial link; the phone screen shows it on the keypad. */
     val dialRequest = MutableStateFlow<String?>(null)
 
-    /** Bumped when something outside the map (a GPX file) needs the map screen on top. */
-    val mapRequests = MutableStateFlow(0)
-
-    /** A GPX file opened from a file manager, a share sheet or the picker in the map. */
-    fun openGpx(uri: android.net.Uri) {
-        mapRequests.value++
-        viewModelScope.launch {
-            val ctx = getApplication<Application>()
-            val track = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                try {
-                    ctx.contentResolver.openInputStream(uri)?.use { GpxImport.parse(BoundedInputStream(it, MAX_GPX_BYTES)) }
-                } catch (e: Exception) {
-                    null
-                }
-            }
-            if (track == null) nav.reportError(ctx.getString(R.string.gpx_unreadable))
-            else nav.followTrack(track.name.ifBlank { ctx.getString(R.string.gpx_title) }, track.points)
-        }
-    }
-
-    val leanEnabled = MutableStateFlow(Prefs.leanEnabled(app))
-    val lean = LeanSensor(app)
-
-    fun setLeanEnabled(enabled: Boolean) {
-        Prefs.setLeanEnabled(getApplication(), enabled)
-        leanEnabled.value = enabled
-        if (enabled) lean.start() else lean.stop()
-    }
-
     val speedLimitEnabled = MutableStateFlow(Prefs.speedLimit(app))
     private val guiding: Flow<Boolean> = nav.ui.map { ui: NavUi -> ui.navigating }.distinctUntilChanged()
     private val limitActive: StateFlow<Boolean> =
@@ -274,7 +242,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         weather.start()
-        viewModelScope.launch { gps.collect { lean.moving = it.speedKmh >= LEAN_MIN_KMH } }
         viewModelScope.launch {
             MessageBridge.latest.filterNotNull().collect { message ->
                 val fresh = System.currentTimeMillis() - message.postedAtMs < FRESH_MESSAGE_MS
@@ -309,7 +276,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         battery.start()
         media.start()
         theme.start()
-        if (leanEnabled.value) lean.start()
         if (sosCrashEnabled.value) crashSensor.start()
         call.start()
         resumeTick.value++
@@ -331,12 +297,10 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         onScreen = false
         crashSensor.stop()
         theme.stop()
-        lean.stop()
     }
 
     override fun onCleared() {
         announcer.shutdown()
-        lean.stop()
         theme.stop()
         nav.shutdown()
         location.stop()
@@ -346,7 +310,5 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         const val FIX_TIMEOUT_MS = 5000L
         const val FRESH_MESSAGE_MS = 30_000L
         const val RESUME_AFTER_CALL_MS = 1500L
-        const val LEAN_MIN_KMH = 15
-        const val MAX_GPX_BYTES = 20L * 1024 * 1024
     }
 }
