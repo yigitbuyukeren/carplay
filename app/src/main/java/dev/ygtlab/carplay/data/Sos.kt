@@ -2,6 +2,8 @@ package dev.ygtlab.carplay.data
 
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.sqrt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -87,13 +89,17 @@ object SosMath {
 }
 
 /**
- * Decides from accelerometer samples and GPS speed whether a rider has crashed (thresholds per vehicle): a hard impact while
- * riding, followed by the phone staying still and the bike not moving. A pothole (impact but the bike
- * rolls on), a hard stop (no impact) and a bike knocked over in a car park (never riding) all stay quiet.
+ * Decides from accelerometer samples and GPS speed whether a rider has crashed (thresholds per vehicle):
+ * a hard impact while riding, followed by the phone staying still and the vehicle not moving. A pothole
+ * (impact but the bike rolls on), a hard stop (no impact) and a bike knocked over in a car park (never
+ * riding) all stay quiet. A pothole followed by a red light looks the same by speed and shaking alone, so
+ * on two wheels the alarm also needs the phone to have tipped over ([needsTilt]) or the impact to have been
+ * twice the threshold; the tilt is read from the gravity direction when the caller supplies it.
  */
 class CrashDetector(
     private val impactG: () -> Float = { IMPACT_G },
     private val ridingKmh: () -> Int = { RIDING_KMH },
+    private val needsTilt: () -> Boolean = { false },
 ) {
     private var lastRidingAt = Long.MIN_VALUE
     private var impactAt = 0L
@@ -101,8 +107,17 @@ class CrashDetector(
     private var armed = false
     private var cooldownUntil = 0L
 
-    /** @param g acceleration magnitude in g, gravity included (about 1 at rest). */
-    fun onSample(tMs: Long, g: Float, speedKmh: Int): Boolean {
+    // Gravity direction, smoothed slowly (what the phone looked like before) and quickly (what it looks like now).
+    private var slow: FloatArray? = null
+    private var fast: FloatArray? = null
+    private var lastVectorAt = 0L
+    private var baseline: FloatArray? = null
+    private var peakG = 0f
+
+    /** @param g acceleration magnitude in g, gravity included (about 1 at rest); [gx] [gy] [gz] the same as a vector, or zeros when unknown. */
+    fun onSample(tMs: Long, g: Float, speedKmh: Int, gx: Float = 0f, gy: Float = 0f, gz: Float = 0f): Boolean {
+        val hasVector = gx != 0f || gy != 0f || gz != 0f
+        if (hasVector) trackGravity(tMs, gx, gy, gz)
         if (speedKmh >= ridingKmh()) lastRidingAt = tMs
         if (tMs < cooldownUntil) return false
 
@@ -111,10 +126,13 @@ class CrashDetector(
                 armed = true
                 impactAt = tMs
                 quietSince = 0L
+                peakG = g
+                baseline = slow?.copyOf()
             }
             return false
         }
 
+        if (g > peakG) peakG = g
         val sinceImpact = tMs - impactAt
         if (sinceImpact > GIVE_UP_MS || (sinceImpact >= RESUME_AFTER_MS && speedKmh >= minOf(RESUME_KMH, ridingKmh() * 3 / 5))) {
             armed = false
@@ -127,11 +145,49 @@ class CrashDetector(
         }
         if (quietSince == 0L) quietSince = tMs
         if (tMs - quietSince >= QUIET_MS) {
+            if (!fellOver(hasVector)) {
+                // Rolled to a stop after a bump: stay armed no longer, nothing to report.
+                armed = false
+                return false
+            }
             armed = false
             cooldownUntil = tMs + COOLDOWN_MS
             return true
         }
         return false
+    }
+
+    /** True when the phone's orientation changed for good, or the hit was so hard that no pothole explains it. */
+    private fun fellOver(hasVector: Boolean): Boolean {
+        if (!needsTilt() || !hasVector) return true
+        if (peakG >= impactG() * 2) return true
+        val before = baseline ?: return true
+        val now = fast ?: return true
+        return angleDeg(before, now) >= TILT_MIN_DEG
+    }
+
+    private fun trackGravity(tMs: Long, x: Float, y: Float, z: Float) {
+        val v = floatArrayOf(x, y, z)
+        if (slow == null || fast == null) {
+            slow = v.copyOf(); fast = v.copyOf(); lastVectorAt = tMs
+            return
+        }
+        val dt = (tMs - lastVectorAt).coerceAtLeast(1L).toFloat()
+        lastVectorAt = tMs
+        blend(slow!!, v, dt / (SLOW_TAU_MS + dt))
+        blend(fast!!, v, dt / (FAST_TAU_MS + dt))
+    }
+
+    private fun blend(into: FloatArray, v: FloatArray, alpha: Float) {
+        for (i in 0..2) into[i] += alpha * (v[i] - into[i])
+    }
+
+    private fun angleDeg(a: FloatArray, b: FloatArray): Float {
+        val na = sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2])
+        val nb = sqrt(b[0] * b[0] + b[1] * b[1] + b[2] * b[2])
+        if (na == 0f || nb == 0f) return 0f
+        val cos = ((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (na * nb)).coerceIn(-1f, 1f)
+        return Math.toDegrees(acos(cos.toDouble())).toFloat()
     }
 
     companion object {
@@ -145,6 +201,9 @@ class CrashDetector(
         const val QUIET_MS = 8_000L
         const val GIVE_UP_MS = 60_000L
         const val COOLDOWN_MS = 5 * 60_000L
+        const val TILT_MIN_DEG = 25f
+        const val SLOW_TAU_MS = 3_000f
+        const val FAST_TAU_MS = 400f
     }
 }
 

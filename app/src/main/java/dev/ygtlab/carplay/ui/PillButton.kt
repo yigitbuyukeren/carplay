@@ -13,7 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -26,6 +28,8 @@ fun PillButton(
     textColor: Color = Color.White,
     horizontalPadding: Dp = 24.dp,
     minHeight: Dp = 72.dp,
+    fontSize: TextUnit = 20.sp,
+    singleLine: Boolean = false,
 ) {
     Box(
         modifier = modifier
@@ -36,6 +40,9 @@ fun PillButton(
             .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = textColor)
+        Text(
+            text, fontSize = fontSize, fontWeight = FontWeight.SemiBold, color = textColor,
+            maxLines = if (singleLine) 1 else Int.MAX_VALUE, softWrap = !singleLine, overflow = TextOverflow.Ellipsis,
+        )
     }
 }

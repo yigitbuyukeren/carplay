@@ -33,9 +33,14 @@ object FuelMath {
     val FUEL_ONLY: List<StopSource> = VehicleProfile.MOTORCYCLE.config.stops
 
     // Nodes and ways only: relations make the public servers scan far more for no gain here.
+    // One statement (and one cap) per kind: a single shared cap let a plentiful kind such as drinking water
+    // use up all the slots and push repair stations and charging points off the answer.
     private fun query(around: String, sources: List<StopSource>): String {
-        val parts = sources.joinToString("") { "node[\"${it.key}\"=\"${it.value}\"]$around;way[\"${it.key}\"=\"${it.value}\"]$around;" }
-        return "[out:json][timeout:15];($parts);out center 80;"
+        val cap = if (sources.size == 1) 80 else 40
+        val parts = sources.joinToString("") {
+            "(node[\"${it.key}\"=\"${it.value}\"]$around;way[\"${it.key}\"=\"${it.value}\"]$around;);out center $cap;"
+        }
+        return "[out:json][timeout:15];$parts"
     }
 
     fun nearQuery(here: GeoPoint, sources: List<StopSource> = FUEL_ONLY): String = query(around(NEAR_RADIUS_M, listOf(here)), sources)
@@ -98,6 +103,10 @@ object FuelMath {
      * With several kinds of stop on one list (car: fuel and charging, bicycle: repair, shop, water) a plentiful
      * kind such as drinking water must not push the rare ones off it: each kind keeps its [PER_KIND] nearest.
      */
+    /** Two answers about the same area, merged: nearest first, one entry per spot, a plentiful kind kept in check. */
+    fun combine(a: List<FuelStation>, b: List<FuelStation>): List<FuelStation> =
+        mix((a + b).sortedBy { it.distanceM }.distinctBy { it.place.point.lat to it.place.point.lon }).take(LIMIT)
+
     fun mix(sorted: List<FuelStation>): List<FuelStation> {
         if (sorted.map { it.kind }.distinct().size < 2) return sorted
         val seen = HashMap<StopKind, Int>()
@@ -164,7 +173,21 @@ class FuelRepository : FuelFinder {
                 Log.w("MotoDash", "nominatim fuel failed", e)
                 emptyList()
             }
-            viaNominatim.ifEmpty { FuelMath.parse(firstAnswer(FuelMath.nearQuery(here, sources)), here) }
+            // Nominatim may know only some of the kinds (it found drinking water but no repair station): the
+            // Overpass servers are asked for the kinds it left out and the two answers are merged.
+            val found = viaNominatim.map { it.kind }.toSet()
+            val missing = sources.filter { it.kind !in found }
+            if (missing.isEmpty()) return@safely viaNominatim
+            val extra = try {
+                FuelMath.parse(firstAnswer(FuelMath.nearQuery(here, missing)), here)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (viaNominatim.isEmpty()) throw e
+                Log.w("MotoDash", "overpass for the missing kinds failed", e)
+                emptyList()
+            }
+            FuelMath.combine(viaNominatim, extra)
         }
     }
 

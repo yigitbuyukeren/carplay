@@ -70,6 +70,9 @@ class NavigationController(
     private var progressIndex = 0
     private var offRouteFixes = 0
     private val spoken = HashSet<Int>()
+    /** "Re-routing" is announced once per time off the road, and a failed attempt waits before the next one. */
+    private var rerouteSpoken = false
+    private var nextRerouteAtMs = 0L
 
     private fun here(): GeoPoint? =
         location.value.takeIf { it.fixAtMs > 0 }?.let { GeoPoint(it.lat, it.lon) }
@@ -181,6 +184,8 @@ class NavigationController(
 
     fun stopNavigation() {
         trackJob?.cancel()
+        // A route still being computed (re-route, stop detour) must not come back to life after "Finish".
+        routeJob?.cancel()
         fuelJob?.cancel()
         voice.stop()
         _ui.value = NavUi()
@@ -229,7 +234,8 @@ class NavigationController(
         val final = state.finalDestination ?: state.destination ?: return
         closeFuel()
         _ui.update { it.copy(rerouting = true) }
-        scope.launch {
+        routeJob?.cancel()
+        routeJob = scope.launch {
             repo.route(from, stop.point, _options.value)
                 .onSuccess { route ->
                     progressIndex = 0
@@ -251,7 +257,8 @@ class NavigationController(
         val final = _ui.value.finalDestination ?: return
         val from = here() ?: return
         _ui.update { it.copy(loading = true, arrived = false) }
-        scope.launch {
+        routeJob?.cancel()
+        routeJob = scope.launch {
             repo.route(from, final.point, _options.value)
                 .onSuccess { route ->
                     _ui.update { it.copy(destination = final, finalDestination = null, route = route, loading = false) }
@@ -283,12 +290,13 @@ class NavigationController(
 
         if (best.distanceM > OFF_ROUTE_M) {
             offRouteFixes++
-            if (offRouteFixes >= OFF_ROUTE_FIXES && !state.rerouting) {
+            if (offRouteFixes >= OFF_ROUTE_FIXES && !state.rerouting && fix.fixAtMs >= nextRerouteAtMs) {
                 reroute(p)
             }
             return
         }
         offRouteFixes = 0
+        rerouteSpoken = false
         progressIndex = bestIdx
 
         val travelled = route.cumulative[bestIdx] +
@@ -298,6 +306,7 @@ class NavigationController(
         if (remaining <= ARRIVAL_M) {
             voice.speak(text(if (state.finalDestination != null) R.string.stop_arrived else R.string.arrived))
             trackJob?.cancel()
+            routeJob?.cancel()
             _ui.update { it.copy(navigating = false, arrived = true, remainingM = 0, remainingS = 0, distToNextM = 0) }
             return
         }
@@ -326,17 +335,24 @@ class NavigationController(
     private fun reroute(from: GeoPoint) {
         val dest = _ui.value.destination ?: return
         _ui.update { it.copy(rerouting = true) }
-        voice.speak(text(R.string.rerouting_voice))
-        scope.launch {
+        if (!rerouteSpoken) {
+            rerouteSpoken = true
+            voice.speak(text(R.string.rerouting_voice))
+        }
+        routeJob?.cancel()
+        routeJob = scope.launch {
             repo.route(from, dest.point, _options.value)
                 .onSuccess { route ->
                     progressIndex = 0
                     offRouteFixes = 0
+                    nextRerouteAtMs = 0L
                     spoken.clear()
                     _ui.update { it.copy(route = route, rerouting = false) }
                 }
                 .onFailure {
                     offRouteFixes = 0
+                    // Offline or the server is busy: try again in a few seconds, not on every fourth fix.
+                    nextRerouteAtMs = location.value.fixAtMs + REROUTE_RETRY_MS
                     _ui.update { it.copy(rerouting = false) }
                 }
         }
@@ -355,5 +371,6 @@ class NavigationController(
         const val ARRIVAL_M = 25.0
         const val ALERT_M = 600.0
         const val PRE_M = 150.0
+        const val REROUTE_RETRY_MS = 10_000L
     }
 }

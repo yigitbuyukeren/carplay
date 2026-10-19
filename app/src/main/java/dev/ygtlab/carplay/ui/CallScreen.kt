@@ -59,6 +59,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Dialpad
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.sp
 import android.telecom.CallAudioState
 import dev.ygtlab.carplay.R
@@ -102,19 +103,16 @@ fun CallScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 28.dp, vertical = 10.dp)) {
             RideStrip(speedKmh, nav, call)
-            Row(
+            TwoPane(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(28.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                first = { m -> Column(
+                    modifier = m,
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
                 ) {
                     Avatar(initial, pulsing = call.phase != CallPhase.ACTIVE)
                     Text(
-                        name, fontSize = if (name.count { it.isDigit() } > name.length / 2) 30.sp else 38.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                        name, fontSize = if (name.count { it.isDigit() } > name.length / 2) 30.sp else 38.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold, color = Color.White,
                         maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
                     )
                     when (call.phase) {
@@ -126,9 +124,9 @@ fun CallScreen(
                         else -> Text(stringResource(R.string.call_incoming), fontSize = 22.sp, color = MotoColors.Gray)
                     }
                     if (!ringing) VolumeRow(onVolumeDown, onVolumeUp)
-                }
-                Column(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                } },
+                second = { m -> Column(
+                    modifier = m,
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
                 ) {
@@ -154,8 +152,28 @@ fun CallScreen(
                             ActionPill(Icons.Rounded.CallEnd, stringResource(R.string.call_hangup), MotoColors.Red, onHangUp)
                         }
                     }
-                }
-            }
+                } },
+            )
+        }
+    }
+}
+
+/** Who is calling and the actions: side by side on a wide screen, one above the other on an upright phone. */
+@Composable
+private fun TwoPane(
+    modifier: Modifier,
+    first: @Composable (Modifier) -> Unit,
+    second: @Composable (Modifier) -> Unit,
+) {
+    if (isNarrowScreen()) {
+        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            first(Modifier.weight(0.8f).fillMaxWidth())
+            second(Modifier.weight(1.2f).fillMaxWidth())
+        }
+    } else {
+        Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
+            first(Modifier.weight(1f).fillMaxHeight())
+            second(Modifier.weight(1f).fillMaxHeight())
         }
     }
 }
@@ -271,7 +289,7 @@ private fun ActionPill(icon: ImageVector, label: String, color: Color, onClick: 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = Color.White, modifier = Modifier.size(34.dp))
-        Text(label, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(label, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, softWrap = false)
     }
 }
 

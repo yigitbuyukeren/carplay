@@ -38,6 +38,7 @@ import dev.ygtlab.carplay.data.PhoneRepository
 import dev.ygtlab.carplay.data.ThemeController
 import dev.ygtlab.carplay.data.Voice
 import dev.ygtlab.carplay.service.CallBridge
+import dev.ygtlab.carplay.service.OverlayService
 import dev.ygtlab.carplay.service.IncomingMessage
 import dev.ygtlab.carplay.service.MessageBridge
 import dev.ygtlab.carplay.util.Prefs
@@ -153,7 +154,10 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val limitActive: StateFlow<Boolean> =
         combine(speedLimitEnabled, guiding) { on: Boolean, navigating: Boolean -> on && navigating }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    val speedLimit = SpeedLimitController(viewModelScope, location.state, limitActive) { limit ->
+    val speedLimit = SpeedLimitController(
+        viewModelScope, location.state, limitActive,
+        repo = dev.ygtlab.carplay.data.SpeedLimitRepository { profileNow.config.costing },
+    ) { limit ->
         if (call.state.value.phase == CallPhase.IDLE) {
             announcer.speak(app.getString(R.string.speed_limit_warning, limit))
         }
@@ -166,7 +170,9 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     val recordTrips = MutableStateFlow(Prefs.recordTrips(app))
     val trips = TripRecorder(TripStore(app), viewModelScope, location.state, recordTrips) { stop ->
-        val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(stop.t))
+        // Today only the time; an older spot also says which day, so a bike left yesterday is not mistaken for one just left.
+        val pattern = if (android.text.format.DateUtils.isToday(stop.t)) "HH:mm" else "d MMM HH:mm"
+        val time = java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault()).format(java.util.Date(stop.t))
         savePlace(PlaceKind.PARKED, Place(app.getString(R.string.saved_parked), time, GeoPoint(stop.lat, stop.lon)))
     }
 
@@ -224,7 +230,14 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             )
         },
         message = { reason, link, stale ->
-            val head = app.getString(if (reason == SosReason.AUTO) R.string.sos_sms_auto else R.string.sos_sms_manual)
+            val head = if (reason == SosReason.AUTO) {
+                val noun = when (profileNow) {
+                    VehicleProfile.MOTORCYCLE -> R.string.sos_noun_moto
+                    VehicleProfile.CAR -> R.string.sos_noun_car
+                    VehicleProfile.BICYCLE -> R.string.sos_noun_bike
+                }
+                app.getString(R.string.sos_sms_auto, app.getString(noun))
+            } else app.getString(R.string.sos_sms_manual)
             val where = when {
                 link == null -> app.getString(R.string.sos_loc_none)
                 stale -> app.getString(R.string.sos_loc_stale, link)
@@ -261,6 +274,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        AndroidSosAlarm(app).restoreVolumeIfPending()
         weather.start()
         viewModelScope.launch {
             MessageBridge.latest.filterNotNull().collect { message ->
@@ -298,6 +312,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         theme.start()
         if (sosCrashEnabled.value) crashSensor.start()
         call.start()
+        // The strip is a service: after a reboot or a killed process it has to be started again.
+        if (Prefs.overlayEnabled(getApplication())) OverlayService.start(getApplication())
         resumeTick.value++
     }
 

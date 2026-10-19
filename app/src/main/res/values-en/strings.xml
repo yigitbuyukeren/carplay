@@ -61,7 +61,7 @@
     <string name="msg_auto_title">Read messages aloud</string>
     <string name="msg_auto_desc">Reads incoming messages automatically. When off, the card shows a Read button.</string>
     <string name="trips_title">Trip history</string>
-    <string name="trips_desc">Distance, time, average and top speed; share as GPX</string>
+    <string name="trips_desc">Distance, time, average and top speed</string>
     <string name="trips_empty">No trips yet. Recording starts automatically when you ride faster than 8 km/h.</string>
     <string name="trip_recording">Recording</string>
     <string name="stat_distance">Distance</string>
@@ -84,8 +84,8 @@
     <string name="go_work">Go to work</string>
     <string name="weather_title">Weather</string>
     <string name="weather_desc">Temperature and rain outlook on the dashboard. Your approximate position (about 1 km precision) is sent to the Open-Meteo server.</string>
-    <string name="rain_voice_title">Spoken rain and ice warning</string>
-    <string name="rain_voice_desc">Speaks once when rain is coming or the air drops to 3 degrees or below.</string>
+    <string name="rain_voice_title">Spoken weather warning</string>
+    <string name="rain_voice_desc">Speaks once when rain is coming, the air drops to 3 degrees or below, or (on a bicycle) the wind gets strong.</string>
     <string name="rain_banner_fmt">Rain expected in %1$d min</string>
     <string name="rain_banner_now">Rain starting now</string>
     <string name="rain_voice_fmt">Rain starting in about %1$d minutes</string>
@@ -103,7 +103,7 @@
     <string name="fuel_add_stop">Add stop</string>
     <string name="fuel_go">Go</string>
     <string name="thermal_title">Heat protection</string>
-    <string name="thermal_desc">Above 42°C the screen dims and the map slows down; if the bike stands still for a minute the screen goes dark and wakes when you move. Nothing changes at normal temperature.</string>
+    <string name="thermal_desc">Above 42°C the screen dims and the map slows down; if the vehicle stands still for a minute the screen goes dark and wakes when you move. Nothing changes at normal temperature.</string>
     <string name="thermal_banner">Phone is overheating, consider unplugging the charger</string>
     <string name="thermal_voice">The phone is getting too hot</string>
     <string name="sos_title">Emergency (SOS)</string>
@@ -115,7 +115,7 @@
     <string name="sos_perm_title">SMS permission</string>
     <string name="sos_perm_desc">To send the message</string>
     <string name="sos_crash_title">Automatic crash detection</string>
-    <string name="sos_crash_desc">Starts the countdown after a hard impact followed by stillness. Use with the phone mounted on the bike.</string>
+    <string name="sos_crash_desc">Starts the countdown after a hard impact followed by stillness. Use with the phone mounted on the vehicle.</string>
     <string name="sos_button_title">SOS button</string>
     <string name="sos_button_desc">Hold the button in the corner of the speed gauge for 1.5 seconds.</string>
     <string name="sos_test">Test (no SMS is sent)</string>
@@ -138,7 +138,7 @@
     <string name="sos_voice_auto">Crash detected. Are you OK? If you do not answer within %1$d seconds your location will be sent to your emergency contacts.</string>
     <string name="sos_voice_manual">Emergency call. The message will be sent in %1$d seconds unless you cancel.</string>
     <string name="sos_voice_test">SOS test. No message will be sent.</string>
-    <string name="sos_sms_auto">EMERGENCY (MotoDash): A motorcycle crash was detected and there was no answer.</string>
+    <string name="sos_sms_auto">EMERGENCY (MotoDash): A %1$s crash was detected and there was no answer.</string>
     <string name="sos_sms_manual">EMERGENCY (MotoDash): I need help.</string>
     <string name="sos_loc">Location: %1$s</string>
     <string name="sos_loc_stale">Last known location: %1$s</string>
@@ -216,4 +216,8 @@
     <string name="bike_mountain">Mountain</string>
     <string name="wind_banner_fmt">Strong wind: %1$d km/h</string>
     <string name="wind_voice_fmt">Wind gusts reach %1$d kilometres an hour, be careful</string>
+    <string name="sos_noun_moto">motorcycle</string>
+    <string name="sos_noun_car">car</string>
+    <string name="sos_noun_bike">bicycle</string>
+    <string name="perm_location_precise">GPS for the speedometer. Only approximate location is allowed; allow "Precise location" in Settings.</string>
 </resources>

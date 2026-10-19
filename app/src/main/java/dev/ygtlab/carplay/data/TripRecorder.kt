@@ -82,7 +82,9 @@ class TripRecorder(
 
     /** Runs on [io]. Returns the point where the bike stopped when the trip was kept, null when it was discarded. */
     private fun finish(id: Long, endedAt: Long): TripPoint? {
-        val points = store.points(id)
+        val all = store.points(id)
+        // The minutes spent standing still before the trip was closed are not part of the ride.
+        val points = all.filter { it.t <= endedAt }.ifEmpty { all }
         val stats = TripMath.compute(points)
         val started = points.firstOrNull()?.t ?: endedAt
         if (stats.distanceM < MIN_DISTANCE_M || stats.movingMs < MIN_MOVING_MS) {

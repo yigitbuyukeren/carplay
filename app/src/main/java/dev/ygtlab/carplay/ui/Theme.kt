@@ -16,7 +16,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /** Palette that changes between day and night. Fixed accent colors live in [MotoColors]. */
 @Immutable
@@ -121,6 +124,20 @@ fun MotoTheme(isDay: Boolean = false, content: @Composable () -> Unit) {
             content = content,
         )
     }
+}
+
+/** An upright phone: too narrow for the side-by-side layouts and for the large type of a wide screen. */
+@Composable
+fun isNarrowScreen(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 560
+
+/**
+ * A text size that follows the system font size only up to [maxScale]: a gauge or the dock has a fixed amount
+ * of room, and a 150% font would push the text out of it (or into the arc around it).
+ */
+@Composable
+fun cappedSp(base: Float, maxScale: Float = 1.15f): TextUnit {
+    val fontScale = LocalDensity.current.fontScale
+    return (base * (maxScale / fontScale).coerceAtMost(1f)).sp
 }
 
 fun Modifier.card(shape: Int = 28): Modifier = composed {

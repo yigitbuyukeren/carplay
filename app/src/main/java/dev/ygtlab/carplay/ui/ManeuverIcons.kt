@@ -26,7 +26,7 @@ fun maneuverIcon(type: Int): ImageVector = when (type) {
     14 -> Icons.Rounded.TurnSharpLeft
     15 -> Icons.Rounded.TurnLeft
     16, 19, 21, 24 -> Icons.Rounded.TurnSlightLeft
-    25 -> Icons.Rounded.Merge
+    25, 37, 38 -> Icons.Rounded.Merge
     26, 27 -> Icons.Rounded.RoundaboutRight
     else -> Icons.Rounded.Straight
 }

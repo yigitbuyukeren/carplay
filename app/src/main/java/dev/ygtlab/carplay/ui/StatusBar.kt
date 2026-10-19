@@ -23,6 +23,16 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
 
+/** The current time, refreshed every [intervalMs]: for times that must keep moving while nothing else changes (an ETA while stuck in traffic). */
+@Composable
+fun rememberNowMs(intervalMs: Long = 15_000L): androidx.compose.runtime.State<Long> =
+    produceState(System.currentTimeMillis()) {
+        while (true) {
+            delay(intervalMs)
+            value = System.currentTimeMillis()
+        }
+    }
+
 /** CarPlay-style clock + battery readout at the bottom of the dock. */
 @Composable
 fun DockStatus(battery: BatteryState) {
@@ -39,7 +49,7 @@ fun DockStatus(battery: BatteryState) {
         else -> LocalMotoPalette.current.muted
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(time, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = LocalMotoPalette.current.text)
+        Text(time, fontSize = cappedSp(26f), fontWeight = FontWeight.Bold, color = LocalMotoPalette.current.text, maxLines = 1, softWrap = false)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 if (battery.charging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryStd,
@@ -47,8 +57,8 @@ fun DockStatus(battery: BatteryState) {
                 tint = if (battery.charging) MotoColors.Green else LocalMotoPalette.current.muted,
                 modifier = Modifier.size(16.dp),
             )
-            Text("%${battery.percent}", fontSize = 13.sp, color = LocalMotoPalette.current.muted)
+            Text("%${battery.percent}", fontSize = cappedSp(13f), color = LocalMotoPalette.current.muted, maxLines = 1, softWrap = false)
         }
-        Text("${battery.tempC.toInt()}°C", fontSize = 13.sp, color = tempColor, fontWeight = FontWeight.Medium)
+        Text("${battery.tempC.toInt()}°C", fontSize = cappedSp(13f), color = tempColor, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
     }
 }

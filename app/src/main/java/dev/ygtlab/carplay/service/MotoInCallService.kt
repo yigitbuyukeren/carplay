@@ -97,6 +97,8 @@ class MotoInCallService : InCallService() {
         val live = calls.filter { it.state != Call.STATE_DISCONNECTED }
         val main = live.firstOrNull { it.state == Call.STATE_RINGING } ?: live.firstOrNull()
         InCallHub.call = main
+        // The "incoming call" notification is for ringing only; once answered or ended it must not hang on.
+        if (main?.state != Call.STATE_RINGING) getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
         if (main == null) {
             InCallHub.state.value = CallState(CallPhase.IDLE, managed = true)
             CallBridge.callerName.value = null

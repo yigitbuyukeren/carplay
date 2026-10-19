@@ -19,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import dev.ygtlab.carplay.data.SosPhase
+import dev.ygtlab.carplay.service.OverlayService
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -72,11 +73,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        OverlayService.appInForeground = true
         viewModel.onResume()
     }
 
     override fun onPause() {
         super.onPause()
+        OverlayService.appInForeground = false
         viewModel.onPause()
     }
 

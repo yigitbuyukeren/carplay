@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -134,17 +135,20 @@ fun SosScreen(ui: SosUi, contactNames: List<String>, onCancel: () -> Unit, onDis
 
 @Composable
 private fun Countdown(ui: SosUi, contactNames: List<String>, onCancel: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        horizontalArrangement = Arrangement.spacedBy(32.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    val narrow = isNarrowScreen()
+    val align = if (narrow) TextAlign.Center else TextAlign.Start
+    val number: @Composable (Modifier) -> Unit = { m ->
         Text(
             ui.secondsLeft.toString(),
-            fontSize = 140.sp, fontWeight = FontWeight.Black, color = Color.White, textAlign = TextAlign.Center,
-            modifier = Modifier.weight(0.8f),
+            fontSize = if (narrow) 120.sp else 140.sp, fontWeight = FontWeight.Black, color = Color.White, textAlign = TextAlign.Center,
+            modifier = m,
         )
-        Column(modifier = Modifier.weight(1.4f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    }
+    val details: @Composable (Modifier) -> Unit = { m ->
+        Column(
+            modifier = m, verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = if (narrow) Alignment.CenterHorizontally else Alignment.Start,
+        ) {
             Text(
                 stringResource(
                     when (ui.reason) {
@@ -153,15 +157,15 @@ private fun Countdown(ui: SosUi, contactNames: List<String>, onCancel: () -> Uni
                         SosReason.TEST -> R.string.sos_count_test
                     }
                 ),
-                fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = align,
             )
             if (ui.reason != SosReason.TEST) {
                 Text(
                     stringResource(if (ui.reason == SosReason.AUTO) R.string.sos_count_hint_auto else R.string.sos_count_hint_manual),
-                    fontSize = 18.sp, color = Color(0xE6FFFFFF),
+                    fontSize = 18.sp, color = Color(0xE6FFFFFF), textAlign = align,
                 )
                 if (contactNames.isNotEmpty()) {
-                    Text(stringResource(R.string.sos_to_fmt, contactNames.joinToString(", ")), fontSize = 15.sp, color = Color(0xB3FFFFFF))
+                    Text(stringResource(R.string.sos_to_fmt, contactNames.joinToString(", ")), fontSize = 15.sp, color = Color(0xB3FFFFFF), textAlign = align)
                 }
             }
             Box(
@@ -171,9 +175,29 @@ private fun Countdown(ui: SosUi, contactNames: List<String>, onCancel: () -> Uni
             ) {
                 Text(
                     stringResource(if (ui.reason == SosReason.AUTO) R.string.sos_fine else R.string.sos_cancel),
-                    fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color(0xFF7A0A0A),
+                    fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color(0xFF7A0A0A), maxLines = 1, softWrap = false,
                 )
             }
+        }
+    }
+    if (narrow) {
+        // Upright: the big number above, the words and the cancel button underneath.
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            number(Modifier)
+            details(Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            number(Modifier.weight(0.8f))
+            details(Modifier.weight(1.4f))
         }
     }
 }
@@ -185,8 +209,8 @@ private fun Result(title: String, detail: String?, onDismiss: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text(title, fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center)
-        if (detail != null) Text(detail, fontSize = 20.sp, color = Color(0xE6FFFFFF), textAlign = TextAlign.Center)
+        Text(title, fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center)
+        if (detail != null) Text(detail, fontSize = 20.sp, lineHeight = 26.sp, color = Color(0xE6FFFFFF), textAlign = TextAlign.Center)
         PillButton(stringResource(R.string.ok), Color.White, onDismiss, textColor = Color(0xFF7A0A0A), modifier = Modifier.padding(top = 10.dp))
     }
 }
@@ -206,6 +230,11 @@ fun SosSettingsCard(
     val palette = LocalMotoPalette.current
     var smsOk by remember { mutableStateOf(context.hasPermission(Manifest.permission.SEND_SMS)) }
     val smsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { smsOk = it }
+    // The permission can also be changed in the system settings while the app is in the background.
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        smsOk = context.hasPermission(Manifest.permission.SEND_SMS)
+        onPauseOrDispose {}
+    }
     val pickLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val uri = result.data?.data ?: return@rememberLauncherForActivityResult
         // The picker hands over read access to just the chosen row, so no contacts permission is needed.

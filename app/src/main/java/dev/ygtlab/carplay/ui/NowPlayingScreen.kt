@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import android.content.res.Configuration
 import android.os.SystemClock
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
@@ -75,6 +76,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -104,33 +106,54 @@ fun NowPlayingScreen(
             Empty(stringResource(R.string.media_grant_prompt), stringResource(R.string.grant_access), onGrantAccess)
             return@Box
         }
-        Row(
-            modifier = Modifier.fillMaxSize().padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.fillMaxHeight().aspectRatio(0.88f), contentAlignment = Alignment.Center) {
-                Cover(state, direction = { media.skipDirection }, onNext = { media.next() }, onPrevious = { media.previous() })
-            }
-            Spacer(Modifier.width(28.dp))
-            Column(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceBetween,
+        val portrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+        // Buttons a little smaller on an upright phone, where all five have to fit the width.
+        val k = if (portrait) 0.86f else 1f
+        val controls: @Composable () -> Unit = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                RoundButton(Icons.AutoMirrored.Rounded.VolumeDown, (60 * k).toInt(), palette.track, onClick = media::volumeDown)
+                RoundButton(Icons.Rounded.SkipPrevious, (68 * k).toInt(), Color.Transparent, enabled = state.hasSession) { media.previous() }
+                RoundButton(
+                    if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    (84 * k).toInt(), palette.strong, dark = true, onClick = media::togglePlay,
+                )
+                RoundButton(Icons.Rounded.SkipNext, (68 * k).toInt(), Color.Transparent, enabled = state.hasSession) { media.next() }
+                RoundButton(Icons.AutoMirrored.Rounded.VolumeUp, (60 * k).toInt(), palette.track, onClick = media::volumeUp)
+            }
+        }
+        if (portrait) {
+            // Upright: the cover on top, then title, progress bar and the buttons underneath.
+            Column(
+                modifier = Modifier.fillMaxSize().padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Cover(state, direction = { media.skipDirection }, onNext = { media.next() }, onPrevious = { media.previous() })
+                }
                 TrackTitle(state)
-                if (state.hasSession) Progress(state, media::seekTo) else Spacer(Modifier.height(1.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                if (state.hasSession) Progress(state, media::seekTo)
+                controls()
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.fillMaxHeight().aspectRatio(0.88f), contentAlignment = Alignment.Center) {
+                    Cover(state, direction = { media.skipDirection }, onNext = { media.next() }, onPrevious = { media.previous() })
+                }
+                Spacer(Modifier.width(28.dp))
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    RoundButton(Icons.AutoMirrored.Rounded.VolumeDown, 60, palette.track, onClick = media::volumeDown)
-                    RoundButton(Icons.Rounded.SkipPrevious, 68, Color.Transparent, enabled = state.hasSession) { media.previous() }
-                    RoundButton(
-                        if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        84, palette.strong, dark = true, onClick = media::togglePlay,
-                    )
-                    RoundButton(Icons.Rounded.SkipNext, 68, Color.Transparent, enabled = state.hasSession) { media.next() }
-                    RoundButton(Icons.AutoMirrored.Rounded.VolumeUp, 60, palette.track, onClick = media::volumeUp)
+                    TrackTitle(state)
+                    if (state.hasSession) Progress(state, media::seekTo) else Spacer(Modifier.height(1.dp))
+                    controls()
                 }
             }
         }
@@ -208,7 +231,12 @@ internal fun Equalizer(modifier: Modifier = Modifier) {
                 infiniteRepeatable(tween(ms, easing = LinearEasing), RepeatMode.Reverse, StartOffset(i * 120)),
                 label = "bar$i",
             )
-            Box(Modifier.width(5.dp).fillMaxHeight(h).clip(RoundedCornerShape(3.dp)).background(color))
+            // Scaled in the draw phase: animating the height asked for a new layout on every frame.
+            Box(
+                Modifier.width(5.dp).fillMaxHeight()
+                    .graphicsLayer { scaleY = h; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f) }
+                    .clip(RoundedCornerShape(3.dp)).background(color),
+            )
         }
     }
 }

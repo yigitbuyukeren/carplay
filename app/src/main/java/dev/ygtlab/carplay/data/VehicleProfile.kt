@@ -30,6 +30,8 @@ data class ProfileConfig(
     val crashImpactG: Float,
     /** Speed above which the vehicle counts as "moving" for crash detection, km/h. */
     val crashMovingKmh: Int,
+    /** A fall tips the phone over: on two wheels the alarm also needs the orientation to have changed. */
+    val crashNeedsTilt: Boolean,
     /** Posted-limit display and warning is on by default. */
     val speedLimitDefault: Boolean,
     /** The stop button (⛽ on the map) looks for these. */
@@ -49,20 +51,20 @@ data class ProfileConfig(
         private val WATER = StopSource(StopKind.WATER, "amenity", "drinking_water", "drinking water", "drinking_water")
 
         private val MOTORCYCLE = ProfileConfig(
-            costing = "motorcycle", gaugeMaxKmh = 200f, crashImpactG = 4.0f, crashMovingKmh = 25,
+            costing = "motorcycle", gaugeMaxKmh = 200f, crashImpactG = 4.0f, crashMovingKmh = 25, crashNeedsTilt = true,
             speedLimitDefault = true, stops = listOf(FUEL), assumesNoCharger = false, allowsPortrait = false, windAlertKmh = null,
         )
 
         // A real car crash is far harder than anything on the road, and the phone sits in a mount on a
         // solid body, so the threshold is higher than a bike's; it also counts as moving a bit faster.
         private val CAR = ProfileConfig(
-            costing = "auto", gaugeMaxKmh = 240f, crashImpactG = 5.0f, crashMovingKmh = 30,
+            costing = "auto", gaugeMaxKmh = 240f, crashImpactG = 5.0f, crashMovingKmh = 30, crashNeedsTilt = false,
             speedLimitDefault = true, stops = listOf(FUEL, CHARGE), assumesNoCharger = false, allowsPortrait = false, windAlertKmh = null,
         )
 
         // A fall at 20 km/h is gentler than a motorcycle crash, so the thresholds sit lower.
         private val BICYCLE = ProfileConfig(
-            costing = "bicycle", gaugeMaxKmh = 60f, crashImpactG = 3.0f, crashMovingKmh = 10,
+            costing = "bicycle", gaugeMaxKmh = 60f, crashImpactG = 3.0f, crashMovingKmh = 10, crashNeedsTilt = true,
             speedLimitDefault = false, stops = listOf(REPAIR, SHOP, WATER), assumesNoCharger = true, allowsPortrait = true, windAlertKmh = 35,
         )
 

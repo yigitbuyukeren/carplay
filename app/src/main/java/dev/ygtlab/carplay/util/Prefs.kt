@@ -20,6 +20,7 @@ object Prefs {
     private const val KEY_AVOID_BAD_SURFACES = "route_avoid_bad_surfaces"
     private const val KEY_BIKE_TYPE = "route_bike_type"
     private const val KEY_VEHICLE = "vehicle_profile"
+    private const val KEY_SOS_ALARM_VOLUME = "sos_saved_alarm_volume"
     private const val KEY_SOS_CONTACTS = "sos_contacts"
     private const val KEY_SOS_CRASH = "sos_crash"
     private const val KEY_SOS_BUTTON = "sos_button"
@@ -132,6 +133,14 @@ object Prefs {
 
     fun setSosButton(context: Context, enabled: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_SOS_BUTTON, enabled).apply()
+    }
+
+    /** The alarm volume to put back after an SOS countdown that was cut short by the process dying; -1 when none. */
+    fun sosSavedAlarmVolume(context: Context): Int =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getInt(KEY_SOS_ALARM_VOLUME, -1)
+
+    fun setSosSavedAlarmVolume(context: Context, volume: Int) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putInt(KEY_SOS_ALARM_VOLUME, volume).apply()
     }
 
     /** The vehicle chosen at first launch; null until then. */

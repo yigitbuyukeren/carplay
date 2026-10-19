@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -79,9 +80,10 @@ fun TripsScreen(trips: TripRecorder, onClose: () -> Unit) {
                     Text(stringResource(R.string.trips_empty), fontSize = 18.sp, color = palette.muted)
                 }
             } else {
-                Row(modifier = Modifier.fillMaxSize().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LazyColumn(
-                        modifier = Modifier.width(380.dp).fillMaxHeight(),
+                SplitPane(
+                    modifier = Modifier.fillMaxSize().padding(top = 12.dp),
+                    first = { m -> LazyColumn(
+                        modifier = m,
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         items(list, key = { it.id }) { trip ->
@@ -102,21 +104,39 @@ fun TripsScreen(trips: TripRecorder, onClose: () -> Unit) {
                                 )
                             }
                         }
-                    }
-                    if (selected != null) {
-                        TripDetail(
-                            trip = selected,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            onDelete = {
-                                scope.launch {
-                                    trips.delete(selected.id)
-                                    selectedId = null
-                                }
-                            },
-                        )
-                    }
-                }
+                    } },
+                    second = { m ->
+                        if (selected != null) {
+                            TripDetail(
+                                trip = selected,
+                                modifier = m,
+                                onDelete = {
+                                    scope.launch {
+                                        trips.delete(selected.id)
+                                        selectedId = null
+                                    }
+                                },
+                            )
+                        }
+                    },
+                )
             }
+        }
+    }
+}
+
+/** The trip list and the chosen trip: side by side on a wide screen, one above the other on an upright phone. */
+@Composable
+private fun SplitPane(modifier: Modifier, first: @Composable (Modifier) -> Unit, second: @Composable (Modifier) -> Unit) {
+    if (isNarrowScreen()) {
+        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            first(Modifier.fillMaxWidth().weight(0.45f))
+            second(Modifier.fillMaxWidth().weight(0.55f))
+        }
+    } else {
+        Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            first(Modifier.width(380.dp).fillMaxHeight())
+            second(Modifier.weight(1f).fillMaxHeight())
         }
     }
 }

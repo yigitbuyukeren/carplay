@@ -57,6 +57,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,6 +74,7 @@ import java.util.Date
 
 /** Gloved fingers: every tap target on this screen is at least this tall. */
 private val TAP = 72.dp
+
 
 private enum class PhoneTab(val label: Int) {
     RECENTS(R.string.phone_recents),
@@ -94,6 +98,7 @@ fun PhoneScreen(
 ) {
     var tab by remember(initialNumber) { mutableStateOf(if (initialNumber != null) PhoneTab.KEYPAD else PhoneTab.RECENTS) }
     val palette = LocalMotoPalette.current
+    val narrow = isNarrowScreen()
     Column(modifier = modifier.padding(start = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PhoneTab.entries.forEach { t ->
@@ -106,8 +111,10 @@ fun PhoneScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        stringResource(t.label), fontSize = 21.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                        stringResource(t.label), fontSize = if (narrow) 16.sp else 21.sp, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
                         color = if (selected) Color.White else palette.text,
+                        modifier = Modifier.padding(horizontal = 6.dp),
                     )
                 }
             }
@@ -226,7 +233,7 @@ private fun PagedList(content: androidx.compose.foundation.lazy.LazyListScope.(L
         ) {
             content(state)
         }
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(56.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(if (isNarrowScreen()) 44.dp else 56.dp)) {
             listOf(Icons.Rounded.KeyboardArrowUp to -1, Icons.Rounded.KeyboardArrowDown to 1).forEach { (icon, dir) ->
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)
@@ -248,19 +255,22 @@ private fun ContactRow(
     onClick: () -> Unit,
 ) {
     val palette = LocalMotoPalette.current
+    // Upright, the time joins the number underneath so the name gets the whole width.
+    val compact = isNarrowScreen()
+    val sub = if (compact) listOfNotNull(subtitle, trailing).joinToString(" · ").ifBlank { null } else subtitle
     Row(
         modifier = Modifier
             .fillMaxWidth().height(80.dp).clip(RoundedCornerShape(20.dp)).background(palette.card)
-            .clickable(onClick = onClick).padding(horizontal = 14.dp),
+            .clickable(onClick = onClick).padding(horizontal = if (compact) 10.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 14.dp),
     ) {
         Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { leading() }
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (subtitle != null) Text(subtitle, fontSize = 14.sp, color = palette.textSecondary, maxLines = 1)
+            Text(title, fontSize = if (compact) 20.sp else 24.sp, fontWeight = FontWeight.SemiBold, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (sub != null) Text(sub, fontSize = 14.sp, color = palette.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (trailing != null) Text(trailing, fontSize = 15.sp, color = palette.textSecondary)
+        if (trailing != null && !compact) Text(trailing, fontSize = 15.sp, color = palette.textSecondary)
         Box(Modifier.size(60.dp).clip(CircleShape).background(MotoColors.Green), contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.Call, stringResource(R.string.phone_call), tint = Color.White, modifier = Modifier.size(30.dp))
         }
@@ -284,8 +294,8 @@ private fun Keypad(
     val clipboard = LocalContext.current.getSystemService(ClipboardManager::class.java)
     val suggestions = remember(number, contacts, recents) { PhoneMath.matches(number, contacts, recents) }
     val canCall = !locked && PhoneMath.dialable(number).isNotEmpty()
-    Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val portrait = isNarrowScreen()
+    val display: @Composable ColumnScope.() -> Unit = {
             // What has been typed; it shrinks for long numbers and says what to do while empty.
             Box(modifier = Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.CenterStart) {
                 if (number.isEmpty()) {
@@ -318,7 +328,8 @@ private fun Keypad(
                     }
                 }
             }
-            Spacer(Modifier.weight(1f))
+    }
+    val actions: @Composable () -> Unit = {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 if (number.isEmpty() && !locked) {
                     KeypadAction(Icons.Rounded.ContentPaste, stringResource(R.string.phone_paste), palette.card) {
@@ -348,11 +359,13 @@ private fun Keypad(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Rounded.Call, null, tint = Color.White, modifier = Modifier.size(34.dp))
-                    Text(stringResource(R.string.phone_call), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.phone_call), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, softWrap = false)
                 }
             }
-        }
-        Column(modifier = Modifier.weight(1.2f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        
+    }
+    val keys: @Composable (Modifier) -> Unit = { keyModifier ->
+        Column(modifier = keyModifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             KEY_ROWS.forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f).fillMaxWidth()) {
                     row.forEach { key ->
@@ -372,6 +385,23 @@ private fun Keypad(
                     }
                 }
             }
+        }
+    }
+    if (portrait) {
+        // Upright: the number on top, the keys filling the middle, the call button underneath.
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            display()
+            keys(Modifier.weight(1f).fillMaxWidth())
+            actions()
+        }
+    } else {
+        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                display()
+                Spacer(Modifier.weight(1f))
+                actions()
+            }
+            keys(Modifier.weight(1.2f).fillMaxHeight())
         }
     }
 }

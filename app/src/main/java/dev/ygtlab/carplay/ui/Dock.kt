@@ -42,17 +42,21 @@ fun Dock(
     horizontal: Boolean = false,
 ) {
     if (horizontal) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val tile = 68.dp
-            DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation)
-            DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic)
-            DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone)
-            DockTile(Icons.Rounded.Settings, MotoColors.Gray, tile, onSettings)
-            DockStatus(battery)
+        // The tiles take what the clock block leaves: 68dp on a normal phone, smaller on a narrow one.
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)) {
+            val statusWidth = 84.dp
+            val tile = ((maxWidth - statusWidth - 8.dp * 4) / 4).coerceIn(48.dp, 68.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation)
+                DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic)
+                DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone)
+                DockTile(Icons.Rounded.Settings, MotoColors.Gray, tile, onSettings)
+                Box(Modifier.width(statusWidth), contentAlignment = Alignment.Center) { DockStatus(battery) }
+            }
         }
         return
     }

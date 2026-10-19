@@ -152,6 +152,7 @@ fun MapScreen(
     val me by locationState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val portrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     val mapView = remember {
         MapLibre.getInstance(context)
@@ -242,8 +243,10 @@ fun MapScreen(
             val bounds = LatLngBounds.Builder().apply {
                 route.shape.forEach { include(LatLng(it.lat, it.lon)) }
             }.build()
+            // Keep the route clear of the panel: on the left when wide, along the top when upright.
+            val padding = if (portrait) intArrayOf(140, 640, 260, 200) else intArrayOf(520, 140, 140, 140)
             m.animateCamera(
-                CameraUpdateFactory.newLatLngBounds(bounds, 520, 140, 140, 140), 800
+                CameraUpdateFactory.newLatLngBounds(bounds, padding[0], padding[1], padding[2], padding[3]), 800
             )
         }
     }
@@ -339,11 +342,13 @@ fun MapScreen(
 
         if (ui.navigating) {
             Column(
-                modifier = Modifier.align(Alignment.BottomStart).padding(12.dp).width(356.dp),
+                modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)
+                    .then(if (portrait) Modifier.fillMaxWidth().padding(end = 84.dp) else Modifier.width(356.dp)),
             ) { TripBar(ui, onStop = nav::stopNavigation) }
         }
 
-        Column(
+        // The keyboard covers the lower right of an upright screen: the round buttons wait until it is closed.
+        if (!(typing && portrait)) Column(
             modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.End,
@@ -575,7 +580,8 @@ private fun RouteCard(
     onCancel: () -> Unit,
 ) {
     val route = ui.route ?: return
-    val eta = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis() + route.durationS.toLong() * 1000))
+    val now by rememberNowMs()
+    val eta = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now + route.durationS.toLong() * 1000))
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -736,7 +742,8 @@ private fun ManeuverBanner(ui: NavUi) {
 
 @Composable
 private fun TripBar(ui: NavUi, onStop: () -> Unit) {
-    val eta = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis() + ui.remainingS * 1000L))
+    val now by rememberNowMs()
+    val eta = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now + ui.remainingS * 1000L))
     GlassPanel(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {

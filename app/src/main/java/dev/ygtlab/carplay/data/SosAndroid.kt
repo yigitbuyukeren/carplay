@@ -13,6 +13,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.telephony.SmsManager
 import android.util.Log
+import dev.ygtlab.carplay.util.Prefs
 import kotlin.math.sqrt
 
 /** Plain text messages through the phone's own SIM; one message per number, no repeat. */
@@ -49,6 +50,8 @@ class AndroidSosAlarm(private val context: Context) : SosAlarm {
         try {
             if (savedVolume == null) {
                 savedVolume = audio.getStreamVolume(AudioManager.STREAM_ALARM)
+                // Written down first: if the process dies mid-countdown the next start puts the volume back.
+                Prefs.setSosSavedAlarmVolume(context, savedVolume!!)
                 audio.setStreamVolume(AudioManager.STREAM_ALARM, audio.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0)
             }
             if (tone == null) tone = ToneGenerator(AudioManager.STREAM_ALARM, 100)
@@ -64,6 +67,15 @@ class AndroidSosAlarm(private val context: Context) : SosAlarm {
         tone = null
         savedVolume?.let { audio.setStreamVolume(AudioManager.STREAM_ALARM, it, 0) }
         savedVolume = null
+        Prefs.setSosSavedAlarmVolume(context, -1)
+    }
+
+    /** At start-up: a countdown that never finished left the alarm stream at full volume. */
+    fun restoreVolumeIfPending() {
+        val v = Prefs.sosSavedAlarmVolume(context)
+        if (v < 0) return
+        try { audio.setStreamVolume(AudioManager.STREAM_ALARM, v, 0) } catch (_: RuntimeException) {}
+        Prefs.setSosSavedAlarmVolume(context, -1)
     }
 
     private fun vibrator(): Vibrator? =
@@ -80,7 +92,7 @@ class CrashSensor(
 ) : SensorEventListener {
     private val sensors = context.getSystemService(SensorManager::class.java)
     private val accelerometer: Sensor? = sensors?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    private val detector = CrashDetector({ config().crashImpactG }, { config().crashMovingKmh })
+    private val detector = CrashDetector({ config().crashImpactG }, { config().crashMovingKmh }, { config().crashNeedsTilt })
     private var listening = false
 
     val supported: Boolean get() = accelerometer != null
@@ -98,9 +110,11 @@ class CrashSensor(
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        val g = sqrt(event.values[0] * event.values[0] + event.values[1] * event.values[1] + event.values[2] * event.values[2]) /
-            SensorManager.GRAVITY_EARTH
-        if (detector.onSample(event.timestamp / 1_000_000L, g, speedKmh())) onCrash()
+        val gx = event.values[0] / SensorManager.GRAVITY_EARTH
+        val gy = event.values[1] / SensorManager.GRAVITY_EARTH
+        val gz = event.values[2] / SensorManager.GRAVITY_EARTH
+        val g = sqrt(gx * gx + gy * gy + gz * gz)
+        if (detector.onSample(event.timestamp / 1_000_000L, g, speedKmh(), gx, gy, gz)) onCrash()
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}

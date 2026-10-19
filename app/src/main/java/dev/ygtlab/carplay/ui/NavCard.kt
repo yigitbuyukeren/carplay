@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,8 +100,9 @@ fun NavCard(
                         Text(maneuver.instruction.trimEnd('.'), fontSize = 13.sp, lineHeight = 16.sp, color = Color(0xE6FFFFFF), maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                val arrival = remember(nav.remainingS) {
-                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis() + nav.remainingS * 1000L))
+                val now by rememberNowMs()
+                val arrival = remember(nav.remainingS, now) {
+                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now + nav.remainingS * 1000L))
                 }
                 Row(
                     modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(Color(0x99000000)).padding(horizontal = 14.dp, vertical = 8.dp),

@@ -42,10 +42,10 @@ import dev.ygtlab.carplay.R
 fun SpeedCard(
     gps: GpsUi,
     limit: Int?,
+    modifier: Modifier = Modifier,
+    onSos: (() -> Unit)? = null,
     /** Full-scale of the gauge, km/h; depends on the vehicle. */
     maxKmh: Float = 200f,
-    onSos: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
     val fraction by animateFloatAsState(
@@ -77,13 +77,13 @@ fun SpeedCard(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 gps.speedKmh.toString(),
-                fontSize = 92.sp,
+                fontSize = cappedSp(92f),
                 fontWeight = FontWeight.Bold,
                 color = if (SpeedLimitMath.isOver(gps.speedKmh, limit)) MotoColors.Red else LocalMotoPalette.current.text,
             )
-            Text(stringResource(R.string.speed_unit), fontSize = 22.sp, color = LocalMotoPalette.current.muted, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.speed_unit), fontSize = cappedSp(22f), color = LocalMotoPalette.current.muted, fontWeight = FontWeight.Medium)
             if (!gps.hasFix) {
-                Text(stringResource(R.string.gps_waiting), fontSize = 16.sp, color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(R.string.gps_waiting), fontSize = cappedSp(16f), color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
             } else {
                 GpsInfo(gps, Modifier.padding(top = 10.dp))
             }
@@ -104,10 +104,10 @@ private fun GpsInfo(gps: GpsUi, modifier: Modifier = Modifier) {
         else -> R.string.gps_poor to MotoColors.Red
     }
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        gps.altitudeM?.let { Text(stringResource(R.string.altitude_fmt, it), fontSize = 17.sp, fontWeight = FontWeight.Medium, color = muted) }
+        gps.altitudeM?.let { Text(stringResource(R.string.altitude_fmt, it), fontSize = cappedSp(17f), maxLines = 1, fontWeight = FontWeight.Medium, color = muted) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(Modifier.size(10.dp).clip(CircleShape).background(color))
-            Text(stringResource(label), fontSize = 17.sp, fontWeight = FontWeight.Medium, color = muted)
+            Text(stringResource(label), fontSize = cappedSp(17f), fontWeight = FontWeight.Medium, color = muted, maxLines = 1)
         }
     }
 }

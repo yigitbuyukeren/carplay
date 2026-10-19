@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.service
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -25,6 +26,7 @@ import dev.ygtlab.carplay.MainActivity
 import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.LocationRepository
 import dev.ygtlab.carplay.util.SpeedUtil
+import dev.ygtlab.carplay.util.hasPermission
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,6 +43,8 @@ class OverlayService : Service() {
     private val tick = object : Runnable {
         override fun run() {
             val loc = location.state.value
+            // MotoDash already shows the speed itself: the strip is only for when another app is on screen.
+            bar?.visibility = if (appInForeground) View.GONE else View.VISIBLE
             val fresh = System.currentTimeMillis() - loc.fixAtMs < 5000
             speedView.text = getString(R.string.overlay_speed_fmt, if (fresh) loc.speedKmh else 0)
             clockView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
@@ -51,7 +55,8 @@ class OverlayService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!Settings.canDrawOverlays(this)) {
+        // A location foreground service may only start with the location permission (Android 14+ throws otherwise).
+        if (!Settings.canDrawOverlays(this) || !hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
             stopSelf()
             return START_NOT_STICKY
         }
@@ -136,7 +141,11 @@ class OverlayService : Service() {
     }
 
     companion object {
+        /** Set by the activity: true between onResume and onPause. */
+        @Volatile var appInForeground = false
+
         fun start(context: Context) {
+            if (!Settings.canDrawOverlays(context) || !context.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) return
             context.startForegroundService(Intent(context, OverlayService::class.java))
         }
 

@@ -77,6 +77,13 @@ class MediaRepository(private val context: Context) {
 
     fun start() {
         if (!hasAccess()) {
+            // Access was switched off: drop the old listener so it can be registered afresh when it comes back.
+            if (registered) {
+                try { sessions.removeOnActiveSessionsChangedListener(sessionsListener) } catch (_: SecurityException) {}
+                controller?.unregisterCallback(callback)
+                controller = null
+                registered = false
+            }
             _state.value = MediaState(hasAccess = false)
             return
         }

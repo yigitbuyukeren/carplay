@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
+import android.Manifest
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
@@ -40,6 +41,8 @@ import dev.ygtlab.carplay.service.OverlayService
 import dev.ygtlab.carplay.util.Prefs
 import dev.ygtlab.carplay.util.openMusicApp
 import dev.ygtlab.carplay.util.openNavigation
+import dev.ygtlab.carplay.data.SosPhase
+import dev.ygtlab.carplay.util.hasPermission
 import dev.ygtlab.carplay.util.openOverlaySettings
 import dev.ygtlab.carplay.util.openSettingsAction
 
@@ -123,7 +126,15 @@ fun DashboardScreen(vm: DashboardViewModel) {
     // Re-evaluated whenever the activity resumes (e.g. coming back from a system settings page).
     val settingItems = remember(resume) {
         listOf(
-            SettingItem(context.getString(R.string.perm_location), context.getString(R.string.perm_location_desc), locationGranted(context), context.getString(R.string.action_allow)) {
+            SettingItem(
+                context.getString(R.string.perm_location),
+                // Approximate location alone cannot drive a speedometer: say so instead of showing a plain "Allow".
+                context.getString(
+                    if (!locationGranted(context) && context.hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) R.string.perm_location_precise
+                    else R.string.perm_location_desc
+                ),
+                locationGranted(context), context.getString(R.string.action_allow), required = true,
+            ) {
                 permissionLauncher.launch(runtimePermissions())
             },
             SettingItem(context.getString(R.string.perm_phone), context.getString(R.string.perm_phone_desc), phoneGranted(context), context.getString(R.string.action_allow)) {
@@ -136,10 +147,10 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
             },
             SettingItem(context.getString(R.string.perm_overlay), context.getString(R.string.perm_overlay_desc), overlayGranted(context), context.getString(R.string.action_open)) { context.openOverlaySettings() },
-            SettingItem(context.getString(R.string.perm_home), context.getString(R.string.perm_home_desc), false, context.getString(R.string.action_set)) {
+            SettingItem(context.getString(R.string.perm_home), context.getString(R.string.perm_home_desc), isHomeApp(context), context.getString(R.string.action_set)) {
                 context.openSettingsAction(Settings.ACTION_HOME_SETTINGS)
             },
-            SettingItem(context.getString(R.string.perm_battery), context.getString(R.string.perm_battery_desc), false, context.getString(R.string.action_open)) {
+            SettingItem(context.getString(R.string.perm_battery), context.getString(R.string.perm_battery_desc), ignoresBatteryOptimization(context), context.getString(R.string.action_open)) {
                 context.openSettingsAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             },
         )
@@ -151,6 +162,12 @@ fun DashboardScreen(vm: DashboardViewModel) {
         showMap = false
         showNowPlaying = false
     }
+
+    // Back closes the settings page; it must not drop out of the app. The first-launch question cannot be skipped
+    // and an SOS countdown cannot be cancelled by accident (only its own button does that).
+    BackHandler(enabled = showSettings) { showSettings = false }
+    BackHandler(enabled = vehicleChosen == null) {}
+    BackHandler(enabled = sosUi.phase != SosPhase.IDLE) { if (sosUi.phase != SosPhase.COUNTDOWN) vm.sos.dismiss() }
 
     Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.wallpaper)) {
         Box(modifier = Modifier.fillMaxSize()) {

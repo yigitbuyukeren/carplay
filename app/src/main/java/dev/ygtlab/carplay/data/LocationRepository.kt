@@ -3,6 +3,7 @@ package dev.ygtlab.carplay.data
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Looper
@@ -30,17 +31,28 @@ class LocationRepository(private val context: Context) {
 
     private var active = false
 
-    private val listener = LocationListener { location ->
-        val kmh = if (location.hasSpeed()) SpeedUtil.msToKmh(location.speed) else 0
-        _state.value = LocationState(
-            speedKmh = kmh,
-            fixAtMs = System.currentTimeMillis(),
-            lat = location.latitude,
-            lon = location.longitude,
-            bearing = if (location.hasBearing() && kmh > 0) location.bearing else _state.value.bearing,
-            altitudeM = if (location.hasAltitude()) Math.round(location.altitude).toInt() else null,
-            accuracyM = if (location.hasAccuracy()) Math.round(location.accuracy) else null,
-        )
+    // An object, not a lambda: before Android 11 the listener's other callbacks are abstract, and a lambda
+    // would crash with AbstractMethodError the first time the GPS is switched off or on.
+    private val listener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            val kmh = if (location.hasSpeed()) SpeedUtil.msToKmh(location.speed) else 0
+            _state.value = LocationState(
+                speedKmh = kmh,
+                fixAtMs = System.currentTimeMillis(),
+                lat = location.latitude,
+                lon = location.longitude,
+                bearing = if (location.hasBearing() && kmh > 0) location.bearing else _state.value.bearing,
+                altitudeM = if (location.hasAltitude()) Math.round(location.altitude).toInt() else null,
+                accuracyM = if (location.hasAccuracy()) Math.round(location.accuracy) else null,
+            )
+        }
+
+        override fun onProviderEnabled(provider: String) {}
+
+        override fun onProviderDisabled(provider: String) {}
+
+        @Deprecated("Deprecated in Java")
+        override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
     }
 
     @SuppressLint("MissingPermission")

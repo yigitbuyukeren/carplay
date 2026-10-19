@@ -38,7 +38,8 @@ object TripMath {
             if (dt <= 0 || dt > MAX_GAP_MS) continue
             val d = Geo.distance(GeoPoint(a.lat, a.lon), GeoPoint(b.lat, b.lon))
             if (d / (dt / 1000.0) > MAX_PLAUSIBLE_MPS) continue
-            distance += d
+            // Standing still, the GPS position still wobbles by a few metres; that is not distance travelled.
+            if (maxOf(a.kmh, b.kmh) >= MOVING_KMH) distance += d
             if (b.kmh >= MOVING_KMH) moving += dt
         }
         return TripStats(distance, moving, max)

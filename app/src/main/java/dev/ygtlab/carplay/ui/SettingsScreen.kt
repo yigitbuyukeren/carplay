@@ -56,6 +56,8 @@ data class SettingItem(
     val description: String,
     val granted: Boolean,
     val action: String,
+    /** Without it the app does not work at all; only such rows send the settings page to the Setup tab. */
+    val required: Boolean = false,
     val onClick: () -> Unit,
 )
 
@@ -73,6 +75,21 @@ fun defaultDialerIntent(c: Context): android.content.Intent =
         android.content.Intent(android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
             .putExtra(android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, c.packageName)
     }
+
+/** True when MotoDash is the phone's home (launcher) app. */
+fun isHomeApp(c: Context): Boolean =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        c.getSystemService(android.app.role.RoleManager::class.java)?.isRoleHeld(android.app.role.RoleManager.ROLE_HOME) == true
+    } else {
+        c.packageManager.resolveActivity(
+            android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME),
+            android.content.pm.PackageManager.MATCH_DEFAULT_ONLY,
+        )?.activityInfo?.packageName == c.packageName
+    }
+
+/** True when the system leaves MotoDash out of battery optimisation, so it is not put to sleep on the road. */
+fun ignoresBatteryOptimization(c: Context): Boolean =
+    c.getSystemService(android.os.PowerManager::class.java)?.isIgnoringBatteryOptimizations(c.packageName) == true
 
 fun notificationAccessGranted(c: Context) =
     NotificationManagerCompat.getEnabledListenerPackages(c).contains(c.packageName)
@@ -126,7 +143,7 @@ fun SettingsScreen(
 ) {
     val palette = LocalMotoPalette.current
     // Start on the setup page while a permission is missing, otherwise on the everyday options.
-    var tab by rememberSaveable { mutableStateOf(if (items.any { !it.granted }) SettingsTab.SETUP else SettingsTab.RIDE) }
+    var tab by rememberSaveable { mutableStateOf(if (items.any { it.required && !it.granted }) SettingsTab.SETUP else SettingsTab.RIDE) }
     Box(modifier = Modifier.fillMaxSize().background(palette.scrim).clickable(enabled = false) {}) {
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 32.dp, vertical = 16.dp)) {
             Row(
@@ -134,7 +151,11 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.settings_title), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = palette.text)
+                Text(
+                    stringResource(R.string.settings_title), fontSize = if (isNarrowScreen()) 24.sp else 30.sp,
+                    fontWeight = FontWeight.Bold, color = palette.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                )
                 Box(
                     modifier = Modifier.size(72.dp).clip(CircleShape).background(MotoColors.CardHigh).clickable(onClick = onClose),
                     contentAlignment = Alignment.Center,
@@ -151,6 +172,9 @@ fun SettingsScreen(
                         textColor = if (t == tab) Color.White else palette.text,
                         horizontalPadding = 8.dp,
                         minHeight = 64.dp,
+                        // Three tabs across an upright phone: one line each, a little smaller.
+                        fontSize = if (portrait) 16.sp else 20.sp,
+                        singleLine = portrait,
                     )
                 }
             }
@@ -187,7 +211,7 @@ fun SettingsScreen(
                                 SettingRow(
                                     SettingItem(
                                         stringResource(R.string.trips_title), stringResource(R.string.trips_desc), false,
-                                        stringResource(R.string.action_open), onOpenTrips,
+                                        stringResource(R.string.action_open), onClick = onOpenTrips,
                                     )
                                 )
                             }

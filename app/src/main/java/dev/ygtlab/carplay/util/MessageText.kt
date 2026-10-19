@@ -1,7 +1,8 @@
 package dev.ygtlab.carplay.util
 
 private val URL = Regex("""https?://\S+|www\.\S+""")
-private val EMOJI = Regex("""[\p{So}\p{Cs}\p{Sk}\u200d\ufe0f]""")
+// Pictographs and arrows only: a blanket "all symbols" class also removed the degree sign ("15°C" read as "15C").
+private val EMOJI = Regex("""[\x{1F000}-\x{1FAFF}\x{2190}-\x{21FF}\x{2300}-\x{23FF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{E0020}-\x{E007F}\u200d\ufe0f]""")
 private val SPACES = Regex("""\s+""")
 
 /**

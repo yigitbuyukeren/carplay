@@ -54,12 +54,15 @@ class CallRepository(private val context: Context, private val scope: CoroutineS
     /** Called the moment a call is placed from MotoDash so its call screen is up before the system reports anything. */
     fun markDialing() {
         dialingUntil.value = System.currentTimeMillis()
-        scope.launch {
+        // A second call placed within the grace time restarts it; the first timer must not cut it short.
+        dialingJob?.cancel()
+        dialingJob = scope.launch {
             delay(DIALING_GRACE_MS)
             dialingUntil.value = 0
         }
     }
 
+    private var dialingJob: kotlinx.coroutines.Job? = null
     private var started = false
 
     private fun handle(raw: Int) {

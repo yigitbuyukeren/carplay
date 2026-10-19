@@ -32,13 +32,16 @@ object SpeedLimitMath {
 }
 
 /** Posted speed limit of the road under the last few GPS fixes, from the public Valhalla server. */
-class SpeedLimitRepository {
+class SpeedLimitRepository(
+    /** Valhalla costing that matches the vehicle, so the trail snaps to roads the vehicle may use. */
+    private val costing: () -> String = { "motorcycle" },
+) {
     suspend fun limitAt(trail: List<GeoPoint>): Result<Int?> = withContext(Dispatchers.IO) {
         try {
             val shape = JSONArray().also { arr -> trail.forEach { arr.put(JSONObject().put("lat", it.lat).put("lon", it.lon)) } }
             val body = JSONObject()
                 .put("shape", shape)
-                .put("costing", "motorcycle")
+                .put("costing", costing())
                 .put("shape_match", "map_snap")
                 .put("filters", JSONObject().put("attributes", JSONArray().put("edge.speed_limit")).put("action", "include"))
             Result.success(SpeedLimitMath.parseLimit(Http.postJson("https://valhalla1.openstreetmap.de/trace_attributes", body.toString(), connectMs = 8_000, readMs = 10_000, emptyOn400 = true)))
