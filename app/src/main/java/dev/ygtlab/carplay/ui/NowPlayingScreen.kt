@@ -1,12 +1,6 @@
 package dev.ygtlab.carplay.ui
 
-import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.os.SystemClock
-import android.speech.RecognizerIntent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -60,7 +53,6 @@ import androidx.palette.graphics.Palette
 import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.MediaRepository
 import dev.ygtlab.carplay.data.MediaState
-import dev.ygtlab.carplay.util.firstInstalledMusicApp
 import kotlinx.coroutines.delay
 
 @Composable
@@ -72,30 +64,6 @@ fun NowPlayingScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var status by remember { mutableStateOf("") }
-
-    val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val query = if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-        } else null
-        status = when {
-            query.isNullOrBlank() -> ""
-            media.playFromSearch(query, state.packageName ?: context.firstInstalledMusicApp()) -> context.getString(R.string.playing_query_fmt, query)
-            else -> context.getString(R.string.music_app_not_found)
-        }
-    }
-    val startVoiceSearch = {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault().toLanguageTag())
-            .putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.voice_prompt))
-        try {
-            voice.launch(intent)
-        } catch (_: ActivityNotFoundException) {
-            status = context.getString(R.string.no_speech)
-        }
-    }
-
     val palette = LocalMotoPalette.current
     val tint = remember(state.art, palette) { mediaTint(state.art, palette) }
     Box(
@@ -145,9 +113,6 @@ fun NowPlayingScreen(
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    if (status.isNotBlank()) {
-                        Text(status, fontSize = 16.sp, color = MotoColors.Blue, modifier = Modifier.padding(top = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
                 }
                 if (state.hasSession) Progress(state)
                 Row(
@@ -155,7 +120,6 @@ fun NowPlayingScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RoundButton(Icons.Rounded.Mic, 76, MotoColors.Blue, onClick = startVoiceSearch)
                     RoundButton(Icons.Rounded.SkipPrevious, 76, Color.Transparent, enabled = state.hasSession) { media.previous() }
                     RoundButton(
                         if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,

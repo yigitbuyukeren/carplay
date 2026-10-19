@@ -329,12 +329,16 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             MessageBridge.latest.filterNotNull().collect { message ->
                 val fresh = System.currentTimeMillis() - message.postedAtMs < FRESH_MESSAGE_MS
-                if (fresh && readMessagesAloud.value && call.state.value.phase == CallPhase.IDLE) speakMessage(message)
+                if (fresh && onScreen && readMessagesAloud.value && call.state.value.phase == CallPhase.IDLE) speakMessage(message)
             }
         }
     }
 
+    /** True between onResume and onPause: messages are only read aloud while MotoDash is the app on screen. */
+    @Volatile private var onScreen = false
+
     fun onResume() {
+        onScreen = true
         location.start()
         battery.start()
         media.start()
@@ -359,6 +363,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onPause() {
+        onScreen = false
         odometer.flush()
         crashSensor.stop()
         theme.stop()

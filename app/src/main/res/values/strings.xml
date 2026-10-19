@@ -43,10 +43,6 @@
     <string name="media_not_playing">Müzik çalmıyor</string>
     <string name="open_music_app">Müzik uygulamasını aç</string>
     <string name="unknown_track">Bilinmeyen parça</string>
-    <string name="playing_query_fmt">Çalınıyor: %1$s</string>
-    <string name="music_app_not_found">Müzik uygulaması bulunamadı</string>
-    <string name="voice_prompt">Ne çalayım?</string>
-    <string name="no_speech">Bu telefonda ses tanıma yok</string>
     <string name="overlay_channel">Hız şeridi</string>
     <string name="overlay_notification">Hız şeridi açık</string>
     <string name="no_results">Sonuç bulunamadı</string>

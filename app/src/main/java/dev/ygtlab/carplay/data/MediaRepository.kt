@@ -1,17 +1,13 @@
 package dev.ygtlab.carplay.data
 
-import android.app.SearchManager
-import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
-import android.provider.MediaStore
 import androidx.core.app.NotificationManagerCompat
 import dev.ygtlab.carplay.service.CarNotificationListener
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,27 +116,6 @@ class MediaRepository(private val context: Context) {
 
     fun next() = controller?.transportControls?.skipToNext()
     fun previous() = controller?.transportControls?.skipToPrevious()
-
-    /** Asks the active music app to search and play. Returns false when no session or app can take it. */
-    fun playFromSearch(query: String, fallbackPackage: String?): Boolean {
-        val c = controller
-        if (c != null) {
-            c.transportControls.playFromSearch(query, null)
-            return true
-        }
-        val pkg = fallbackPackage ?: return false
-        val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
-            .setPackage(pkg)
-            .putExtra(SearchManager.QUERY, query)
-            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return try {
-            context.startActivity(intent)
-            true
-        } catch (_: ActivityNotFoundException) {
-            false
-        }
-    }
 
     fun volumeUp() = audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
     fun volumeDown() = audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)

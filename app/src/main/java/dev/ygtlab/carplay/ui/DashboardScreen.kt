@@ -241,6 +241,56 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 }
             }
 
+            val shownMessage = message?.takeIf { it.id != dismissedMessageId && callState.phase == CallPhase.IDLE }
+            if (shownMessage != null && !showSettings) {
+                MessageBanner(
+                    message = shownMessage,
+                    onRead = { vm.speakMessage(shownMessage) },
+                    onDismiss = { dismissedMessageId = shownMessage.id },
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                )
+            }
+
+            // Not over the map: there the top left holds the route or manoeuvre card, and rain, ice and heat are also spoken.
+            if (!showSettings && !showMap && !showPhone && callState.phase == CallPhase.IDLE && shownMessage == null) {
+                val w = weather
+                val rainIn = w?.rainInMin
+                when {
+                    thermal.warn && !heatDismissed -> AlertStrip(
+                        text = stringResource(R.string.thermal_banner),
+                        accent = MotoColors.Red,
+                        onDismiss = { heatDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
+                    weatherOn && w != null && rainIn != null && !rainDismissed -> AlertStrip(
+                        text = if (rainIn > 0) stringResource(R.string.rain_banner_fmt, rainIn) else stringResource(R.string.rain_banner_now),
+                        accent = MotoColors.Blue,
+                        onDismiss = { rainDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
+                    weatherOn && w != null && w.iceRisk && !iceDismissed -> AlertStrip(
+                        text = stringResource(R.string.ice_banner_fmt, w.tempC),
+                        accent = MotoColors.Cyan,
+                        onDismiss = { iceDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
+                    // Service reminders only while standing still, and once until the app is reopened.
+                    serviceDue != null && !serviceDismissed && gps.speedKmh < 5 -> {
+                        val due = serviceDue!!
+                        AlertStrip(
+                            text = if (due.remainingKm <= 0) stringResource(R.string.svc_banner_overdue_fmt, stringResource(due.item.label), formatKm(-due.remainingKm))
+                            else stringResource(R.string.svc_banner_soon_fmt, stringResource(due.item.label), formatKm(due.remainingKm)),
+                            accent = MotoColors.Orange,
+                            onDismiss = { serviceDismissed = true },
+                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                        )
+                    }
+                }
+            }
+
+        }
+
+        // Settings and trips cover the whole screen, cutout strip included; they pad their own content.
             if (showSettings) {
                 val toggles = listOf(
                     ToggleItem(stringResource(R.string.msg_auto_title), stringResource(R.string.msg_auto_desc), autoRead, vm::setReadMessagesAloud),
@@ -298,54 +348,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 TripsScreen(trips = vm.trips, onClose = { showTrips = false })
             }
 
-            val shownMessage = message?.takeIf { it.id != dismissedMessageId && callState.phase == CallPhase.IDLE }
-            if (shownMessage != null && !showSettings) {
-                MessageBanner(
-                    message = shownMessage,
-                    onRead = { vm.speakMessage(shownMessage) },
-                    onDismiss = { dismissedMessageId = shownMessage.id },
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                )
-            }
-
-            // Not over the map: there the top left holds the route or manoeuvre card, and rain, ice and heat are also spoken.
-            if (!showSettings && !showMap && !showPhone && callState.phase == CallPhase.IDLE && shownMessage == null) {
-                val w = weather
-                val rainIn = w?.rainInMin
-                when {
-                    thermal.warn && !heatDismissed -> AlertStrip(
-                        text = stringResource(R.string.thermal_banner),
-                        accent = MotoColors.Red,
-                        onDismiss = { heatDismissed = true },
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                    )
-                    weatherOn && w != null && rainIn != null && !rainDismissed -> AlertStrip(
-                        text = if (rainIn > 0) stringResource(R.string.rain_banner_fmt, rainIn) else stringResource(R.string.rain_banner_now),
-                        accent = MotoColors.Blue,
-                        onDismiss = { rainDismissed = true },
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                    )
-                    weatherOn && w != null && w.iceRisk && !iceDismissed -> AlertStrip(
-                        text = stringResource(R.string.ice_banner_fmt, w.tempC),
-                        accent = MotoColors.Cyan,
-                        onDismiss = { iceDismissed = true },
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                    )
-                    // Service reminders only while standing still, and once until the app is reopened.
-                    serviceDue != null && !serviceDismissed && gps.speedKmh < 5 -> {
-                        val due = serviceDue!!
-                        AlertStrip(
-                            text = if (due.remainingKm <= 0) stringResource(R.string.svc_banner_overdue_fmt, stringResource(due.item.label), formatKm(-due.remainingKm))
-                            else stringResource(R.string.svc_banner_soon_fmt, stringResource(due.item.label), formatKm(due.remainingKm)),
-                            accent = MotoColors.Orange,
-                            onDismiss = { serviceDismissed = true },
-                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                        )
-                    }
-                }
-            }
-
-        }
 
         // The call screen paints edge to edge (it pads its own content); inside the padded box it left a bare strip at the cutout.
         if (callState.phase != CallPhase.IDLE) {

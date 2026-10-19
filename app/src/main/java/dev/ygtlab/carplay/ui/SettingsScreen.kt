@@ -8,6 +8,9 @@ import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -123,7 +126,7 @@ fun SettingsScreen(
     // Start on the setup page while a permission is missing, otherwise on the everyday options.
     var tab by rememberSaveable { mutableStateOf(if (items.any { !it.granted }) SettingsTab.SETUP else SettingsTab.RIDE) }
     Box(modifier = Modifier.fillMaxSize().background(palette.scrim).clickable(enabled = false) {}) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 16.dp)) {
+        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 32.dp, vertical = 16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -136,7 +139,7 @@ fun SettingsScreen(
                 ) { Icon(Icons.Rounded.Close, null, tint = palette.text, modifier = Modifier.size(32.dp)) }
             }
             Row(modifier = Modifier.fillMaxSize().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                Column(modifier = Modifier.width(190.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(modifier = Modifier.width(190.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SettingsTab.entries.forEach { t ->
                         PillButton(
                             stringResource(t.label),
@@ -145,6 +148,7 @@ fun SettingsScreen(
                             Modifier.fillMaxWidth(),
                             textColor = if (t == tab) Color.White else palette.text,
                             horizontalPadding = 8.dp,
+                            minHeight = 64.dp,
                         )
                     }
                 }

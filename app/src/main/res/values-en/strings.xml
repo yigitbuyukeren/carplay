@@ -43,10 +43,6 @@
     <string name="media_not_playing">Nothing playing</string>
     <string name="open_music_app">Open music app</string>
     <string name="unknown_track">Unknown track</string>
-    <string name="playing_query_fmt">Playing: %1$s</string>
-    <string name="music_app_not_found">Music app not found</string>
-    <string name="voice_prompt">What should I play?</string>
-    <string name="no_speech">Speech recognition is not available on this phone</string>
     <string name="overlay_channel">Speed strip</string>
     <string name="overlay_notification">Speed strip is on</string>
     <string name="no_results">No results found</string>
