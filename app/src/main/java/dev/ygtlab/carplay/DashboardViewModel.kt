@@ -8,11 +8,7 @@ import dev.ygtlab.carplay.data.CrashSensor
 import dev.ygtlab.carplay.data.BoundedInputStream
 import dev.ygtlab.carplay.data.GeoPoint
 import dev.ygtlab.carplay.data.GpxImport
-import dev.ygtlab.carplay.data.MaintenanceMath
-import dev.ygtlab.carplay.data.Odometer
 import dev.ygtlab.carplay.data.Place
-import dev.ygtlab.carplay.data.ServiceDue
-import dev.ygtlab.carplay.data.ServiceItem
 import dev.ygtlab.carplay.data.RouteOptions
 import dev.ygtlab.carplay.data.SosContact
 import dev.ygtlab.carplay.data.SosController
@@ -25,9 +21,6 @@ import dev.ygtlab.carplay.data.WeatherController
 import dev.ygtlab.carplay.data.PlaceKind
 import dev.ygtlab.carplay.data.SavedPlace
 import dev.ygtlab.carplay.data.SavedPlaces
-import dev.ygtlab.carplay.data.EngineAlert
-import dev.ygtlab.carplay.data.ObdRepository
-import dev.ygtlab.carplay.data.BluetoothScanner
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.ygtlab.carplay.data.SpeedLimitController
@@ -135,21 +128,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         rainVoice.value = enabled
     }
 
-    val odometer = Odometer(viewModelScope, location.state, Prefs.odometerM(app)) { Prefs.setOdometerM(app, it) }
-    val service = MutableStateFlow(MaintenanceMath.fromJson(Prefs.service(app)))
-    val serviceDue: StateFlow<ServiceDue?> =
-        combine(service, odometer.meters) { list, meters -> MaintenanceMath.mostUrgent(list, meters) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
-    fun serviceDone(item: ServiceItem) = updateService(MaintenanceMath.markDone(service.value, item, odometer.meters.value))
-
-    fun changeServiceInterval(item: ServiceItem, steps: Int) = updateService(MaintenanceMath.changeInterval(service.value, item, steps))
-
-    private fun updateService(list: List<dev.ygtlab.carplay.data.ServiceState>) {
-        service.value = list
-        Prefs.setService(getApplication(), MaintenanceMath.toJson(list))
-    }
-
     /** A number handed over by another app's dial link; the phone screen shows it on the keypad. */
     val dialRequest = MutableStateFlow<String?>(null)
 
@@ -208,35 +186,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         Prefs.setRecordTrips(getApplication(), enabled)
         recordTrips.value = enabled
     }
-
-    val obdEnabled = MutableStateFlow(Prefs.obdEnabled(app))
-    val obdDevice = MutableStateFlow(Prefs.obdDevice(app))
-    val obd: ObdRepository = ObdRepository(app, viewModelScope) { alert ->
-        if (call.state.value.phase != CallPhase.IDLE) return@ObdRepository
-        announcer.speak(
-            when (alert) {
-                EngineAlert.OVERHEAT -> app.getString(R.string.obd_alert_overheat, obd.state.value.data.coolantC ?: 0)
-                EngineAlert.LOW_VOLTAGE -> app.getString(R.string.obd_alert_low_voltage)
-                EngineAlert.HIGH_VOLTAGE -> app.getString(R.string.obd_alert_high_voltage)
-                EngineAlert.MALFUNCTION -> app.getString(R.string.obd_alert_mil)
-            }
-        )
-    }
-
-    fun setObdEnabled(enabled: Boolean) {
-        Prefs.setObdEnabled(getApplication(), enabled)
-        obdEnabled.value = enabled
-        if (enabled) obd.start() else obd.stop()
-    }
-
-    fun setObdDevice(address: String) {
-        Prefs.setObdDevice(getApplication(), address)
-        obdDevice.value = address
-        obd.restart()
-    }
-
-    /** Pairing a new adapter from the settings card selects it and connects right away. */
-    val bluetooth = BluetoothScanner(app, ::setObdDevice)
 
     /** Bumped on every onResume so permission-dependent UI re-checks its state. */
     val resumeTick = MutableStateFlow(0)
@@ -363,7 +312,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         if (leanEnabled.value) lean.start()
         if (sosCrashEnabled.value) crashSensor.start()
         call.start()
-        obd.start()
         resumeTick.value++
     }
 
@@ -381,15 +329,12 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onPause() {
         onScreen = false
-        odometer.flush()
         crashSensor.stop()
         theme.stop()
         lean.stop()
     }
 
     override fun onCleared() {
-        obd.stop()
-        bluetooth.release()
         announcer.shutdown()
         lean.stop()
         theme.stop()

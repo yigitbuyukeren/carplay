@@ -114,12 +114,12 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
-private fun styleUrl(isDay: Boolean) =
+internal fun styleUrl(isDay: Boolean) =
     "https://tiles.openfreemap.org/styles/" + if (isDay) "bright" else "dark"
-private const val SRC_ROUTE = "route"
-private const val SRC_DEST = "dest"
-private const val SRC_ME = "me"
-private const val SRC_FUEL = "fuel"
+internal const val SRC_ROUTE = "route"
+internal const val SRC_DEST = "dest"
+internal const val SRC_ME = "me"
+internal const val SRC_FUEL = "fuel"
 
 /** No typing while riding: the search box locks above this speed. */
 private const val SEARCH_LOCK_KMH = 5
@@ -365,7 +365,7 @@ fun MapScreen(
     }
 }
 
-private fun addMapLayers(style: Style) {
+internal fun addMapLayers(style: Style) {
     style.addSource(GeoJsonSource(SRC_ROUTE))
     style.addLayer(
         LineLayer("route-casing", SRC_ROUTE).withProperties(

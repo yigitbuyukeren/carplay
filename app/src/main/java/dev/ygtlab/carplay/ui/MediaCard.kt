@@ -68,11 +68,11 @@ fun MediaCard(
             !state.hasAccess -> Prompt(stringResource(R.string.media_grant_prompt), stringResource(R.string.grant_access), onGrantAccess)
             !state.hasSession -> Prompt(stringResource(R.string.media_not_playing), stringResource(R.string.open_music_app), onOpenMusicApp)
             else -> Row(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
+                modifier = Modifier.fillMaxSize().padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    modifier = Modifier.size(104.dp).clip(RoundedCornerShape(18.dp)).background(MotoColors.CardHigh)
+                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(16.dp)).background(MotoColors.CardHigh)
                         .clickable(onClick = onOpenNowPlaying),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -83,7 +83,7 @@ fun MediaCard(
                         Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(44.dp))
                     }
                 }
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         state.title.ifBlank { stringResource(R.string.unknown_track) },
@@ -100,14 +100,14 @@ fun MediaCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        ControlButton(Icons.AutoMirrored.Rounded.VolumeDown, 64, onClick = media::volumeDown)
-                        ControlButton(Icons.Rounded.SkipPrevious, 72, onClick = { media.previous() })
+                        ControlButton(Icons.AutoMirrored.Rounded.VolumeDown, 52, onClick = media::volumeDown)
+                        ControlButton(Icons.Rounded.SkipPrevious, 58, onClick = { media.previous() })
                         ControlButton(
                             if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            84, filled = true, onClick = media::togglePlay,
+                            72, filled = true, onClick = media::togglePlay,
                         )
-                        ControlButton(Icons.Rounded.SkipNext, 72, onClick = { media.next() })
-                        ControlButton(Icons.AutoMirrored.Rounded.VolumeUp, 64, onClick = media::volumeUp)
+                        ControlButton(Icons.Rounded.SkipNext, 58, onClick = { media.next() })
+                        ControlButton(Icons.AutoMirrored.Rounded.VolumeUp, 52, onClick = media::volumeUp)
                     }
                 }
             }

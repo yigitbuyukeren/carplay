@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -103,8 +104,9 @@ fun SosButton(onTrigger: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 fun SosScreen(ui: SosUi, contactNames: List<String>, onCancel: () -> Unit, onDismiss: () -> Unit) {
     if (ui.phase == SosPhase.IDLE) return
+    // The red fills the whole screen, cutout strip included; the content keeps clear of the system bars.
     Box(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF7A0A0A)).clickable(enabled = false) {},
+        modifier = Modifier.fillMaxSize().background(Color(0xFF7A0A0A)).clickable(enabled = false) {}.safeDrawingPadding(),
         contentAlignment = Alignment.Center,
     ) {
         when (ui.phase) {

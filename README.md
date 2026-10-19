@@ -12,8 +12,9 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 | ![Rota](docs/screenshots/route.png) | ![Navigasyon](docs/screenshots/navigation.png) |
 | **Benzinlikler** | **GPX rotası** |
 | ![Benzinlikler](docs/screenshots/fuel.png) | ![GPX](docs/screenshots/gpx.png) |
-| **SOS geri sayımı** | **Bakım takibi** |
-| ![SOS](docs/screenshots/sos.png) | ![Bakım](docs/screenshots/maintenance.png) |
+| **SOS geri sayımı** |
+|---|
+| ![SOS](docs/screenshots/sos.png) |
 
 ## Özellikler
 **Gösterge ve sürüş**
@@ -32,10 +33,6 @@ Motor için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidonda 
 - Yolun hız limiti ve aşınca sesli uyarı
 - Sürerken arama kutusu kilitlenir (sürüş kuralı: hareket halindeyken yazı girişi yok); hedefi kayıtlı yerlerden veya haritaya uzun basarak seç
 - Google Haritalar / Waze / Yandex kısayolları
-
-**Motor (isteğe bağlı)**
-- OBD: ELM327 Bluetooth adaptörden devir, tahmini vites, motor sıcaklığı, akü voltajı ve Türkçe açıklamalı arıza kodları (emülatör için sahte OBD modu var)
-- Bakım takibi: yağ, zincir, hava filtresi, balata ve lastik için sürülen kilometreye göre hatırlatma (uygulamanın kendi sayacı; motorun gerçek kilometre sayacı değil)
 
 **Güvenlik**
 - Hava durumu: sıcaklık, 1 saat içinde yağmur ve buzlanma uyarısı (şerit + sesli)

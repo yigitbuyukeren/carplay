@@ -44,6 +44,7 @@ import dev.ygtlab.carplay.util.openSettingsAction
 fun DashboardScreen(vm: DashboardViewModel) {
     val context = LocalContext.current
     val gps by vm.gps.collectAsStateWithLifecycle()
+    val locationState by vm.locationState.collectAsStateWithLifecycle()
     val battery by vm.battery.state.collectAsStateWithLifecycle()
     val mediaState by vm.media.state.collectAsStateWithLifecycle()
     val callState by vm.call.state.collectAsStateWithLifecycle()
@@ -51,9 +52,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
     val leanEnabled by vm.leanEnabled.collectAsStateWithLifecycle()
-    val obdEnabled by vm.obdEnabled.collectAsStateWithLifecycle()
-    val obdDevice by vm.obdDevice.collectAsStateWithLifecycle()
-    val obdState by vm.obd.state.collectAsStateWithLifecycle()
     val leanState by vm.lean.state.collectAsStateWithLifecycle()
     val speedLimitOn by vm.speedLimitEnabled.collectAsStateWithLifecycle()
     val speedLimit by vm.speedLimit.limit.collectAsStateWithLifecycle()
@@ -77,10 +75,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val thermalOn by vm.thermalEnabled.collectAsStateWithLifecycle()
     var heatDismissed by remember { mutableStateOf(false) }
     LaunchedEffect(thermal.warn) { if (!thermal.warn) heatDismissed = false }
-    val odometerM by vm.odometer.meters.collectAsStateWithLifecycle()
-    val service by vm.service.collectAsStateWithLifecycle()
-    val serviceDue by vm.serviceDue.collectAsStateWithLifecycle()
-    var serviceDismissed by remember { mutableStateOf(false) }
     val sosUi by vm.sos.ui.collectAsStateWithLifecycle()
     val sosContacts by vm.sosContacts.collectAsStateWithLifecycle()
     val sosCrash by vm.sosCrashEnabled.collectAsStateWithLifecycle()
@@ -218,13 +212,14 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, obd = obdState.takeIf { obdEnabled }, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
+                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
                         Column(
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
                             NavCard(
-                                context, navUi, places, weather.takeIf { weatherOn },
+                                navUi, places, weather.takeIf { weatherOn },
+                                me = locationState, isDay = isDay, lowPower = thermal.lowPower,
                                 onOpenMap = { showMap = true },
                                 onGoTo = { vm.nav.selectPlace(it); showMap = true },
                                 modifier = Modifier.weight(1f).fillMaxSize())
@@ -274,17 +269,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         onDismiss = { iceDismissed = true },
                         modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
                     )
-                    // Service reminders only while standing still, and once until the app is reopened.
-                    serviceDue != null && !serviceDismissed && gps.speedKmh < 5 -> {
-                        val due = serviceDue!!
-                        AlertStrip(
-                            text = if (due.remainingKm <= 0) stringResource(R.string.svc_banner_overdue_fmt, stringResource(due.item.label), formatKm(-due.remainingKm))
-                            else stringResource(R.string.svc_banner_soon_fmt, stringResource(due.item.label), formatKm(due.remainingKm)),
-                            accent = MotoColors.Orange,
-                            onDismiss = { serviceDismissed = true },
-                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                        )
-                    }
                 }
             }
 
@@ -326,21 +310,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             onTest = { vm.sos.trigger(SosReason.TEST) },
                         )
                     },
-                    engineCard = {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ObdSettingsCard(
-                            obd = vm.obd,
-                            bluetooth = vm.bluetooth,
-                            state = obdState,
-                            enabled = obdEnabled,
-                            onEnabled = vm::setObdEnabled,
-                            device = obdDevice,
-                            onDevice = vm::setObdDevice,
-                            moving = gps.speedKmh > 2 || (obdState.data.speedKmh ?: 0) > 2,
-                        )
-                        MaintenanceCard(odometerM, service, vm::serviceDone, vm::changeServiceInterval)
-                        }
-                    },
                 )
             }
 
@@ -359,9 +328,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
         }
 
         // Last, so nothing can cover an SOS countdown.
-        Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-            SosScreen(sosUi, sosContacts.map { it.name }, onCancel = vm.sos::cancel, onDismiss = vm.sos::dismiss)
-        }
+        SosScreen(sosUi, sosContacts.map { it.name }, onCancel = vm.sos::cancel, onDismiss = vm.sos::dismiss)
         }
     }
 }

@@ -100,12 +100,11 @@ private enum class SettingsTab(val label: Int) {
     SETUP(R.string.settings_tab_setup),
     RIDE(R.string.settings_tab_ride),
     SAFETY(R.string.settings_tab_safety),
-    ENGINE(R.string.settings_tab_engine),
 }
 
 /**
- * Settings in four tabs down the left side, so each page is a short list even on a 360dp-high phone:
- * permissions, ride options, safety (SOS) and engine (OBD).
+ * Settings in three tabs down the left side, so each page is a short list even on a 360dp-high phone:
+ * permissions, ride options, and safety (SOS).
  */
 @Composable
 fun SettingsScreen(
@@ -120,7 +119,6 @@ fun SettingsScreen(
     onThemeMode: (ThemeMode) -> Unit,
     onClose: () -> Unit,
     safetyCard: @Composable () -> Unit = {},
-    engineCard: @Composable () -> Unit = {},
 ) {
     val palette = LocalMotoPalette.current
     // Start on the setup page while a permission is missing, otherwise on the everyday options.
@@ -169,7 +167,6 @@ fun SettingsScreen(
                             item { ThemeRow(themeMode, onThemeMode) }
                         }
                         SettingsTab.SAFETY -> item { safetyCard() }
-                        SettingsTab.ENGINE -> item { engineCard() }
                     }
                 }
             }
