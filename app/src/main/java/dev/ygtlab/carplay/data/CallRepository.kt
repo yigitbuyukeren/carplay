@@ -118,7 +118,8 @@ class CallRepository(private val context: Context, private val scope: CoroutineS
     }
 
     fun toggleSpeaker() {
-        InCallHub.service?.setAudioRoute(if (state.value.speaker) (CallAudioState.ROUTE_EARPIECE or CallAudioState.ROUTE_BLUETOOTH) else CallAudioState.ROUTE_SPEAKER)
+        val service = InCallHub.service ?: return
+        if (state.value.speaker) service.leaveSpeaker() else service.setAudioRoute(CallAudioState.ROUTE_SPEAKER)
     }
 
     private companion object {

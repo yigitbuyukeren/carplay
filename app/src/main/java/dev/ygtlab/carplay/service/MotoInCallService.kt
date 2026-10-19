@@ -37,6 +37,8 @@ object InCallHub {
  * The system only binds this once the user has made MotoDash the default phone app.
  */
 class MotoInCallService : InCallService() {
+    @Volatile private var latestAudio: CallAudioState? = null
+
     private val callback = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) = publish()
         override fun onDetailsChanged(call: Call, details: Call.Details) = publish()
@@ -84,7 +86,21 @@ class MotoInCallService : InCallService() {
         publish()
     }
 
-    override fun onCallAudioStateChanged(audioState: CallAudioState) = publish()
+    override fun onCallAudioStateChanged(audioState: CallAudioState) {
+        latestAudio = audioState
+        publish()
+    }
+
+    /** Where to send the sound when the speaker goes off: a headset or helmet if one is connected, else the earpiece. */
+    fun leaveSpeaker() {
+        val supported = (latestAudio ?: @Suppress("DEPRECATION") callAudioState)?.supportedRouteMask ?: CallAudioState.ROUTE_EARPIECE
+        val route = when {
+            supported and CallAudioState.ROUTE_BLUETOOTH != 0 -> CallAudioState.ROUTE_BLUETOOTH
+            supported and CallAudioState.ROUTE_WIRED_HEADSET != 0 -> CallAudioState.ROUTE_WIRED_HEADSET
+            else -> CallAudioState.ROUTE_EARPIECE
+        }
+        setAudioRoute(route)
+    }
 
     /** The call the rider cares about: one that is ringing first, otherwise the first live one. */
     private fun publish() {
@@ -98,7 +114,7 @@ class MotoInCallService : InCallService() {
         }
         val d = main.details
         CallBridge.callerName.value = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) d.contactDisplayName else lookupName(d.handle?.schemeSpecificPart))?.takeIf { it.isNotBlank() } ?: d.handle?.schemeSpecificPart
-        val audio = callAudioState
+        @Suppress("DEPRECATION") val audio = latestAudio ?: callAudioState
         InCallHub.state.value = CallState(
             phase = InCallHub.phaseOf(main.state),
             startedAtMs = d.connectTimeMillis,
