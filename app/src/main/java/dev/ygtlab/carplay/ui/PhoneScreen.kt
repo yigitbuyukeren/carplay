@@ -62,6 +62,8 @@ fun PhoneScreen(
     hasAccess: Boolean,
     keypadLocked: Boolean,
     initialNumber: String?,
+    dialerHint: Boolean,
+    onSetDialer: () -> Unit,
     onGrantAccess: () -> Unit,
     onDial: (String, String?) -> Unit,
     modifier: Modifier = Modifier,
@@ -84,6 +86,16 @@ fun PhoneScreen(
                         color = if (selected) Color.White else palette.text,
                     )
                 }
+            }
+        }
+        if (dialerHint) {
+            Row(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(palette.card).padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(stringResource(R.string.dialer_hint), fontSize = 16.sp, color = palette.textSecondary, modifier = Modifier.weight(1f))
+                PillButton(stringResource(R.string.action_set), MotoColors.Blue, onSetDialer, horizontalPadding = 20.dp)
             }
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {

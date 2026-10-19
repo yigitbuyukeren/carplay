@@ -271,4 +271,5 @@
     <string name="call_hangup">End</string>
     <string name="call_decline">Decline</string>
     <string name="call_answer">Answer</string>
+    <string name="dialer_hint">Show the call screen in MotoDash</string>
 </resources>

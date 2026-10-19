@@ -271,4 +271,5 @@
     <string name="call_hangup">Bitir</string>
     <string name="call_decline">Reddet</string>
     <string name="call_answer">Cevapla</string>
+    <string name="dialer_hint">Arama ekranı MotoDash\'te açılsın</string>
 </resources>

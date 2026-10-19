@@ -100,7 +100,12 @@ fun DashboardScreen(vm: DashboardViewModel) {
     }
     var overlayEnabled by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
 
-    val dialerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.onResume() }
+    var pendingDial by remember { mutableStateOf<Pair<String, String?>?>(null) }
+    val dialerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        vm.onResume()
+        pendingDial?.let { (number, name) -> vm.dial(number, name) }
+        pendingDial = null
+    }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         vm.onResume()
     }
@@ -172,7 +177,16 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         keypadLocked = gps.speedKmh >= PHONE_LOCK_KMH,
                         initialNumber = dialRequest,
                         onGrantAccess = { phonebookLauncher.launch(phonebookPermissions()) },
-                        onDial = vm::dial,
+                        dialerHint = !isDefaultDialer(context),
+                        onSetDialer = { dialerLauncher.launch(defaultDialerIntent(context)) },
+                        // Once, offer to make MotoDash the phone app; otherwise the phone's own call screen fights with ours.
+                        onDial = { number, name ->
+                            if (!isDefaultDialer(context) && !Prefs.dialerPrompted(context)) {
+                                Prefs.setDialerPrompted(context)
+                                pendingDial = number to name
+                                dialerLauncher.launch(defaultDialerIntent(context))
+                            } else vm.dial(number, name)
+                        },
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )
                 } else if (showNowPlaying) {

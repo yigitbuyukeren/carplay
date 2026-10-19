@@ -127,6 +127,13 @@ object Prefs {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_RAIN_VOICE, enabled).apply()
     }
 
+    fun dialerPrompted(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("dialer_prompted", false)
+
+    fun setDialerPrompted(context: Context) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean("dialer_prompted", true).apply()
+    }
+
     fun thermalGuard(context: Context): Boolean =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_THERMAL, true)
 
