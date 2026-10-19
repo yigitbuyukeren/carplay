@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,7 +38,24 @@ fun Dock(
     onMusic: () -> Unit,
     onPhone: () -> Unit,
     onSettings: () -> Unit,
+    /** A bar along the bottom for an upright phone; the default is the column down the left side. */
+    horizontal: Boolean = false,
 ) {
+    if (horizontal) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val tile = 68.dp
+            DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation)
+            DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic)
+            DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone)
+            DockTile(Icons.Rounded.Settings, MotoColors.Gray, tile, onSettings)
+            DockStatus(battery)
+        }
+        return
+    }
     BoxWithConstraints(modifier = Modifier.fillMaxHeight().width(96.dp).padding(vertical = 8.dp)) {
         // Tiles take whatever height the status block leaves, up to a glove-sized 76dp (never below the old 62dp).
         val gap = 8.dp

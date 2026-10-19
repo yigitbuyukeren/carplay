@@ -1,6 +1,7 @@
 package dev.ygtlab.carplay
 
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
@@ -41,6 +42,13 @@ class MainActivity : ComponentActivity() {
                 }.distinctUntilChanged().collect { brightness ->
                     window.attributes = window.attributes.also { it.screenBrightness = brightness }
                 }
+            }
+        }
+        // Only the bicycle may stand upright on the handlebar; the others keep the landscape dashboard.
+        lifecycleScope.launch {
+            viewModel.profile.collect { profile ->
+                requestedOrientation = if (profile.config.allowsPortrait) ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }
         }
         setContent {

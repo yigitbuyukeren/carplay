@@ -146,6 +146,19 @@ class NavigationController(
         }
     }
 
+    /**
+     * The vehicle changed. A previewed route is recomputed at once; during guidance the route is
+     * re-planned from where the rider is, since the old one was made for another kind of road user.
+     */
+    fun setProfile(profile: VehicleProfile) {
+        val before = _options.value
+        if (before.profile == profile) return
+        val guiding = _ui.value.navigating
+        closeFuel()
+        setOptions(before.copy(profile = profile))
+        if (guiding) here()?.let(::reroute)
+    }
+
     fun startNavigation() {
         val route = _ui.value.route ?: return
         begin(route, 0)
@@ -185,13 +198,14 @@ class NavigationController(
         }
         val state = _ui.value
         val route = state.route.takeIf { state.navigating }
+        val sources = _options.value.profile.config.stops
         fuelJob?.cancel()
         _fuel.value = FuelUi(visible = true, loading = true, alongRoute = route != null)
         fuelJob = scope.launch {
             val result = if (route != null) {
-                fuelFinder.along(FuelMath.samplePoints(route.shape, route.cumulative, progressIndex), from)
+                fuelFinder.along(FuelMath.samplePoints(route.shape, route.cumulative, progressIndex), from, sources)
             } else {
-                fuelFinder.near(from)
+                fuelFinder.near(from, sources)
             }
             result
                 .onSuccess { list ->

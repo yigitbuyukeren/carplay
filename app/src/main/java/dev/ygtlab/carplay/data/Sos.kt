@@ -87,11 +87,14 @@ object SosMath {
 }
 
 /**
- * Decides from accelerometer samples and GPS speed whether a rider has crashed: a hard impact while
+ * Decides from accelerometer samples and GPS speed whether a rider has crashed (thresholds per vehicle): a hard impact while
  * riding, followed by the phone staying still and the bike not moving. A pothole (impact but the bike
  * rolls on), a hard stop (no impact) and a bike knocked over in a car park (never riding) all stay quiet.
  */
-class CrashDetector {
+class CrashDetector(
+    private val impactG: () -> Float = { IMPACT_G },
+    private val ridingKmh: () -> Int = { RIDING_KMH },
+) {
     private var lastRidingAt = Long.MIN_VALUE
     private var impactAt = 0L
     private var quietSince = 0L
@@ -100,11 +103,11 @@ class CrashDetector {
 
     /** @param g acceleration magnitude in g, gravity included (about 1 at rest). */
     fun onSample(tMs: Long, g: Float, speedKmh: Int): Boolean {
-        if (speedKmh >= RIDING_KMH) lastRidingAt = tMs
+        if (speedKmh >= ridingKmh()) lastRidingAt = tMs
         if (tMs < cooldownUntil) return false
 
         if (!armed) {
-            if (g >= IMPACT_G && lastRidingAt != Long.MIN_VALUE && tMs - lastRidingAt <= RIDING_WINDOW_MS) {
+            if (g >= impactG() && lastRidingAt != Long.MIN_VALUE && tMs - lastRidingAt <= RIDING_WINDOW_MS) {
                 armed = true
                 impactAt = tMs
                 quietSince = 0L
@@ -113,7 +116,7 @@ class CrashDetector {
         }
 
         val sinceImpact = tMs - impactAt
-        if (sinceImpact > GIVE_UP_MS || (sinceImpact >= RESUME_AFTER_MS && speedKmh >= RESUME_KMH)) {
+        if (sinceImpact > GIVE_UP_MS || (sinceImpact >= RESUME_AFTER_MS && speedKmh >= minOf(RESUME_KMH, ridingKmh() * 3 / 5))) {
             armed = false
             return false
         }

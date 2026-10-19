@@ -95,9 +95,9 @@
     <string name="stop_arrived">You have reached your stop</string>
     <string name="continue_trip">Continue</string>
     <string name="fuel_title">Fuel stations</string>
-    <string name="fuel_searching">Looking for fuel stations…</string>
-    <string name="fuel_none">No fuel stations found nearby</string>
-    <string name="fuel_failed">Could not load fuel stations. Check your connection.</string>
+    <string name="fuel_searching">Looking for stops…</string>
+    <string name="fuel_none">No stops found nearby</string>
+    <string name="fuel_failed">Could not load stops. Check your connection.</string>
     <string name="fuel_ahead">Along your route</string>
     <string name="fuel_unnamed">Fuel station</string>
     <string name="fuel_add_stop">Add stop</string>
@@ -189,4 +189,31 @@
     <string name="gps_fair">GPS fair</string>
     <string name="gps_poor">GPS weak</string>
     <string name="altitude_fmt">▲ %1$d m</string>
+
+    <!-- Vehicle profile -->
+    <string name="vehicle_title">What are you riding?</string>
+    <string name="vehicle_sub">Routes, alerts and layout follow this. You can change it later in Settings.</string>
+    <string name="vehicle_moto">Motorcycle</string>
+    <string name="vehicle_moto_desc">Motorcycle routing, glove-sized buttons, crash detection</string>
+    <string name="vehicle_car">Car</string>
+    <string name="vehicle_car_desc">Car routing, fuel and charging stops</string>
+    <string name="vehicle_bike">Bicycle</string>
+    <string name="vehicle_bike_desc">Bicycle routing, repair and water stops, wind alerts, upright screen</string>
+    <string name="vehicle_setting_title">Vehicle</string>
+    <string name="vehicle_setting_desc">Routes, alerts and layout follow the vehicle you pick.</string>
+    <string name="stops_title_car">Fuel and charging</string>
+    <string name="stops_title_bike">Stops</string>
+    <string name="stop_unnamed_charge">Charging station</string>
+    <string name="stop_unnamed_repair">Bike repair point</string>
+    <string name="stop_unnamed_shop">Bike shop</string>
+    <string name="stop_unnamed_water">Drinking water</string>
+    <string name="opt_no_hills">No hills</string>
+    <string name="opt_no_bad_surface">Smooth roads</string>
+    <string name="bike_type_title">Bike type</string>
+    <string name="bike_type_desc">A road bike keeps to asphalt, a mountain bike also takes dirt tracks.</string>
+    <string name="bike_road">Road</string>
+    <string name="bike_city">City</string>
+    <string name="bike_mountain">Mountain</string>
+    <string name="wind_banner_fmt">Strong wind: %1$d km/h</string>
+    <string name="wind_voice_fmt">Wind gusts reach %1$d kilometres an hour, be careful</string>
 </resources>

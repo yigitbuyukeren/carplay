@@ -2,6 +2,7 @@ package dev.ygtlab.carplay.ui
 
 import android.Manifest
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.background
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,7 +45,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import dev.ygtlab.carplay.R
+import androidx.compose.ui.platform.LocalConfiguration
+import dev.ygtlab.carplay.data.BikeType
 import dev.ygtlab.carplay.data.ThemeMode
+import dev.ygtlab.carplay.data.VehicleProfile
 import dev.ygtlab.carplay.util.hasPermission
 
 data class SettingItem(
@@ -113,6 +118,10 @@ fun SettingsScreen(
     themeMode: ThemeMode,
     onThemeMode: (ThemeMode) -> Unit,
     onClose: () -> Unit,
+    vehicle: VehicleProfile = VehicleProfile.MOTORCYCLE,
+    onVehicle: (VehicleProfile) -> Unit = {},
+    bikeType: BikeType = BikeType.CITY,
+    onBikeType: (BikeType) -> Unit = {},
     safetyCard: @Composable () -> Unit = {},
 ) {
     val palette = LocalMotoPalette.current
@@ -131,24 +140,49 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Rounded.Close, null, tint = palette.text, modifier = Modifier.size(32.dp)) }
             }
-            Row(modifier = Modifier.fillMaxSize().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                Column(modifier = Modifier.width(190.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SettingsTab.entries.forEach { t ->
-                        PillButton(
-                            stringResource(t.label),
-                            if (t == tab) MotoColors.Blue else palette.cardHigh,
-                            { tab = t },
-                            Modifier.fillMaxWidth(),
-                            textColor = if (t == tab) Color.White else palette.text,
-                            horizontalPadding = 8.dp,
-                            minHeight = 64.dp,
-                        )
-                    }
+            val portrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+            val tabs: @Composable (Modifier) -> Unit = { modifier ->
+                SettingsTab.entries.forEach { t ->
+                    PillButton(
+                        stringResource(t.label),
+                        if (t == tab) MotoColors.Blue else palette.cardHigh,
+                        { tab = t },
+                        modifier,
+                        textColor = if (t == tab) Color.White else palette.text,
+                        horizontalPadding = 8.dp,
+                        minHeight = 64.dp,
+                    )
                 }
-                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            }
+            val list: @Composable (Modifier) -> Unit = { modifier ->
+                LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     when (tab) {
-                        SettingsTab.SETUP -> items(items) { item -> SettingRow(item) }
+                        SettingsTab.SETUP -> {
+                            item {
+                                ChoiceRow(
+                                    stringResource(R.string.vehicle_setting_title), stringResource(R.string.vehicle_setting_desc),
+                                    listOf(
+                                        stringResource(R.string.vehicle_moto) to (vehicle == VehicleProfile.MOTORCYCLE),
+                                        stringResource(R.string.vehicle_car) to (vehicle == VehicleProfile.CAR),
+                                        stringResource(R.string.vehicle_bike) to (vehicle == VehicleProfile.BICYCLE),
+                                    ),
+                                ) { onVehicle(VehicleProfile.entries[it]) }
+                            }
+                            items(items) { item -> SettingRow(item) }
+                        }
                         SettingsTab.RIDE -> {
+                            if (vehicle == VehicleProfile.BICYCLE) {
+                                item {
+                                    ChoiceRow(
+                                        stringResource(R.string.bike_type_title), stringResource(R.string.bike_type_desc),
+                                        listOf(
+                                            stringResource(R.string.bike_road) to (bikeType == BikeType.ROAD),
+                                            stringResource(R.string.bike_city) to (bikeType == BikeType.CITY),
+                                            stringResource(R.string.bike_mountain) to (bikeType == BikeType.MOUNTAIN),
+                                        ),
+                                    ) { onBikeType(BikeType.entries[it]) }
+                                }
+                            }
                             item {
                                 SettingRow(
                                     SettingItem(
@@ -162,6 +196,20 @@ fun SettingsScreen(
                         }
                         SettingsTab.SAFETY -> item { safetyCard() }
                     }
+                }
+            }
+            if (portrait) {
+                // An upright phone has no room for a side column: the tabs sit on top.
+                Column(modifier = Modifier.fillMaxSize().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { tabs(Modifier.weight(1f)) }
+                    list(Modifier.weight(1f))
+                }
+            } else {
+                Row(modifier = Modifier.fillMaxSize().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    Column(modifier = Modifier.width(190.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        tabs(Modifier.fillMaxWidth())
+                    }
+                    list(Modifier.weight(1f))
                 }
             }
         }
@@ -224,6 +272,35 @@ private fun ThemeRow(mode: ThemeMode, onSelect: (ThemeMode) -> Unit) {
                     Modifier.weight(1f),
                     textColor = if (m == mode) Color.White else palette.text,
                 )
+            }
+        }
+    }
+}
+
+/** A title with a row of exclusive buttons; the selected one is blue. */
+@Composable
+fun ChoiceRow(title: String, description: String, choices: List<Pair<String, Boolean>>, onSelect: (Int) -> Unit) {
+    val palette = LocalMotoPalette.current
+    Column(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(title, fontSize = 20.sp, color = palette.text, fontWeight = FontWeight.SemiBold)
+        Text(description, fontSize = 15.sp, color = palette.muted)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            choices.forEachIndexed { i, (label, selected) ->
+                // One line each: a long name such as "Motorcycle" must not wrap inside a third of the width.
+                Box(
+                    modifier = Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(32.dp))
+                        .background(if (selected) MotoColors.Blue else palette.cardHigh)
+                        .clickable { onSelect(i) }.padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false,
+                        color = if (selected) Color.White else palette.text,
+                    )
+                }
             }
         }
     }

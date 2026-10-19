@@ -43,6 +43,13 @@ Bakılanlar: DMD2, Calimoto, Kurviger, Scenic, REVER, RISER, Motolog, AndrOBD, O
 
 - **2026-10-19, üçüncü tur**: uygulamaya gömülü Türkçe arama klavyesi (`SearchKeyboard`, sistem klavyesi yok, ekranı yeniden boyutlandırmaz, "Ara" hep görünür, uzun basınca sil, 123/sembol sayfası, İ/ı büyük-küçük kuralı); harita ekranında logo ve (i) kalktı, yerine küçük atıf yazısı (`MapCredit`), sağ düğmeler tek sütunda eşit aralıklı; dönüş talimatındaki "Caddesi caddesine" tekrarı temizlenir (`InstructionText`); hız kartında rakım ve GPS durumu (doğruluk yarıçapından iyi/orta/zayıf); müzikte kapak ve başlık "sonraki" ile sola, "önceki" ile sağa kayar, ana ekran müzik kartında da aynı animasyon, nefes alan kapak ve ekolayzer. Gerçek telefonda denenmedi.
 
+## Araç profili (2026-10-19)
+- İlk açılışta **Motosiklet / Araba / Bisiklet** seçimi (`VehicleChooser`); Ayarlar > Kurulum'dan değiştirilir. Seçim rota `costing`'ini (`motorcycle` / `auto` / `bicycle`), hız göstergesi ölçeğini, kaza algılama eşiklerini, durak türlerini ve düzeni belirler. Kullanıcının elle değiştirdiği ayarlar korunur, yalnızca hız limiti varsayılanı araca uyar. Gezinme sürerken araç değişirse rota yeniden hesaplanır.
+- **Araba**: ⛽ düğmesi benzinlik ve şarj istasyonlarını birlikte listeler (soket filtresi yok). **Bisiklet**: tamir noktası, bisiklet dükkânı, içme suyu; yokuşsuz / düz zemin seçenekleri, bisiklet tipi (yol/şehir/dağ), rüzgâr uyarısı (esinti >= 35 km/s), şarj yok varsayımıyla pil %30 altında harita düşük FPS, **dik ekran** (ana ekran dikey düzen + alt dock, ayarlarda sekmeler üstte).
+- Eşikler (`ProfileConfig`): kaza etkisi motosiklet 4 g / araba 5 g / bisiklet 3 g, hareket sayılan hız 25 / 30 / 10 km/s. **Sahada ayarlanmadı.**
+- Emülatörde görüldü: seçim ekranı, dik bisiklet ana ekranı, dik ayarlar ve harita, bisiklet durak listesi, Araba'ya geçişte yatay düzene dönüş. **Görülmedi**: araba şarj istasyonu listesi, gezinirken profil değişimi, dik düzende telefon / müzik / arama / gezinti ekranları (yalnızca harita ve ayarlar bakıldı), gerçek telefonda hiçbiri.
+- Yapılmadı: profile göre dokunma ölçeği (hepsi 64-84 dp), profile göre park etiketi ("Park" ortak), uygulama adı değişikliği.
+
 ## Sıradaki işler
 1. **Telefonda dene** (üstteki "denenmedi" listesi): önce bir arama, Oynat, kapak kaydırma, klavye ile adres arama, canlı mini harita.
 2. **SOS eşiklerini sahada ayarla**: `CrashDetector.IMPACT_G` (4 g) ve 8 sn hareketsizlik yalnızca sentetik verilerle test edildi. Gidonda yanlış alarm olursa önce eşiği artır. Gerçek SIM ile bir test SMS'i (kendi numarana) gönder.

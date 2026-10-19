@@ -18,11 +18,13 @@ data class WeatherSnapshot(
     val code: Int,
     /** Minutes until rain starts within the next hour, 0 when it is already raining, null when dry. */
     val rainInMin: Int?,
+    /** Strongest gust right now, km/h. */
+    val windKmh: Int = 0,
 ) {
     val iceRisk: Boolean get() = WeatherMath.iceRisk(tempC)
 }
 
-enum class WeatherAlert { RAIN, ICE }
+enum class WeatherAlert { RAIN, ICE, WIND }
 
 object WeatherMath {
     private const val SLOT_MIN = 15
@@ -69,6 +71,7 @@ object WeatherMath {
             tempC = Math.round(current.getDouble("temperature_2m")).toInt(),
             code = current.optInt("weather_code", 0),
             rainInMin = rainIn,
+            windKmh = Math.round(current.optDouble("wind_gusts_10m", 0.0)).toInt(),
         )
     }
 
@@ -89,7 +92,7 @@ object WeatherMath {
     fun url(lat: Double, lon: Double): String =
         // Two decimals is roughly a kilometre: plenty for a forecast, and less precise than the real fix.
         "https://api.open-meteo.com/v1/forecast?latitude=${"%.2f".format(Locale.US, lat)}&longitude=${"%.2f".format(Locale.US, lon)}" +
-            "&current=temperature_2m,weather_code&minutely_15=precipitation&forecast_minutely_15=8&timezone=auto"
+            "&current=temperature_2m,weather_code,wind_gusts_10m&minutely_15=precipitation&forecast_minutely_15=8&timezone=auto"
 }
 
 class WeatherRepository {
@@ -111,6 +114,8 @@ class WeatherController(
     private val location: StateFlow<LocationState>,
     private val enabled: StateFlow<Boolean>,
     private val repo: WeatherRepository = WeatherRepository(),
+    /** Gust speed (km/h) from which the wind is worth a warning for this vehicle; null for none. */
+    private val windAlertKmh: () -> Int? = { null },
     private val onAlert: (WeatherAlert, WeatherSnapshot) -> Unit,
 ) {
     private val _snapshot = MutableStateFlow<WeatherSnapshot?>(null)
@@ -120,6 +125,7 @@ class WeatherController(
     private var lastFetchPoint: GeoPoint? = null
     private var rainAnnounced = false
     private var iceAnnounced = false
+    private var windAnnounced = false
 
     fun start() {
         scope.launch {
@@ -152,11 +158,16 @@ class WeatherController(
         // A failed fetch keeps the old snapshot and tries again on the next tick.
     }
 
+    /** True when the gusts reach this vehicle's threshold. */
+    fun windy(s: WeatherSnapshot): Boolean = windAlertKmh()?.let { s.windKmh >= it } == true
+
     private fun announce(s: WeatherSnapshot) {
         if (s.rainInMin == null) rainAnnounced = false
         else if (!rainAnnounced) { rainAnnounced = true; onAlert(WeatherAlert.RAIN, s) }
         if (!s.iceRisk) iceAnnounced = false
         else if (!iceAnnounced) { iceAnnounced = true; onAlert(WeatherAlert.ICE, s) }
+        if (!windy(s)) windAnnounced = false
+        else if (!windAnnounced) { windAnnounced = true; onAlert(WeatherAlert.WIND, s) }
     }
 
     private companion object {

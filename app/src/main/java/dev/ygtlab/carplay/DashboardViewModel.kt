@@ -6,7 +6,7 @@ import dev.ygtlab.carplay.data.AndroidSosAlarm
 import dev.ygtlab.carplay.data.CrashSensor
 import dev.ygtlab.carplay.data.GeoPoint
 import dev.ygtlab.carplay.data.Place
-import dev.ygtlab.carplay.data.RouteOptions
+import dev.ygtlab.carplay.data.VehicleProfile
 import dev.ygtlab.carplay.data.SosContact
 import dev.ygtlab.carplay.data.SosController
 import dev.ygtlab.carplay.data.SosMath
@@ -85,11 +85,30 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     val locationState: StateFlow<LocationState> = location.state
+
+    /** Null until the first-launch chooser has been answered. */
+    val vehicleChosen = MutableStateFlow(Prefs.vehicle(app))
+    private val profileNow: VehicleProfile get() = vehicleChosen.value ?: VehicleProfile.MOTORCYCLE
+    val profile: StateFlow<VehicleProfile> = vehicleChosen.map { it ?: VehicleProfile.MOTORCYCLE }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, profileNow)
+
     val nav = NavigationController(
         app::getString, viewModelScope, location.state, Voice(app),
-        initialOptions = RouteOptions(Prefs.avoidHighways(app), Prefs.avoidTolls(app)),
-        onOptionsChanged = { Prefs.setRouteOptions(app, it.avoidHighways, it.avoidTolls) },
+        initialOptions = Prefs.routeOptions(app, profileNow),
+        onOptionsChanged = { Prefs.setRouteOptions(app, it) },
     )
+
+    /**
+     * First-launch choice or a change in Settings. Settings the user set themselves stay as they are;
+     * only what they never touched (the speed-limit display) follows the new vehicle.
+     */
+    fun setVehicle(profile: VehicleProfile) {
+        val app = getApplication<Application>()
+        Prefs.setVehicle(app, profile)
+        vehicleChosen.value = profile
+        nav.setProfile(profile)
+        if (!Prefs.speedLimitChosen(app)) speedLimitEnabled.value = profile.config.speedLimitDefault
+    }
 
     val places = MutableStateFlow(SavedPlaces.fromJson(Prefs.savedPlaces(app)))
 
@@ -104,13 +123,14 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     val weatherEnabled = MutableStateFlow(Prefs.weatherEnabled(app))
     val rainVoice = MutableStateFlow(Prefs.rainVoice(app))
-    val weather = WeatherController(viewModelScope, location.state, weatherEnabled) { alert, snapshot ->
+    val weather = WeatherController(viewModelScope, location.state, weatherEnabled, windAlertKmh = { profileNow.config.windAlertKmh }) { alert, snapshot ->
         if (!rainVoice.value || call.state.value.phase != CallPhase.IDLE) return@WeatherController
         announcer.speak(
             when (alert) {
                 WeatherAlert.RAIN -> snapshot.rainInMin?.takeIf { it > 0 }
                     ?.let { app.getString(R.string.rain_voice_fmt, it) } ?: app.getString(R.string.rain_voice_now)
                 WeatherAlert.ICE -> app.getString(R.string.ice_voice_fmt, snapshot.tempC)
+                WeatherAlert.WIND -> app.getString(R.string.wind_voice_fmt, snapshot.windKmh)
             }
         )
     }
@@ -128,7 +148,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     /** A number handed over by another app's dial link; the phone screen shows it on the keypad. */
     val dialRequest = MutableStateFlow<String?>(null)
 
-    val speedLimitEnabled = MutableStateFlow(Prefs.speedLimit(app))
+    val speedLimitEnabled = MutableStateFlow(Prefs.speedLimit(app, profileNow))
     private val guiding: Flow<Boolean> = nav.ui.map { ui: NavUi -> ui.navigating }.distinctUntilChanged()
     private val limitActive: StateFlow<Boolean> =
         combine(speedLimitEnabled, guiding) { on: Boolean, navigating: Boolean -> on && navigating }
@@ -213,7 +233,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             "$head $where"
         },
     )
-    private val crashSensor = CrashSensor(app, speedKmh = { gps.value.speedKmh }) { sos.trigger(SosReason.AUTO) }
+    private val crashSensor = CrashSensor(app, speedKmh = { gps.value.speedKmh }, config = { profileNow.config }) { sos.trigger(SosReason.AUTO) }
 
     fun setSosCrashEnabled(enabled: Boolean) {
         Prefs.setSosCrash(getApplication(), enabled)

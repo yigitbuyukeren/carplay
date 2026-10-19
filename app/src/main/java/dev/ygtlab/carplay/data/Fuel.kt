@@ -11,11 +11,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-data class FuelStation(val place: Place, val distanceM: Int)
+data class FuelStation(val place: Place, val distanceM: Int, val kind: StopKind = StopKind.FUEL)
 
 interface FuelFinder {
-    suspend fun near(here: GeoPoint): Result<List<FuelStation>>
-    suspend fun along(route: List<GeoPoint>, here: GeoPoint): Result<List<FuelStation>>
+    suspend fun near(here: GeoPoint, sources: List<StopSource>): Result<List<FuelStation>>
+    suspend fun along(route: List<GeoPoint>, here: GeoPoint, sources: List<StopSource>): Result<List<FuelStation>>
 }
 
 object FuelMath {
@@ -24,17 +24,32 @@ object FuelMath {
     const val MAX_ROUTE_POINTS = 40
     private const val MIN_SPACING_M = 1500.0
     private const val LIMIT = 25
+    private const val PER_KIND = 8
 
     private fun around(radiusM: Int, points: List<GeoPoint>): String =
         "(around:$radiusM," + points.joinToString(",") { "%.5f,%.5f".format(Locale.US, it.lat, it.lon) } + ")"
 
+    /** What the motorcycle profile looks for; the default wherever no vehicle is given. */
+    val FUEL_ONLY: List<StopSource> = VehicleProfile.MOTORCYCLE.config.stops
+
     // Nodes and ways only: relations make the public servers scan far more for no gain here.
-    private fun query(around: String) =
-        "[out:json][timeout:15];(node[\"amenity\"=\"fuel\"]$around;way[\"amenity\"=\"fuel\"]$around;);out center 80;"
+    private fun query(around: String, sources: List<StopSource>): String {
+        val parts = sources.joinToString("") { "node[\"${it.key}\"=\"${it.value}\"]$around;way[\"${it.key}\"=\"${it.value}\"]$around;" }
+        return "[out:json][timeout:15];($parts);out center 80;"
+    }
 
-    fun nearQuery(here: GeoPoint): String = query(around(NEAR_RADIUS_M, listOf(here)))
+    fun nearQuery(here: GeoPoint, sources: List<StopSource> = FUEL_ONLY): String = query(around(NEAR_RADIUS_M, listOf(here)), sources)
 
-    fun routeQuery(points: List<GeoPoint>): String = query(around(ROUTE_RADIUS_M, points))
+    fun routeQuery(points: List<GeoPoint>, sources: List<StopSource> = FUEL_ONLY): String = query(around(ROUTE_RADIUS_M, points), sources)
+
+    /** Which kind of stop an OSM element is, from its tags; fuel when it says nothing clearer. */
+    fun kindOf(tags: JSONObject): StopKind = when {
+        tags.optString("amenity") == "charging_station" -> StopKind.CHARGE
+        tags.optString("amenity") == "bicycle_repair_station" -> StopKind.BIKE_REPAIR
+        tags.optString("shop") == "bicycle" -> StopKind.BIKE_SHOP
+        tags.optString("amenity") == "drinking_water" -> StopKind.WATER
+        else -> StopKind.FUEL
+    }
 
     /**
      * Thins the rest of a route down to a handful of points, no closer than [MIN_SPACING_M] and never
@@ -74,9 +89,19 @@ object FuelMath {
             val name = tags.optString("name").ifBlank { brand }
             // Unnamed stations get a generic label from the UI layer (blank name).
             val detail = brand.takeIf { it.isNotBlank() && !it.equals(name, ignoreCase = true) }.orEmpty()
-            found += FuelStation(Place(name, detail, point), Geo.distance(from, point).toInt())
+            found += FuelStation(Place(name, detail, point), Geo.distance(from, point).toInt(), kindOf(tags))
         }
-        return found.sortedBy { it.distanceM }.distinctBy { it.place.point.lat to it.place.point.lon }.take(LIMIT)
+        return mix(found.sortedBy { it.distanceM }.distinctBy { it.place.point.lat to it.place.point.lon }).take(LIMIT)
+    }
+
+    /**
+     * With several kinds of stop on one list (car: fuel and charging, bicycle: repair, shop, water) a plentiful
+     * kind such as drinking water must not push the rare ones off it: each kind keeps its [PER_KIND] nearest.
+     */
+    fun mix(sorted: List<FuelStation>): List<FuelStation> {
+        if (sorted.map { it.kind }.distinct().size < 2) return sorted
+        val seen = HashMap<StopKind, Int>()
+        return sorted.filter { seen.merge(it.kind, 1, Int::plus)!! <= PER_KIND }
     }
 
     /** South, west, north, east. */
@@ -90,18 +115,18 @@ object FuelMath {
     )
 
     /** Nominatim answers "fuel" inside a box in well under a second, which the Overpass mirrors often cannot. */
-    fun nominatimUrl(box: Box): String =
-        "https://nominatim.openstreetmap.org/search?format=jsonv2&q=fuel&bounded=1&limit=40" +
+    fun nominatimUrl(box: Box, query: String = "fuel"): String =
+        "https://nominatim.openstreetmap.org/search?format=jsonv2&q=${URLEncoder.encode(query, "UTF-8")}&bounded=1&limit=40" +
             "&viewbox=${"%.5f,%.5f,%.5f,%.5f".format(Locale.US, box.west, box.north, box.east, box.south)}"
 
-    fun parseNominatim(json: String, from: GeoPoint): List<FuelStation> {
+    fun parseNominatim(json: String, from: GeoPoint, sources: List<StopSource> = FUEL_ONLY): List<FuelStation> {
         val items = org.json.JSONArray(json)
         val found = ArrayList<FuelStation>()
         for (i in 0 until items.length()) {
             val item = items.getJSONObject(i)
-            if (item.optString("type") != "fuel") continue
+            val source = sources.firstOrNull { it.nominatimType == item.optString("type") } ?: continue
             val point = GeoPoint(item.getDouble("lat"), item.getDouble("lon"))
-            found += FuelStation(Place(item.optString("name"), "", point), Geo.distance(from, point).toInt())
+            found += FuelStation(Place(item.optString("name"), "", point), Geo.distance(from, point).toInt(), source.kind)
         }
         return found.sortedBy { it.distanceM }.take(LIMIT)
     }
@@ -129,32 +154,39 @@ class FuelRepository : FuelFinder {
     )
 
     /** Around the rider: Nominatim first (fast), the Overpass mirrors when it finds nothing or fails. */
-    override suspend fun near(here: GeoPoint): Result<List<FuelStation>> = withContext(Dispatchers.IO) {
+    override suspend fun near(here: GeoPoint, sources: List<StopSource>): Result<List<FuelStation>> = withContext(Dispatchers.IO) {
         safely("fuel") {
             val viaNominatim = try {
-                FuelMath.parseNominatim(Http.get(FuelMath.nominatimUrl(FuelMath.boundingBox(listOf(here), NEAR_BOX_DEG))), here)
+                nominatim(FuelMath.boundingBox(listOf(here), NEAR_BOX_DEG), here, sources)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.w("MotoDash", "nominatim fuel failed", e)
                 emptyList()
             }
-            viaNominatim.ifEmpty { FuelMath.parse(firstAnswer(FuelMath.nearQuery(here)), here) }
+            viaNominatim.ifEmpty { FuelMath.parse(firstAnswer(FuelMath.nearQuery(here, sources)), here) }
         }
     }
 
+    /** One Nominatim search per kind of stop; the kinds are merged, nearest first. */
+    private suspend fun nominatim(box: FuelMath.Box, here: GeoPoint, sources: List<StopSource>): List<FuelStation> =
+        FuelMath.mix(
+            sources.flatMap { FuelMath.parseNominatim(Http.get(FuelMath.nominatimUrl(box, it.nominatimQuery)), here, listOf(it)) }
+                .sortedBy { it.distanceM },
+        )
+
     /** Along the road ahead: the exact Overpass corridor first, a Nominatim box filtered to the corridor otherwise. */
-    override suspend fun along(route: List<GeoPoint>, here: GeoPoint): Result<List<FuelStation>> = withContext(Dispatchers.IO) {
+    override suspend fun along(route: List<GeoPoint>, here: GeoPoint, sources: List<StopSource>): Result<List<FuelStation>> = withContext(Dispatchers.IO) {
         safely("fuel") {
             try {
-                FuelMath.parse(firstAnswer(FuelMath.routeQuery(route)), here)
+                FuelMath.parse(firstAnswer(FuelMath.routeQuery(route, sources)), here)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 // About the next 20 km: a box any wider returns whatever Nominatim ranks first, not what is ahead.
                 val ahead = route.take(FALLBACK_POINTS)
                 val box = FuelMath.boundingBox(ahead, ROUTE_BOX_MARGIN_DEG)
-                FuelMath.alongRoute(FuelMath.parseNominatim(Http.get(FuelMath.nominatimUrl(box)), here), ahead)
+                FuelMath.alongRoute(nominatim(box, here, sources), ahead)
             }
         }
     }

@@ -75,11 +75,12 @@ class AndroidSosAlarm(private val context: Context) : SosAlarm {
 class CrashSensor(
     context: Context,
     private val speedKmh: () -> Int,
+    config: () -> ProfileConfig,
     private val onCrash: () -> Unit,
 ) : SensorEventListener {
     private val sensors = context.getSystemService(SensorManager::class.java)
     private val accelerometer: Sensor? = sensors?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    private val detector = CrashDetector()
+    private val detector = CrashDetector({ config().crashImpactG }, { config().crashMovingKmh })
     private var listening = false
 
     val supported: Boolean get() = accelerometer != null

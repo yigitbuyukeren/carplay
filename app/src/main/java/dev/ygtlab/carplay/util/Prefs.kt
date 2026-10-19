@@ -1,7 +1,10 @@
 package dev.ygtlab.carplay.util
 
 import android.content.Context
+import dev.ygtlab.carplay.data.BikeType
+import dev.ygtlab.carplay.data.RouteOptions
 import dev.ygtlab.carplay.data.ThemeMode
+import dev.ygtlab.carplay.data.VehicleProfile
 
 object Prefs {
     private const val FILE = "motodash"
@@ -13,6 +16,10 @@ object Prefs {
     private const val KEY_PLACES = "saved_places"
     private const val KEY_AVOID_HIGHWAYS = "route_avoid_highways"
     private const val KEY_AVOID_TOLLS = "route_avoid_tolls"
+    private const val KEY_AVOID_HILLS = "route_avoid_hills"
+    private const val KEY_AVOID_BAD_SURFACES = "route_avoid_bad_surfaces"
+    private const val KEY_BIKE_TYPE = "route_bike_type"
+    private const val KEY_VEHICLE = "vehicle_profile"
     private const val KEY_SOS_CONTACTS = "sos_contacts"
     private const val KEY_SOS_CRASH = "sos_crash"
     private const val KEY_SOS_BUTTON = "sos_button"
@@ -41,8 +48,14 @@ object Prefs {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_RECORD_TRIPS, enabled).apply()
     }
 
-    fun speedLimit(context: Context): Boolean =
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_SPEED_LIMIT, true)
+    /** Until the user flips it themselves, the vehicle decides: on for motorcycle and car, off for a bicycle. */
+    fun speedLimit(context: Context, profile: VehicleProfile): Boolean {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        return if (prefs.contains(KEY_SPEED_LIMIT)) prefs.getBoolean(KEY_SPEED_LIMIT, true) else profile.config.speedLimitDefault
+    }
+
+    fun speedLimitChosen(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).contains(KEY_SPEED_LIMIT)
 
     fun setSpeedLimit(context: Context, enabled: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_SPEED_LIMIT, enabled).apply()
@@ -121,15 +134,31 @@ object Prefs {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_SOS_BUTTON, enabled).apply()
     }
 
-    fun avoidHighways(context: Context): Boolean =
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_AVOID_HIGHWAYS, false)
+    /** The vehicle chosen at first launch; null until then. */
+    fun vehicle(context: Context): VehicleProfile? =
+        VehicleProfile.fromName(context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_VEHICLE, null))
 
-    fun avoidTolls(context: Context): Boolean =
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_AVOID_TOLLS, false)
+    fun setVehicle(context: Context, profile: VehicleProfile) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_VEHICLE, profile.name).apply()
+    }
 
-    fun setRouteOptions(context: Context, highways: Boolean, tolls: Boolean) {
+    fun routeOptions(context: Context, profile: VehicleProfile): RouteOptions {
+        val p = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        return RouteOptions(
+            avoidHighways = p.getBoolean(KEY_AVOID_HIGHWAYS, false),
+            avoidTolls = p.getBoolean(KEY_AVOID_TOLLS, false),
+            profile = profile,
+            avoidHills = p.getBoolean(KEY_AVOID_HILLS, false),
+            avoidBadSurfaces = p.getBoolean(KEY_AVOID_BAD_SURFACES, false),
+            bikeType = BikeType.entries.firstOrNull { it.name == p.getString(KEY_BIKE_TYPE, null) } ?: BikeType.CITY,
+        )
+    }
+
+    fun setRouteOptions(context: Context, options: RouteOptions) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
-            .putBoolean(KEY_AVOID_HIGHWAYS, highways).putBoolean(KEY_AVOID_TOLLS, tolls).apply()
+            .putBoolean(KEY_AVOID_HIGHWAYS, options.avoidHighways).putBoolean(KEY_AVOID_TOLLS, options.avoidTolls)
+            .putBoolean(KEY_AVOID_HILLS, options.avoidHills).putBoolean(KEY_AVOID_BAD_SURFACES, options.avoidBadSurfaces)
+            .putString(KEY_BIKE_TYPE, options.bikeType.name).apply()
     }
 
 }

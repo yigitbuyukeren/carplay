@@ -33,15 +33,35 @@ data class Route(
     }
 }
 
-/** What the rider wants to avoid. Everything off leaves Valhalla's own motorcycle defaults untouched. */
-data class RouteOptions(val avoidHighways: Boolean = false, val avoidTolls: Boolean = false) {
+/** Valhalla `bicycle_type`: how much road bike the cyclist is on. */
+enum class BikeType(val valhalla: String) { ROAD("Road"), CITY("Hybrid"), MOUNTAIN("Mountain") }
+
+/**
+ * Who is travelling and what they want to avoid. Everything off leaves Valhalla's own defaults for the
+ * vehicle untouched (a bicycle always names its [bikeType]).
+ */
+data class RouteOptions(
+    val avoidHighways: Boolean = false,
+    val avoidTolls: Boolean = false,
+    val profile: VehicleProfile = VehicleProfile.MOTORCYCLE,
+    val avoidHills: Boolean = false,
+    val avoidBadSurfaces: Boolean = false,
+    val bikeType: BikeType = BikeType.CITY,
+) {
     /** Valhalla `costing_options`, or null when there is nothing to change. */
     fun costingOptions(): JSONObject? {
-        if (!avoidHighways && !avoidTolls) return null
-        val motorcycle = JSONObject()
-        if (avoidHighways) motorcycle.put("use_highways", 0)
-        if (avoidTolls) motorcycle.put("use_tolls", 0)
-        return JSONObject().put("motorcycle", motorcycle)
+        val costing = profile.config.costing
+        val options = JSONObject()
+        if (profile == VehicleProfile.BICYCLE) {
+            options.put("bicycle_type", bikeType.valhalla)
+            if (avoidHills) options.put("use_hills", 0)
+            if (avoidBadSurfaces) options.put("avoid_bad_surfaces", 1)
+        } else {
+            if (avoidHighways) options.put("use_highways", 0)
+            if (avoidTolls) options.put("use_tolls", 0)
+        }
+        if (options.length() == 0) return null
+        return JSONObject().put(costing, options)
     }
 }
 
@@ -72,7 +92,7 @@ object PlaceNames {
     }
 }
 
-/** Valhalla (OSM) motorcycle routing and Nominatim geocoding, both public no-key services. */
+/** Valhalla (OSM) routing for the chosen vehicle and Nominatim geocoding, both public no-key services. */
 class RouteRepository : Routing {
     override suspend fun route(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<Route> = withContext(Dispatchers.IO) {
         safely("route") {
@@ -80,7 +100,7 @@ class RouteRepository : Routing {
                 .put("locations", JSONArray()
                     .put(JSONObject().put("lat", from.lat).put("lon", from.lon))
                     .put(JSONObject().put("lat", to.lat).put("lon", to.lon)))
-                .put("costing", "motorcycle")
+                .put("costing", options.profile.config.costing)
                 .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", "kilometers"))
             options.costingOptions()?.let { body.put("costing_options", it) }
             parseTrip(Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString()))

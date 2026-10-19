@@ -1,6 +1,9 @@
 package dev.ygtlab.carplay
 
 import dev.ygtlab.carplay.data.FuelFinder
+import dev.ygtlab.carplay.data.StopKind
+import dev.ygtlab.carplay.data.StopSource
+import dev.ygtlab.carplay.data.VehicleProfile
 import dev.ygtlab.carplay.data.FuelStation
 import dev.ygtlab.carplay.data.GeoPoint
 import dev.ygtlab.carplay.data.LocationState
@@ -62,10 +65,11 @@ private class FakeFuel : FuelFinder {
     var nearCalls = 0
     var alongCalls = 0
     var alongPoints = 0
+    var sourcesSeen: List<StopSource> = emptyList()
     private val station = FuelStation(Place("Opet", "", GeoPoint(41.05, 29.0)), 300)
-    override suspend fun near(here: GeoPoint): Result<List<FuelStation>> { nearCalls++; return Result.success(listOf(station)) }
-    override suspend fun along(route: List<GeoPoint>, here: GeoPoint): Result<List<FuelStation>> {
-        alongCalls++; alongPoints = route.size; return Result.success(listOf(station))
+    override suspend fun near(here: GeoPoint, sources: List<StopSource>): Result<List<FuelStation>> { nearCalls++; sourcesSeen = sources; return Result.success(listOf(station)) }
+    override suspend fun along(route: List<GeoPoint>, here: GeoPoint, sources: List<StopSource>): Result<List<FuelStation>> {
+        alongCalls++; sourcesSeen = sources; alongPoints = route.size; return Result.success(listOf(station))
     }
 }
 
@@ -254,6 +258,39 @@ class NavigationControllerTest {
         assertTrue(fuel.alongPoints >= 2)
         assertTrue(nav.fuel.value.alongRoute)
         assertEquals("Opet", nav.fuel.value.stations.single().place.name)
+    }
+
+    @Test
+    fun theStopSearchFollowsTheVehicle() {
+        nav.findFuel()
+        assertEquals(listOf(StopKind.FUEL), fuel.sourcesSeen.map { it.kind })
+        nav.setProfile(VehicleProfile.CAR)
+        nav.findFuel()
+        assertEquals(listOf(StopKind.FUEL, StopKind.CHARGE), fuel.sourcesSeen.map { it.kind })
+        nav.setProfile(VehicleProfile.BICYCLE)
+        nav.findFuel()
+        assertTrue(StopKind.WATER in fuel.sourcesSeen.map { it.kind })
+    }
+
+    @Test
+    fun changingTheVehicleInThePreviewRoutesAgainForIt() {
+        nav.selectPlace(dest)
+        nav.setProfile(VehicleProfile.BICYCLE)
+        assertEquals(2, routing.requests.size)
+        assertEquals(VehicleProfile.BICYCLE, routing.optionsSeen.last().profile)
+        nav.setProfile(VehicleProfile.BICYCLE) // same vehicle, nothing to redo
+        assertEquals(2, routing.requests.size)
+    }
+
+    @Test
+    fun changingTheVehicleWhileGuidingPlansTheRestOfTheTripForIt() {
+        startGuidance()
+        drive(3)
+        val before = routing.requests.size
+        nav.setProfile(VehicleProfile.CAR)
+        assertEquals(before + 1, routing.requests.size)
+        assertEquals(VehicleProfile.CAR, routing.optionsSeen.last().profile)
+        assertTrue(nav.ui.value.navigating)
     }
 
     @Test

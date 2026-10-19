@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -50,6 +53,11 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val callState by vm.call.state.collectAsStateWithLifecycle()
     val callerName by vm.callerName.collectAsStateWithLifecycle()
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
+    val profile by vm.profile.collectAsStateWithLifecycle()
+    val vehicleChosen by vm.vehicleChosen.collectAsStateWithLifecycle()
+    val routeOptions by vm.nav.options.collectAsStateWithLifecycle()
+    val cfg = profile.config
+    val portrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     val speedLimitOn by vm.speedLimitEnabled.collectAsStateWithLifecycle()
     val speedLimit by vm.speedLimit.limit.collectAsStateWithLifecycle()
@@ -69,6 +77,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
     val places by vm.places.collectAsStateWithLifecycle()
     val thermal by vm.thermal.state.collectAsStateWithLifecycle()
+    // Without a charger a low battery is treated like a hot phone: the maps drop their frame rate.
+    val lowPower = thermal.lowPower || (cfg.assumesNoCharger && !battery.charging && battery.percent in 1..LOW_BATTERY_PERCENT)
     val thermalOn by vm.thermalEnabled.collectAsStateWithLifecycle()
     var heatDismissed by remember { mutableStateOf(false) }
     LaunchedEffect(thermal.warn) { if (!thermal.warn) heatDismissed = false }
@@ -81,6 +91,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val rainVoice by vm.rainVoice.collectAsStateWithLifecycle()
     var rainDismissed by remember { mutableStateOf(false) }
     var iceDismissed by remember { mutableStateOf(false) }
+    var windDismissed by remember { mutableStateOf(false) }
+    val windy = weather?.let { w -> cfg.windAlertKmh?.let { w.windKmh >= it } } == true
+    LaunchedEffect(windy) { if (!windy) windDismissed = false }
     val raining = weather?.rainInMin != null
     val icy = weather?.iceRisk == true
     LaunchedEffect(raining) { if (!raining) rainDismissed = false }
@@ -142,14 +155,17 @@ fun DashboardScreen(vm: DashboardViewModel) {
     Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.wallpaper)) {
         Box(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-            Row(modifier = Modifier.fillMaxSize().padding(end = 16.dp, top = 8.dp, bottom = 12.dp)) {
+            val dock: @Composable () -> Unit = {
                 Dock(
                     battery = battery,
                     onNavigation = { showMap = !showMap; showNowPlaying = false; showPhone = false; showSettings = false },
                     onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showPhone = false; showSettings = false },
                     onPhone = { vm.dialRequest.value = null; showPhone = !showPhone; showMap = false; showNowPlaying = false; showSettings = false },
                     onSettings = { showSettings = true },
+                    horizontal = portrait,
                 )
+            }
+            val content: @Composable (Modifier) -> Unit = { m ->
                 if (showPhone) {
                     PhoneScreen(
                         recents = recents,
@@ -168,14 +184,14 @@ fun DashboardScreen(vm: DashboardViewModel) {
                                 dialerLauncher.launch(defaultDialerIntent(context))
                             } else vm.dial(number, name)
                         },
-                        modifier = Modifier.weight(1f).fillMaxSize(),
+                        modifier = m,
                     )
                 } else if (showNowPlaying) {
                     NowPlayingScreen(
                         state = mediaState,
                         media = vm.media,
                         onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
-                        modifier = Modifier.weight(1f).fillMaxSize(),
+                        modifier = m,
                     )
                 } else if (showMap) {
                     MapScreen(
@@ -184,38 +200,67 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         speedKmh = gps.speedKmh,
                         speedLimit = speedLimit,
                         isDay = isDay,
-                        lowPower = thermal.lowPower,
+                        lowPower = lowPower,
                         places = places,
                         onSavePlace = vm::savePlace,
                         onRemovePlace = vm::removePlace,
                         onClose = { showMap = false },
-                        modifier = Modifier.weight(1f).fillMaxSize(),
+                        modifier = m,
                     )
-                } else Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    ) {
-                        SpeedCard(gps, speedLimit, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
-                        Column(
-                            modifier = Modifier.weight(1.15f).fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                } else Column(modifier = m) {
+                    val speedCard: @Composable (Modifier) -> Unit = { mod ->
+                        SpeedCard(gps, speedLimit, maxKmh = cfg.gaugeMaxKmh, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = mod, onClick = { showTrips = true })
+                    }
+                    val navCard: @Composable (Modifier) -> Unit = { mod ->
+                        NavCard(
+                            navUi, places, weather.takeIf { weatherOn },
+                            me = locationState, isDay = isDay, lowPower = lowPower,
+                            onOpenMap = { showMap = true },
+                            onGoTo = { vm.nav.selectPlace(it); showMap = true },
+                            modifier = mod)
+                    }
+                    val mediaCard: @Composable (Modifier) -> Unit = { mod ->
+                        MediaCard(
+                            state = mediaState,
+                            media = vm.media,
+                            onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
+                            onOpenNowPlaying = { showNowPlaying = true },
+                            modifier = mod,
+                        )
+                    }
+                    if (portrait) {
+                        // Upright phone: speed on top, the route in the middle, music at the bottom.
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            speedCard(Modifier.weight(1.1f).fillMaxWidth())
+                            navCard(Modifier.weight(1.3f).fillMaxWidth())
+                            mediaCard(Modifier.weight(0.9f).fillMaxWidth())
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
-                            NavCard(
-                                navUi, places, weather.takeIf { weatherOn },
-                                me = locationState, isDay = isDay, lowPower = thermal.lowPower,
-                                onOpenMap = { showMap = true },
-                                onGoTo = { vm.nav.selectPlace(it); showMap = true },
-                                modifier = Modifier.weight(1f).fillMaxSize())
-                            MediaCard(
-                                state = mediaState,
-                                media = vm.media,
-                                onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
-                                onOpenNowPlaying = { showNowPlaying = true },
-                                modifier = Modifier.weight(1f).fillMaxSize(),
-                            )
+                            speedCard(Modifier.weight(1f).fillMaxSize())
+                            Column(
+                                modifier = Modifier.weight(1.15f).fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(14.dp),
+                            ) {
+                                navCard(Modifier.weight(1f).fillMaxSize())
+                                mediaCard(Modifier.weight(1f).fillMaxSize())
+                            }
                         }
                     }
+                }
+            }
+            if (portrait) {
+                Column(modifier = Modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 8.dp)) {
+                    content(Modifier.weight(1f).fillMaxWidth())
+                    dock()
+                }
+            } else {
+                Row(modifier = Modifier.fillMaxSize().padding(end = 16.dp, top = 8.dp, bottom = 12.dp)) {
+                    dock()
+                    content(Modifier.weight(1f).fillMaxSize())
                 }
             }
 
@@ -252,6 +297,12 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         onDismiss = { iceDismissed = true },
                         modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
                     )
+                    weatherOn && w != null && windy && !windDismissed -> AlertStrip(
+                        text = stringResource(R.string.wind_banner_fmt, w.windKmh),
+                        accent = MotoColors.Orange,
+                        onDismiss = { windDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
                 }
             }
 
@@ -277,6 +328,10 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     themeMode = themeMode,
                     onThemeMode = vm.theme::setMode,
                     onClose = { showSettings = false },
+                    vehicle = profile,
+                    onVehicle = vm::setVehicle,
+                    bikeType = routeOptions.bikeType,
+                    onBikeType = { vm.nav.setOptions(routeOptions.copy(bikeType = it)) },
                     safetyCard = {
                         SosSettingsCard(
                             contacts = sosContacts,
@@ -306,11 +361,17 @@ fun DashboardScreen(vm: DashboardViewModel) {
             )
         }
 
+        // The first-launch question sits above everything but the SOS countdown.
+        if (vehicleChosen == null) VehicleChooser(onChoose = vm::setVehicle)
+
         // Last, so nothing can cover an SOS countdown.
         SosScreen(sosUi, sosContacts.map { it.name }, onCancel = vm.sos::cancel, onDismiss = vm.sos::dismiss)
         }
     }
 }
+
+/** Below this charge, a phone with no charger on board saves power. */
+private const val LOW_BATTERY_PERCENT = 30
 
 /** No number entry while riding, same limit as the map search box. */
 private const val PHONE_LOCK_KMH = 5

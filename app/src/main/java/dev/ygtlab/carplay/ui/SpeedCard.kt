@@ -38,18 +38,18 @@ import androidx.compose.ui.unit.sp
 import dev.ygtlab.carplay.GpsUi
 import dev.ygtlab.carplay.R
 
-private const val MAX_SPEED = 200f
-
 @Composable
 fun SpeedCard(
     gps: GpsUi,
     limit: Int?,
+    /** Full-scale of the gauge, km/h; depends on the vehicle. */
+    maxKmh: Float = 200f,
     onSos: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
     val fraction by animateFloatAsState(
-        targetValue = (gps.speedKmh / MAX_SPEED).coerceIn(0f, 1f),
+        targetValue = (gps.speedKmh / maxKmh).coerceIn(0f, 1f),
         animationSpec = spring(stiffness = 120f),
         label = "speed",
     )
