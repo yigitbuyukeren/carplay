@@ -86,6 +86,7 @@ fun NavCard(
             )
         }
         if (weather != null) WeatherChip(weather, Modifier.align(Alignment.TopEnd).padding(12.dp))
+        if (guiding) MapCredit(Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 6.dp))
         Column(
             modifier = Modifier.fillMaxSize().padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween,

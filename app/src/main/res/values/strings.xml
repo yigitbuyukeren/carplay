@@ -77,7 +77,7 @@
     <string name="saved_home">Ev</string>
     <string name="saved_work">İş</string>
     <string name="saved_favorite">Favori</string>
-    <string name="saved_hint">Arama sonucundaki ☆ ile Ev, İş veya favori ekle. Haritaya uzun basarak da hedef seçebilirsin.</string>
+    <string name="saved_hint">☆ ile Ev, İş veya favori ekle. Haritaya uzun basarak da hedef seç.</string>
     <string name="saved_delete_confirm">Silmek için dokun</string>
     <string name="search_locked">Sürerken arama kilitli. Kayıtlı yerlerden seç veya haritaya uzun bas.</string>
     <string name="go_home">Eve git</string>
@@ -185,4 +185,8 @@
     <string name="play">Oynat</string>
     <string name="phone_enter_number">Numara gir</string>
     <string name="phone_paste">Yapıştır</string>
+    <string name="gps_good">GPS iyi</string>
+    <string name="gps_fair">GPS orta</string>
+    <string name="gps_poor">GPS zayıf</string>
+    <string name="altitude_fmt">▲ %1$d m</string>
 </resources>

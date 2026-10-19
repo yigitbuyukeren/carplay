@@ -1,6 +1,5 @@
 package dev.ygtlab.carplay.ui
 
-import android.view.Gravity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -11,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -127,13 +127,23 @@ fun MiniMap(
                 mv.getMapAsync { m ->
                     // A glance, not a control: taps and drags go to the card, which opens the full map.
                     m.uiSettings.setAllGesturesEnabled(false)
-                    // The required data attribution stays, small, bottom right; the optional MapLibre logo goes.
+                    // MapLibre's own logo and (i) button look out of place on a dark card; the required credit is drawn by the card instead.
                     m.uiSettings.isLogoEnabled = false
-                    m.uiSettings.attributionGravity = Gravity.BOTTOM or Gravity.END
-                    m.uiSettings.setAttributionMargins(0, 0, 8, 8)
+                    m.uiSettings.isAttributionEnabled = false
                     map = m
                 }
             }
         },
+    )
+}
+
+/** The map data credit that OpenFreeMap and OpenStreetMap ask for, small and quiet. */
+@Composable
+fun MapCredit(modifier: Modifier = Modifier) {
+    androidx.compose.material3.Text(
+        "OpenFreeMap © OpenMapTiles · © OpenStreetMap",
+        fontSize = 9.sp,
+        color = androidx.compose.ui.graphics.Color(0x99FFFFFF),
+        modifier = modifier,
     )
 }

@@ -97,9 +97,9 @@ class RouteRepository : Routing {
                 val m = arr.getJSONObject(i)
                 Maneuver(
                     type = m.getInt("type"),
-                    instruction = m.optString("instruction"),
-                    alert = m.optString("verbal_transition_alert_instruction"),
-                    verbal = m.optString("verbal_pre_transition_instruction", m.optString("instruction")),
+                    instruction = InstructionText.clean(m.optString("instruction")),
+                    alert = InstructionText.clean(m.optString("verbal_transition_alert_instruction")),
+                    verbal = InstructionText.clean(m.optString("verbal_pre_transition_instruction", m.optString("instruction"))),
                     lengthM = m.getDouble("length") * 1000,
                     beginIndex = m.getInt("begin_shape_index"),
                 )

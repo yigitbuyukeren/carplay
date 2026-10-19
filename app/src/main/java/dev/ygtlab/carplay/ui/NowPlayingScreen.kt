@@ -109,7 +109,7 @@ fun NowPlayingScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.fillMaxHeight().aspectRatio(0.88f), contentAlignment = Alignment.Center) {
-                Cover(state, onNext = { media.next() }, onPrevious = { media.previous() })
+                Cover(state, direction = { media.skipDirection }, onNext = { media.next() }, onPrevious = { media.previous() })
             }
             Spacer(Modifier.width(28.dp))
             Column(
@@ -139,7 +139,7 @@ fun NowPlayingScreen(
 
 /** Album art: swipe it sideways for the next or previous track; it eases back and shrinks a little while paused. */
 @Composable
-private fun Cover(state: MediaState, onNext: () -> Unit, onPrevious: () -> Unit) {
+private fun Cover(state: MediaState, direction: () -> Int, onNext: () -> Unit, onPrevious: () -> Unit) {
     val palette = LocalMotoPalette.current
     var drag by remember { mutableFloatStateOf(0f) }
     val offset by animateFloatAsState(drag, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium), label = "swipe")
@@ -167,11 +167,18 @@ private fun Cover(state: MediaState, onNext: () -> Unit, onPrevious: () -> Unit)
             },
         contentAlignment = Alignment.Center,
     ) {
-        Crossfade(state.art, animationSpec = tween(500), label = "art") { art ->
+        // Keyed on the track, not the picture, so a swap always slides the whole cover.
+        AnimatedContent(
+            targetState = Triple(state.title, state.artist, state.art),
+            transitionSpec = { trackTransition(direction()) },
+            label = "cover",
+        ) { (_, _, art) ->
             if (art != null) {
                 Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             } else {
-                Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(72.dp))
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(72.dp))
+                }
             }
         }
     }
@@ -204,7 +211,7 @@ private fun TrackTitle(state: MediaState) {
 
 /** Three bars that bounce while music plays. */
 @Composable
-private fun Equalizer(modifier: Modifier = Modifier) {
+internal fun Equalizer(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "eq")
     val color = LocalMotoPalette.current.text
     Row(modifier.height(24.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {

@@ -3,6 +3,12 @@ package dev.ygtlab.carplay.ui
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -79,29 +85,43 @@ fun MediaCard(
                     modifier = Modifier.fillMaxWidth().pressClickable(onClick = onOpenNowPlaying),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // The cover slides like on the music screen; it also breathes a little while music plays.
+                    val coverScale by animateFloatAsState(if (state.playing) 1f else 0.92f, spring(stiffness = Spring.StiffnessLow), label = "cover")
                     Box(
-                        modifier = Modifier.size(68.dp).clip(RoundedCornerShape(16.dp)).background(MotoColors.CardHigh),
+                        modifier = Modifier.size(68.dp).graphicsLayer { scaleX = coverScale; scaleY = coverScale }
+                            .clip(RoundedCornerShape(16.dp)).background(MotoColors.CardHigh),
                         contentAlignment = Alignment.Center,
                     ) {
-                        val art = state.art
-                        if (art != null) {
-                            Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                        } else {
-                            Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(34.dp))
+                        AnimatedContent(
+                            targetState = Triple(state.title, state.artist, state.art),
+                            transitionSpec = { trackTransition(media.skipDirection) },
+                            label = "cardCover",
+                        ) { (_, _, art) ->
+                            if (art != null) {
+                                Image(art.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                            } else {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Rounded.MusicNote, null, tint = palette.muted, modifier = Modifier.size(34.dp))
+                                }
+                            }
                         }
                     }
-                    Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
-                        Text(
-                            state.title.ifBlank { stringResource(R.string.unknown_track) },
-                            fontSize = 22.sp, fontWeight = FontWeight.Bold, color = palette.text,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            state.artist,
-                            fontSize = 16.sp, color = palette.textSecondary,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        )
+                    AnimatedContent(
+                        targetState = state.title to state.artist,
+                        transitionSpec = { trackTransition(media.skipDirection) },
+                        modifier = Modifier.weight(1f).padding(start = 14.dp),
+                        label = "cardTitle",
+                    ) { (title, artist) ->
+                        Column {
+                            Text(
+                                title.ifBlank { stringResource(R.string.unknown_track) },
+                                fontSize = 22.sp, fontWeight = FontWeight.Bold, color = palette.text,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(artist, fontSize = 16.sp, color = palette.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
+                    if (state.playing) Equalizer(Modifier.padding(start = 10.dp))
                 }
                 // Bottom: volume, previous, play, next, volume across the whole card width.
                 Row(
@@ -133,7 +153,9 @@ private fun ControlButton(icon: ImageVector, size: Int, filled: Boolean = false,
             .background(if (filled) LocalMotoPalette.current.strong else if (soft) LocalMotoPalette.current.track else Color.Transparent),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, tint = if (filled) LocalMotoPalette.current.onStrong else LocalMotoPalette.current.text, modifier = Modifier.size((size * 0.62f).dp))
+        Crossfade(icon, animationSpec = tween(200), label = "icon") { shown ->
+            Icon(shown, null, tint = if (filled) LocalMotoPalette.current.onStrong else LocalMotoPalette.current.text, modifier = Modifier.size((size * 0.62f).dp))
+        }
     }
 }
 

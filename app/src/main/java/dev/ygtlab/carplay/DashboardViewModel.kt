@@ -55,7 +55,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class GpsUi(val speedKmh: Int = 0, val hasFix: Boolean = false)
+data class GpsUi(val speedKmh: Int = 0, val hasFix: Boolean = false, val altitudeM: Int? = null, val accuracyM: Int? = null)
 
 class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val location = LocationRepository(app)
@@ -167,7 +167,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     val gps: StateFlow<GpsUi> = combine(location.state, ticker) { loc, now ->
         val fresh = now - loc.fixAtMs < FIX_TIMEOUT_MS
-        GpsUi(if (fresh) loc.speedKmh else 0, fresh)
+        GpsUi(if (fresh) loc.speedKmh else 0, fresh, loc.altitudeM, loc.accuracyM)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, GpsUi())
 
     val thermalEnabled = MutableStateFlow(Prefs.thermalGuard(app))

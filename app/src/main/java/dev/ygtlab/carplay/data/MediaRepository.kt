@@ -170,8 +170,19 @@ class MediaRepository(private val context: Context) {
         audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY))
     }
 
-    fun next() = controller?.transportControls?.skipToNext()
-    fun previous() = controller?.transportControls?.skipToPrevious()
+    /** +1 after "next", -1 after "previous": which way the cover should slide when the track changes. */
+    @Volatile var skipDirection = 1
+        private set
+
+    fun next() {
+        skipDirection = 1
+        controller?.transportControls?.skipToNext()
+    }
+
+    fun previous() {
+        skipDirection = -1
+        controller?.transportControls?.skipToPrevious()
+    }
 
     fun volumeUp() = audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
     fun volumeDown() = audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)

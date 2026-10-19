@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -83,9 +84,33 @@ fun SpeedCard(
             Text(stringResource(R.string.speed_unit), fontSize = 22.sp, color = LocalMotoPalette.current.muted, fontWeight = FontWeight.Medium)
             if (!gps.hasFix) {
                 Text(stringResource(R.string.gps_waiting), fontSize = 16.sp, color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
+            } else {
+                GpsInfo(gps, Modifier.padding(top = 10.dp))
             }
         }
         if (onSos != null) SosButton(onSos, Modifier.align(Alignment.BottomStart).padding(16.dp))
         if (limit != null) SpeedLimitSign(limit, Modifier.align(Alignment.TopEnd).padding(16.dp), size = 76.dp)
     }
 }
+
+/** Altitude and how good the GPS fix is: the accuracy radius turned into a word and a colour. */
+@Composable
+private fun GpsInfo(gps: GpsUi, modifier: Modifier = Modifier) {
+    val muted = LocalMotoPalette.current.muted
+    val (label, color) = when {
+        gps.accuracyM == null -> R.string.gps_fair to MotoColors.Orange
+        gps.accuracyM <= GPS_GOOD_M -> R.string.gps_good to MotoColors.Green
+        gps.accuracyM <= GPS_FAIR_M -> R.string.gps_fair to MotoColors.Orange
+        else -> R.string.gps_poor to MotoColors.Red
+    }
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        gps.altitudeM?.let { Text(stringResource(R.string.altitude_fmt, it), fontSize = 17.sp, fontWeight = FontWeight.Medium, color = muted) }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.size(10.dp).clip(CircleShape).background(color))
+            Text(stringResource(label), fontSize = 17.sp, fontWeight = FontWeight.Medium, color = muted)
+        }
+    }
+}
+
+private const val GPS_GOOD_M = 10
+private const val GPS_FAIR_M = 30

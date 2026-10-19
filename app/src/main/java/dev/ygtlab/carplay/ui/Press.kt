@@ -3,7 +3,9 @@ package dev.ygtlab.carplay.ui
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.getValue
@@ -23,3 +25,14 @@ fun Modifier.pressClickable(enabled: Boolean = true, onClick: () -> Unit): Modif
     )
     this.graphicsLayer { scaleX = scale; scaleY = scale }.clickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick)
 }
+
+/** A key that squeezes while pressed, with an optional long-press action. */
+@OptIn(ExperimentalFoundationApi::class)
+internal fun Modifier.pressKey(enabled: Boolean, onClick: () -> Unit, onLongClick: (() -> Unit)?): Modifier = composed {
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "key")
+    this.graphicsLayer { scaleX = scale; scaleY = scale }
+        .combinedClickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick, onLongClick = onLongClick)
+}
+

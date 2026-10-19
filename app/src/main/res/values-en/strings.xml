@@ -77,7 +77,7 @@
     <string name="saved_home">Home</string>
     <string name="saved_work">Work</string>
     <string name="saved_favorite">Favorite</string>
-    <string name="saved_hint">Tap the ☆ on a search result to save Home, Work or a favorite. You can also long-press the map to pick a destination.</string>
+    <string name="saved_hint">Tap ☆ to save Home, Work or a favorite. Long-press the map to pick a spot.</string>
     <string name="saved_delete_confirm">Tap to delete</string>
     <string name="search_locked">Search is locked while riding. Pick a saved place or long-press the map.</string>
     <string name="go_home">Go home</string>
@@ -185,4 +185,8 @@
     <string name="play">Play</string>
     <string name="phone_enter_number">Enter a number</string>
     <string name="phone_paste">Paste</string>
+    <string name="gps_good">GPS good</string>
+    <string name="gps_fair">GPS fair</string>
+    <string name="gps_poor">GPS weak</string>
+    <string name="altitude_fmt">▲ %1$d m</string>
 </resources>

@@ -156,6 +156,8 @@ fun MapScreen(
     var styleReady by remember { mutableStateOf(false) }
     var centeredOnce by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf<Place?>(null) }
+    var typing by remember { mutableStateOf(false) }
+    LaunchedEffect(speedKmh >= SEARCH_LOCK_KMH) { if (speedKmh >= SEARCH_LOCK_KMH) typing = false }
 
     // A hot phone gets a calmer map: fewer frames per second.
     LaunchedEffect(lowPower) { mapView.setMaximumFps(if (lowPower) LOW_POWER_FPS else FULL_FPS) }
@@ -268,6 +270,8 @@ fun MapScreen(
                     mv.getMapAsync { m ->
                         map = m
                         m.uiSettings.isRotateGesturesEnabled = true
+                        m.uiSettings.isLogoEnabled = false
+                        m.uiSettings.isAttributionEnabled = false
                         m.addOnMapLongClickListener { latLng ->
                             nav.selectPoint(GeoPoint(latLng.latitude, latLng.longitude))
                             true
@@ -312,9 +316,10 @@ fun MapScreen(
                 else -> SearchPanel(
                     ui = ui,
                     locked = speedKmh >= SEARCH_LOCK_KMH,
+                    typing = typing,
+                    onFocus = { typing = true },
+                    onSearch = { typing = false; nav.search() },
                     places = places,
-                    onQuery = nav::onQueryChange,
-                    onSearch = nav::search,
                     onSelect = nav::selectPlace,
                     onSave = { saving = it },
                     onRemovePlace = onRemovePlace,
@@ -330,17 +335,11 @@ fun MapScreen(
         }
 
         Column(
-            modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.End,
         ) {
             RoundIconButton(Icons.Rounded.Close, onClick = onClose)
-        }
-        Column(
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            horizontalAlignment = Alignment.End,
-        ) {
             if (!ui.arrived) {
                 RoundIconButton(Icons.Rounded.LocalGasStation, onClick = { if (fuel.visible) nav.closeFuel() else nav.findFuel() })
             }
@@ -354,6 +353,18 @@ fun MapScreen(
             }
             if (speedLimit != null) SpeedLimitSign(speedLimit, size = 64.dp)
             SpeedChip(speedKmh, over = SpeedLimitMath.isOver(speedKmh, speedLimit))
+        }
+        MapCredit(Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 4.dp))
+
+        // The app's own keyboard: it covers the lower part of the map, never resizes anything.
+        if (typing && speedKmh < SEARCH_LOCK_KMH) {
+            SearchKeyboard(
+                query = ui.query,
+                onQuery = nav::onQueryChange,
+                onSearch = { typing = false; nav.search() },
+                onClose = { typing = false },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 }
@@ -408,43 +419,35 @@ private fun GlassPanel(modifier: Modifier = Modifier, content: @Composable () ->
 private fun SearchPanel(
     ui: NavUi,
     locked: Boolean,
-    places: List<SavedPlace>,
-    onQuery: (String) -> Unit,
+    typing: Boolean,
+    onFocus: () -> Unit,
     onSearch: () -> Unit,
+    places: List<SavedPlace>,
     onSelect: (Place) -> Unit,
     onSave: (Place) -> Unit,
     onRemovePlace: (SavedPlace) -> Unit,
 ) {
-    val focus = LocalFocusManager.current
-    val keyboard = LocalSoftwareKeyboardController.current
-    val submit = { keyboard?.hide(); focus.clearFocus(); onSearch() }
-    LaunchedEffect(locked) { if (locked) { keyboard?.hide(); focus.clearFocus() } }
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // The query is typed on the app's own keyboard; this box just shows it and opens the keyboard.
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MotoColors.PanelHigh).padding(horizontal = 14.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(16.dp)).background(MotoColors.PanelHigh)
+                    .clickable(enabled = !locked, onClick = onFocus).padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Rounded.Search, null, tint = MotoColors.Gray, modifier = Modifier.size(24.dp))
+                Icon(Icons.Rounded.Search, null, tint = MotoColors.Gray, modifier = Modifier.size(26.dp))
                 Box(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
-                    if (ui.query.isEmpty()) Text(stringResource(R.string.where_to), fontSize = 18.sp, color = MotoColors.Gray)
-                    BasicTextField(
-                        value = ui.query,
-                        onValueChange = onQuery,
-                        enabled = !locked,
-                        singleLine = true,
-                        textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
-                        cursorBrush = SolidColor(Color.White),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { submit() }),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    if (ui.query.isEmpty()) Text(stringResource(R.string.where_to), fontSize = 20.sp, color = MotoColors.Gray, maxLines = 1)
+                    else Text(ui.query + if (typing) "▏" else "", fontSize = 20.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Box(
-                    modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(12.dp))
-                        .background(if (locked) MotoColors.Gray else MotoColors.Blue)
-                        .clickable(enabled = !locked) { submit() }.padding(horizontal = 14.dp, vertical = 6.dp),
-                ) { Text(stringResource(R.string.search), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White) }
+                if (ui.query.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier.padding(start = 8.dp).height(52.dp).clip(RoundedCornerShape(14.dp))
+                            .background(if (locked) MotoColors.Gray else MotoColors.Blue)
+                            .pressClickable(enabled = !locked, onClick = onSearch).padding(horizontal = 22.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Text(stringResource(R.string.search), fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                }
             }
             when {
                 ui.loading -> Text(stringResource(R.string.route_computing), fontSize = 15.sp, color = MotoColors.Gray)
@@ -464,7 +467,7 @@ private fun SearchPanel(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(
                                 modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
-                                    .clickable { keyboard?.hide(); focus.clearFocus(); onSelect(place) }.padding(horizontal = 8.dp, vertical = 10.dp)
+                                    .clickable { onSelect(place) }.padding(horizontal = 8.dp, vertical = 10.dp)
                             ) {
                                 Text(place.name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 if (place.detail.isNotBlank()) {

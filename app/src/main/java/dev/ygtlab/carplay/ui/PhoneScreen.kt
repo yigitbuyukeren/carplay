@@ -388,16 +388,6 @@ private fun KeypadAction(icon: androidx.compose.ui.graphics.vector.ImageVector, 
     }
 }
 
-/** A key that squeezes while pressed, with an optional long-press action. */
-@OptIn(ExperimentalFoundationApi::class)
-private fun Modifier.pressKey(enabled: Boolean, onClick: () -> Unit, onLongClick: (() -> Unit)?): Modifier = composed {
-    val source = remember { MutableInteractionSource() }
-    val pressed by source.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "key")
-    this.graphicsLayer { scaleX = scale; scaleY = scale }
-        .combinedClickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick, onLongClick = onLongClick)
-}
-
 @Composable
 private fun whenLabel(atMs: Long): String {
     val context = LocalContext.current
