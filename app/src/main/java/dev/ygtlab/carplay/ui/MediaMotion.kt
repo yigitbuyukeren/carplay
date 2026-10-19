@@ -2,8 +2,6 @@ package dev.ygtlab.carplay.ui
 
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -13,5 +11,8 @@ import androidx.compose.animation.togetherWith
  * in from the right, after "previous" the other way round. [direction] is +1 for next, -1 for previous.
  */
 fun trackTransition(direction: Int): ContentTransform =
-    (slideInHorizontally(tween(380)) { it * direction } + fadeIn(tween(380))) togetherWith
-        (slideOutHorizontally(tween(380)) { -it * direction } + fadeOut(tween(260)))
+    // Slides only, both over the same time: a fade that ends sooner leaves a gap between the two covers.
+    slideInHorizontally(tween(SLIDE_MS)) { it * direction } togetherWith
+        slideOutHorizontally(tween(SLIDE_MS)) { -it * direction }
+
+private const val SLIDE_MS = 380
