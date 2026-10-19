@@ -160,6 +160,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
     }
 
     Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.wallpaper)) {
+        Box(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(modifier = Modifier.fillMaxSize().padding(end = 16.dp, top = 8.dp, bottom = 12.dp)) {
                 Dock(
@@ -344,12 +345,17 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 }
             }
 
-            if (callState.phase != CallPhase.IDLE) {
-                CallScreen(callState, callerName, onAnswer = vm.call::answer, onHangUp = vm.call::hangUp, onMute = vm.call::toggleMute, onRoute = vm.call::setRoute)
-            }
+        }
 
-            // Last, so nothing can cover an SOS countdown.
+        // The call screen paints edge to edge (it pads its own content); inside the padded box it left a bare strip at the cutout.
+        if (callState.phase != CallPhase.IDLE) {
+            CallScreen(callState, callerName, onAnswer = vm.call::answer, onHangUp = vm.call::hangUp, onMute = vm.call::toggleMute, onRoute = vm.call::setRoute)
+        }
+
+        // Last, so nothing can cover an SOS countdown.
+        Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             SosScreen(sosUi, sosContacts.map { it.name }, onCancel = vm.sos::cancel, onDismiss = vm.sos::dismiss)
+        }
         }
     }
 }
