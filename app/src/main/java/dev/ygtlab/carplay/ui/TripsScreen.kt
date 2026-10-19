@@ -70,7 +70,7 @@ fun TripsScreen(trips: TripRecorder, onClose: () -> Unit) {
                     if (recording) Text(stringResource(R.string.trip_recording), fontSize = 16.sp, color = MotoColors.Red)
                 }
                 Box(
-                    modifier = Modifier.size(64.dp).clip(CircleShape).background(palette.cardHigh).clickable(onClick = onClose),
+                    modifier = Modifier.size(72.dp).clip(CircleShape).background(palette.cardHigh).clickable(onClick = onClose),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Rounded.Close, null, tint = palette.text, modifier = Modifier.size(32.dp)) }
             }

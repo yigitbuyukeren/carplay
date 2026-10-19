@@ -131,7 +131,7 @@ fun SettingsScreen(
             ) {
                 Text(stringResource(R.string.settings_title), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = palette.text)
                 Box(
-                    modifier = Modifier.size(64.dp).clip(CircleShape).background(MotoColors.CardHigh).clickable(onClick = onClose),
+                    modifier = Modifier.size(72.dp).clip(CircleShape).background(MotoColors.CardHigh).clickable(onClick = onClose),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Rounded.Close, null, tint = palette.text, modifier = Modifier.size(32.dp)) }
             }
@@ -201,8 +201,10 @@ private fun LeanRow(lean: LeanState, enabled: Boolean, onEnabled: (Boolean) -> U
 
 @Composable
 private fun ToggleRow(t: ToggleItem) {
+    // The whole row toggles, not just the small switch: much easier to hit with gloves.
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card)
+            .clickable { t.onChange(!t.checked) }.padding(horizontal = 16.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {

@@ -124,7 +124,23 @@ class CallRepository(private val context: Context, private val scope: CoroutineS
         InCallHub.service?.setAudioRoute(route)
     }
 
+    private val audio = context.getSystemService(android.media.AudioManager::class.java)
+
+    fun volumeUp() = audio.adjustStreamVolume(android.media.AudioManager.STREAM_VOICE_CALL, android.media.AudioManager.ADJUST_RAISE, android.media.AudioManager.FLAG_SHOW_UI)
+    fun volumeDown() = audio.adjustStreamVolume(android.media.AudioManager.STREAM_VOICE_CALL, android.media.AudioManager.ADJUST_LOWER, android.media.AudioManager.FLAG_SHOW_UI)
+
+    /** Sends one key tone down the line, for voice menus ("press 1"); only possible when MotoDash holds the call. */
+    fun sendDigit(key: Char) {
+        val call = InCallHub.call ?: return
+        call.playDtmfTone(key)
+        scope.launch {
+            delay(DTMF_MS)
+            call.stopDtmfTone()
+        }
+    }
+
     private companion object {
+        const val DTMF_MS = 150L
         const val DIALING_GRACE_MS = 8000L
     }
 }

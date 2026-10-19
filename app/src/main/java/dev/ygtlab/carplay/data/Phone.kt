@@ -28,7 +28,7 @@ data class RecentCall(
     val count: Int = 1,
 )
 
-data class Favorite(val name: String, val number: String)
+data class Contact(val name: String, val number: String, val starred: Boolean = false)
 
 object PhoneMath {
     const val MAX_DIGITS = 20
@@ -61,17 +61,24 @@ object PhoneMath {
     /** Keeps only characters a dial string may carry; empty means there is nothing to call. */
     fun dialable(raw: String): String = raw.filter { it in "0123456789*#+" }
 
-    /** Several phone rows can belong to one starred contact; keep the first number per name, sorted by name. */
-    fun favorites(rows: List<Favorite>): List<Favorite> =
-        rows.filter { it.number.isNotBlank() }.distinctBy { it.name }.sortedBy { it.name.lowercase() }
+    private val collator: java.text.Collator = java.text.Collator.getInstance(java.util.Locale("tr", "TR"))
+
+    /** One row per (name, number); starred contacts first, then the whole book in Turkish alphabetical order. */
+    fun contacts(rows: List<Contact>): List<Contact> =
+        rows.filter { dialable(it.number).isNotEmpty() && it.name.isNotBlank() }
+            .distinctBy { it.name to dialable(it.number) }
+            .sortedWith(compareByDescending<Contact> { it.starred }.thenComparator { x, y -> collator.compare(x.name, y.name) })
+
+    /** The letter a contact is filed under in the list; anything that is not a letter goes under '#'. */
+    fun initialOf(name: String): Char = name.trim().firstOrNull()?.takeIf { it.isLetter() }?.uppercaseChar() ?: '#'
 }
 
 /** Recent calls and starred contacts from the system, plus placing a call; empty until the permissions are granted. */
 class PhoneRepository(private val context: Context, private val scope: CoroutineScope) {
     private val _recents = MutableStateFlow<List<RecentCall>>(emptyList())
     val recents: StateFlow<List<RecentCall>> = _recents
-    private val _favorites = MutableStateFlow<List<Favorite>>(emptyList())
-    val favorites: StateFlow<List<Favorite>> = _favorites
+    private val _contacts = MutableStateFlow<List<Contact>>(emptyList())
+    val contacts: StateFlow<List<Contact>> = _contacts
 
     fun canReadLog() = context.hasPermission(Manifest.permission.READ_CALL_LOG)
     fun canReadContacts() = context.hasPermission(Manifest.permission.READ_CONTACTS)
@@ -80,7 +87,7 @@ class PhoneRepository(private val context: Context, private val scope: Coroutine
         scope.launch {
             withContext(Dispatchers.IO) {
                 if (canReadLog()) _recents.value = safely(emptyList()) { PhoneMath.collapse(readLog()) }
-                if (canReadContacts()) _favorites.value = safely(emptyList()) { PhoneMath.favorites(readStarred()) }
+                if (canReadContacts()) _contacts.value = safely(emptyList()) { PhoneMath.contacts(readContacts()) }
             }
         }
     }
@@ -107,17 +114,15 @@ class PhoneRepository(private val context: Context, private val scope: Coroutine
         return out
     }
 
-    private fun readStarred(): List<Favorite> {
+    private fun readContacts(): List<Contact> {
         val cols = arrayOf(
             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
             ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.STARRED,
         )
-        val out = ArrayList<Favorite>()
-        context.contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI, cols,
-            "${ContactsContract.Contacts.STARRED}=1", null, null,
-        )?.use { c ->
-            while (c.moveToNext()) out += Favorite(c.getString(0).orEmpty(), c.getString(1).orEmpty())
+        val out = ArrayList<Contact>()
+        context.contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, cols, null, null, null)?.use { c ->
+            while (c.moveToNext()) out += Contact(c.getString(0).orEmpty(), c.getString(1).orEmpty(), c.getInt(2) == 1)
         }
         return out
     }

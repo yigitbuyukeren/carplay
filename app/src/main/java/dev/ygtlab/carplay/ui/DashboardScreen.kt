@@ -69,7 +69,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showPhone by remember { mutableStateOf(false) }
     val dialRequest by vm.dialRequest.collectAsStateWithLifecycle()
     val recents by vm.phone.recents.collectAsStateWithLifecycle()
-    val favorites by vm.phone.favorites.collectAsStateWithLifecycle()
+    val contacts by vm.phone.contacts.collectAsStateWithLifecycle()
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
     val mapRequests by vm.mapRequests.collectAsStateWithLifecycle()
     val places by vm.places.collectAsStateWithLifecycle()
@@ -173,7 +173,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 if (showPhone) {
                     PhoneScreen(
                         recents = recents,
-                        favorites = favorites,
+                        contacts = contacts,
                         hasAccess = phonebookGranted(context),
                         keypadLocked = gps.speedKmh >= PHONE_LOCK_KMH,
                         initialNumber = dialRequest,
@@ -349,7 +349,11 @@ fun DashboardScreen(vm: DashboardViewModel) {
 
         // The call screen paints edge to edge (it pads its own content); inside the padded box it left a bare strip at the cutout.
         if (callState.phase != CallPhase.IDLE) {
-            CallScreen(callState, callerName, onAnswer = vm.call::answer, onHangUp = vm.call::hangUp, onMute = vm.call::toggleMute, onRoute = vm.call::setRoute)
+            CallScreen(
+                callState, callerName, gps.speedKmh, navUi,
+                onAnswer = vm.call::answer, onHangUp = vm.call::hangUp, onMute = vm.call::toggleMute, onRoute = vm.call::setRoute,
+                onVolumeUp = vm.call::volumeUp, onVolumeDown = vm.call::volumeDown, onDigit = vm.call::sendDigit,
+            )
         }
 
         // Last, so nothing can cover an SOS countdown.

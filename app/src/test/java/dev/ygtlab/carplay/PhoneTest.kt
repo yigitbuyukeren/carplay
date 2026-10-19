@@ -1,7 +1,7 @@
 package dev.ygtlab.carplay
 
 import dev.ygtlab.carplay.data.CallKind
-import dev.ygtlab.carplay.data.Favorite
+import dev.ygtlab.carplay.data.Contact
 import dev.ygtlab.carplay.data.PhoneMath
 import dev.ygtlab.carplay.data.RecentCall
 import org.junit.Assert.assertEquals
@@ -45,10 +45,27 @@ class PhoneTest {
 
     @Test fun dialableOfJunkIsEmpty() = assertEquals("", PhoneMath.dialable("abc"))
 
-    @Test fun favoritesKeepFirstNumberPerNameSortedAndSkipBlank() {
-        val out = PhoneMath.favorites(
-            listOf(Favorite("Zeynep", "3"), Favorite("ali", "1"), Favorite("ali", "2"), Favorite("Can", " ")),
+    @Test fun contactsListStarredFirstThenAlphabetical() {
+        val out = PhoneMath.contacts(
+            listOf(Contact("Zeynep", "3"), Contact("Çağla", "4"), Contact("Ali", "1"), Contact("Veli", "5", starred = true)),
         )
-        assertEquals(listOf("ali" to "1", "Zeynep" to "3"), out.map { it.name to it.number })
+        assertEquals(listOf("Veli", "Ali", "Çağla", "Zeynep"), out.map { it.name })
+    }
+
+    @Test fun contactsKeepEachDistinctNumberOfAPerson() {
+        val out = PhoneMath.contacts(
+            listOf(Contact("Ali", "0532 111"), Contact("Ali", "0532111"), Contact("Ali", "0212 222")),
+        )
+        assertEquals(listOf("0532 111", "0212 222"), out.map { it.number })
+    }
+
+    @Test fun contactsSkipBlankNumbersAndNames() {
+        assertEquals(emptyList<Contact>(), PhoneMath.contacts(listOf(Contact("Can", " "), Contact(" ", "5"))))
+    }
+
+    @Test fun initialIsUppercaseLetterOrHash() {
+        assertEquals('A', PhoneMath.initialOf("ali"))
+        assertEquals('#', PhoneMath.initialOf("1-800"))
+        assertEquals('#', PhoneMath.initialOf(""))
     }
 }

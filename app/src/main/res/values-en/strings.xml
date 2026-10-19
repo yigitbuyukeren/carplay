@@ -275,4 +275,9 @@
     <string name="call_route_phone">Phone</string>
     <string name="call_route_bluetooth">Bluetooth</string>
     <string name="call_route_headset">Headset</string>
+    <string name="phone_contacts">Contacts</string>
+    <string name="phone_empty_contacts">No contacts</string>
+    <string name="call_keys">Keypad</string>
+    <string name="call_keys_hide">Hide</string>
+    <string name="call_volume">Volume</string>
 </resources>

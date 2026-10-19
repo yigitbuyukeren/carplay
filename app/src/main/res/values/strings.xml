@@ -275,4 +275,9 @@
     <string name="call_route_phone">Telefon</string>
     <string name="call_route_bluetooth">Bluetooth</string>
     <string name="call_route_headset">Kulaklık</string>
+    <string name="phone_contacts">Rehber</string>
+    <string name="phone_empty_contacts">Rehberde kişi yok</string>
+    <string name="call_keys">Tuş takımı</string>
+    <string name="call_keys_hide">Gizle</string>
+    <string name="call_volume">Ses</string>
 </resources>

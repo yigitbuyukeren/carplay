@@ -155,14 +155,14 @@ fun NowPlayingScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RoundButton(Icons.Rounded.Mic, 64, MotoColors.Blue, onClick = startVoiceSearch)
-                    RoundButton(Icons.Rounded.SkipPrevious, 64, Color.Transparent, enabled = state.hasSession) { media.previous() }
+                    RoundButton(Icons.Rounded.Mic, 76, MotoColors.Blue, onClick = startVoiceSearch)
+                    RoundButton(Icons.Rounded.SkipPrevious, 76, Color.Transparent, enabled = state.hasSession) { media.previous() }
                     RoundButton(
                         if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         84, palette.strong, dark = true, enabled = state.hasSession, onClick = media::togglePlay,
                     )
-                    RoundButton(Icons.Rounded.SkipNext, 64, Color.Transparent, enabled = state.hasSession) { media.next() }
-                    RoundButton(Icons.AutoMirrored.Rounded.OpenInNew, 64, palette.track, onClick = onOpenMusicApp)
+                    RoundButton(Icons.Rounded.SkipNext, 76, Color.Transparent, enabled = state.hasSession) { media.next() }
+                    RoundButton(Icons.AutoMirrored.Rounded.OpenInNew, 76, palette.track, onClick = onOpenMusicApp)
                 }
             }
         }

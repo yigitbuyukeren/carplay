@@ -28,13 +28,13 @@ fun PillButton(
 ) {
     Box(
         modifier = modifier
-            .defaultMinSize(minHeight = 56.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .defaultMinSize(minHeight = 72.dp)
+            .clip(RoundedCornerShape(36.dp))
             .background(color)
             .clickable(onClick = onClick)
             .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = textColor)
+        Text(text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = textColor)
     }
 }

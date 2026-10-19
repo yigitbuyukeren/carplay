@@ -60,14 +60,14 @@ import kotlinx.coroutines.launch
 
 private const val HOLD_MS = 1500L
 
-/** Red 56dp button that needs a 1.5 second hold, with a ring that fills while held. */
+/** Red 68dp button that needs a 1.5 second hold, with a ring that fills while held. */
 @Composable
 fun SosButton(onTrigger: () -> Unit, modifier: Modifier = Modifier) {
     var progress by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
     Box(
         modifier = modifier
-            .size(56.dp)
+            .size(68.dp)
             .clip(CircleShape)
             .background(MotoColors.Red)
             .pointerInput(Unit) {

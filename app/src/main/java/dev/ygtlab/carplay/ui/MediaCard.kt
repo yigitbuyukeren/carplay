@@ -100,14 +100,14 @@ fun MediaCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        ControlButton(Icons.AutoMirrored.Rounded.VolumeDown, 48, onClick = media::volumeDown)
-                        ControlButton(Icons.Rounded.SkipPrevious, 56, onClick = { media.previous() })
+                        ControlButton(Icons.AutoMirrored.Rounded.VolumeDown, 64, onClick = media::volumeDown)
+                        ControlButton(Icons.Rounded.SkipPrevious, 72, onClick = { media.previous() })
                         ControlButton(
                             if (state.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            72, filled = true, onClick = media::togglePlay,
+                            84, filled = true, onClick = media::togglePlay,
                         )
-                        ControlButton(Icons.Rounded.SkipNext, 56, onClick = { media.next() })
-                        ControlButton(Icons.AutoMirrored.Rounded.VolumeUp, 48, onClick = media::volumeUp)
+                        ControlButton(Icons.Rounded.SkipNext, 72, onClick = { media.next() })
+                        ControlButton(Icons.AutoMirrored.Rounded.VolumeUp, 64, onClick = media::volumeUp)
                     }
                 }
             }

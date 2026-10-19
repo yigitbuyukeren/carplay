@@ -4,6 +4,7 @@ import android.text.format.DateFormat
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,11 +12,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,14 +52,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.CallKind
-import dev.ygtlab.carplay.data.Favorite
+import dev.ygtlab.carplay.data.Contact
 import dev.ygtlab.carplay.data.PhoneMath
 import dev.ygtlab.carplay.data.RecentCall
 import java.util.Date
 
+/** Gloved fingers: every tap target on this screen is at least this tall. */
+private val TAP = 72.dp
+
 private enum class PhoneTab(val label: Int) {
     RECENTS(R.string.phone_recents),
-    FAVORITES(R.string.phone_favorites),
+    CONTACTS(R.string.phone_contacts),
     KEYPAD(R.string.phone_keypad),
 }
 
@@ -58,7 +70,7 @@ private enum class PhoneTab(val label: Int) {
 @Composable
 fun PhoneScreen(
     recents: List<RecentCall>,
-    favorites: List<Favorite>,
+    contacts: List<Contact>,
     hasAccess: Boolean,
     keypadLocked: Boolean,
     initialNumber: String?,
@@ -76,13 +88,13 @@ fun PhoneScreen(
                 val selected = t == tab
                 Box(
                     modifier = Modifier
-                        .weight(1f).height(56.dp).clip(RoundedCornerShape(28.dp))
+                        .weight(1f).height(TAP).clip(RoundedCornerShape(TAP / 2))
                         .background(if (selected) MotoColors.Green else palette.card)
                         .clickable { tab = t },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        stringResource(t.label), fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                        stringResource(t.label), fontSize = 21.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                         color = if (selected) Color.White else palette.text,
                     )
                 }
@@ -103,7 +115,7 @@ fun PhoneScreen(
                 tab == PhoneTab.KEYPAD -> Keypad(keypadLocked, initialNumber.orEmpty(), onDial)
                 !hasAccess -> Notice(stringResource(R.string.phone_need_perm), stringResource(R.string.phone_allow), onGrantAccess)
                 tab == PhoneTab.RECENTS -> RecentsList(recents, onDial)
-                else -> FavoritesList(favorites, onDial)
+                else -> ContactsList(contacts, onDial)
             }
         }
     }
@@ -125,7 +137,7 @@ private fun Notice(text: String, action: String?, onAction: () -> Unit) {
 private fun RecentsList(recents: List<RecentCall>, onDial: (String, String?) -> Unit) {
     if (recents.isEmpty()) return Notice(stringResource(R.string.phone_empty_recents), null) {}
     val unknown = stringResource(R.string.phone_unknown)
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
+    PagedList { state ->
         items(recents, key = { "${it.number}/${it.atMs}" }) { call ->
             val missed = call.kind == CallKind.MISSED
             val title = (call.name ?: call.number.ifBlank { unknown }) + if (call.count > 1) " (${call.count})" else ""
@@ -140,7 +152,7 @@ private fun RecentsList(recents: List<RecentCall>, onDial: (String, String?) -> 
                         CallKind.OUTGOING -> Icons.AutoMirrored.Rounded.CallMade to MotoColors.Blue
                         CallKind.MISSED -> Icons.AutoMirrored.Rounded.CallMissed to MotoColors.Red
                     }
-                    Icon(icon, null, tint = tint, modifier = Modifier.size(28.dp))
+                    Icon(icon, null, tint = tint, modifier = Modifier.size(32.dp))
                 },
                 onClick = { onDial(call.number, call.name) },
             )
@@ -148,21 +160,64 @@ private fun RecentsList(recents: List<RecentCall>, onDial: (String, String?) -> 
     }
 }
 
+/** The whole address book: starred people first under a star header, then one header per letter. */
 @Composable
-private fun FavoritesList(favorites: List<Favorite>, onDial: (String, String?) -> Unit) {
-    if (favorites.isEmpty()) return Notice(stringResource(R.string.phone_empty_favorites), null) {}
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
-        items(favorites, key = { it.name }) { fav ->
-            ContactRow(
-                title = fav.name, subtitle = fav.number, trailing = null,
-                titleColor = LocalMotoPalette.current.text,
-                leading = {
-                    Box(Modifier.size(40.dp).clip(CircleShape).background(MotoColors.Blue), contentAlignment = Alignment.Center) {
-                        Text(fav.name.take(1).uppercase(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                },
-                onClick = { onDial(fav.number, fav.name) },
-            )
+private fun ContactsList(contacts: List<Contact>, onDial: (String, String?) -> Unit) {
+    if (contacts.isEmpty()) return Notice(stringResource(R.string.phone_empty_contacts), null) {}
+    val rows = remember(contacts) {
+        buildList<Any> {
+            var last: Any? = null
+            for (c in contacts) {
+                val group: Any = if (c.starred) STARRED else PhoneMath.initialOf(c.name)
+                if (group != last) { add(group); last = group }
+                add(c)
+            }
+        }
+    }
+    PagedList { _ ->
+        items(rows, key = { if (it is Contact) "c/${it.name}/${it.number}" else "h/$it" }) { row ->
+            if (row is Contact) {
+                ContactRow(
+                    title = row.name, subtitle = row.number, trailing = null,
+                    titleColor = LocalMotoPalette.current.text,
+                    leading = {
+                        Box(Modifier.size(44.dp).clip(CircleShape).background(MotoColors.Blue), contentAlignment = Alignment.Center) {
+                            Text(PhoneMath.initialOf(row.name).toString(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    },
+                    onClick = { onDial(row.number, row.name) },
+                )
+            } else {
+                Text(
+                    if (row == STARRED) stringResource(R.string.phone_favorites) else row.toString(),
+                    fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MotoColors.Blue,
+                    modifier = Modifier.padding(start = 8.dp, top = 6.dp),
+                )
+            }
+        }
+    }
+}
+
+private const val STARRED = "starred"
+
+/** A list with big page up / page down buttons on the right, because flicking a long list is hard with gloves. */
+@Composable
+private fun PagedList(content: androidx.compose.foundation.lazy.LazyListScope.(LazyListState) -> Unit) {
+    val state = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val palette = LocalMotoPalette.current
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
+        LazyColumn(state = state, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f).fillMaxHeight()) {
+            content(state)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(TAP)) {
+            listOf(Icons.Rounded.KeyboardArrowUp to -1, Icons.Rounded.KeyboardArrowDown to 1).forEach { (icon, dir) ->
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)
+                        .clickable { scope.launch { state.animateScrollBy(dir * state.layoutInfo.viewportSize.height * 0.85f) } },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(icon, null, tint = palette.text, modifier = Modifier.size(40.dp)) }
+            }
         }
     }
 }
@@ -179,19 +234,19 @@ private fun ContactRow(
     val palette = LocalMotoPalette.current
     Row(
         modifier = Modifier
-            .fillMaxWidth().height(64.dp).clip(RoundedCornerShape(18.dp)).background(palette.card)
+            .fillMaxWidth().height(80.dp).clip(RoundedCornerShape(20.dp)).background(palette.card)
             .clickable(onClick = onClick).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) { leading() }
+        Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { leading() }
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (subtitle != null) Text(subtitle, fontSize = 14.sp, color = palette.textSecondary, maxLines = 1)
         }
         if (trailing != null) Text(trailing, fontSize = 15.sp, color = palette.textSecondary)
-        Box(Modifier.size(44.dp).clip(CircleShape).background(MotoColors.Green), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.Call, stringResource(R.string.phone_call), tint = Color.White, modifier = Modifier.size(24.dp))
+        Box(Modifier.size(60.dp).clip(CircleShape).background(MotoColors.Green), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Call, stringResource(R.string.phone_call), tint = Color.White, modifier = Modifier.size(30.dp))
         }
     }
 }
@@ -216,29 +271,29 @@ private fun Keypad(locked: Boolean, initial: String, onDial: (String, String?) -
                 val canCall = !locked && PhoneMath.dialable(number).isNotEmpty()
                 Box(
                     modifier = Modifier
-                        .size(72.dp).clip(CircleShape).background(if (canCall) MotoColors.Green else palette.track)
+                        .size(88.dp).clip(CircleShape).background(if (canCall) MotoColors.Green else palette.track)
                         .clickable(enabled = canCall) { onDial(number, null) },
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Call, stringResource(R.string.phone_call), tint = Color.White, modifier = Modifier.size(36.dp)) }
+                ) { Icon(Icons.Rounded.Call, stringResource(R.string.phone_call), tint = Color.White, modifier = Modifier.size(44.dp)) }
                 Box(
                     modifier = Modifier
-                        .size(56.dp).clip(CircleShape).background(palette.card)
+                        .size(72.dp).clip(CircleShape).background(palette.card)
                         .clickable(enabled = !locked && number.isNotEmpty()) { number = PhoneMath.backspace(number) },
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.AutoMirrored.Rounded.Backspace, stringResource(R.string.phone_delete), tint = palette.text, modifier = Modifier.size(26.dp)) }
             }
         }
-        Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)) {
+        Column(modifier = Modifier.weight(1.2f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             KEY_ROWS.forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f).fillMaxWidth()) {
                     row.forEach { key ->
                         Box(
                             modifier = Modifier
-                                .weight(1f).height(60.dp).clip(RoundedCornerShape(18.dp))
+                                .weight(1f).fillMaxHeight().defaultMinSize(minHeight = 60.dp).clip(RoundedCornerShape(20.dp))
                                 .background(if (locked) palette.track else palette.card)
                                 .clickable(enabled = !locked) { number = PhoneMath.append(number, key) },
                             contentAlignment = Alignment.Center,
-                        ) { Text(key.toString(), fontSize = 28.sp, fontWeight = FontWeight.SemiBold, color = if (locked) palette.muted else palette.text) }
+                        ) { Text(key.toString(), fontSize = 34.sp, fontWeight = FontWeight.SemiBold, color = if (locked) palette.muted else palette.text) }
                     }
                 }
             }
