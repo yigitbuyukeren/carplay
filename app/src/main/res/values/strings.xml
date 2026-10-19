@@ -272,4 +272,7 @@
     <string name="call_decline">Reddet</string>
     <string name="call_answer">Cevapla</string>
     <string name="dialer_hint">Arama ekranı MotoDash\'te açılsın</string>
+    <string name="call_route_phone">Telefon</string>
+    <string name="call_route_bluetooth">Bluetooth</string>
+    <string name="call_route_headset">Kulaklık</string>
 </resources>

@@ -28,7 +28,9 @@ data class CallState(
     val phase: CallPhase = CallPhase.IDLE,
     val startedAtMs: Long = 0L,
     val muted: Boolean = false,
-    val speaker: Boolean = false,
+    /** Current [android.telecom.CallAudioState] route and the mask of routes the phone offers right now. */
+    val route: Int = CallAudioState.ROUTE_EARPIECE,
+    val routes: Int = CallAudioState.ROUTE_EARPIECE,
     val managed: Boolean = false,
 )
 
@@ -117,9 +119,9 @@ class CallRepository(private val context: Context, private val scope: CoroutineS
         InCallHub.service?.setMuted(!state.value.muted)
     }
 
-    fun toggleSpeaker() {
-        val service = InCallHub.service ?: return
-        if (state.value.speaker) service.leaveSpeaker() else service.setAudioRoute(CallAudioState.ROUTE_SPEAKER)
+    /** Sends the call sound to one of the routes the phone offers: earpiece, speaker, headset or Bluetooth. */
+    fun setRoute(route: Int) {
+        InCallHub.service?.setAudioRoute(route)
     }
 
     private companion object {

@@ -345,7 +345,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
             }
 
             if (callState.phase != CallPhase.IDLE) {
-                CallScreen(callState, callerName, onAnswer = vm.call::answer, onHangUp = vm.call::hangUp, onMute = vm.call::toggleMute, onSpeaker = vm.call::toggleSpeaker)
+                CallScreen(callState, callerName, onAnswer = vm.call::answer, onHangUp = vm.call::hangUp, onMute = vm.call::toggleMute, onRoute = vm.call::setRoute)
             }
 
             // Last, so nothing can cover an SOS countdown.

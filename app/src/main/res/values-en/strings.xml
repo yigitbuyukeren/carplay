@@ -272,4 +272,7 @@
     <string name="call_decline">Decline</string>
     <string name="call_answer">Answer</string>
     <string name="dialer_hint">Show the call screen in MotoDash</string>
+    <string name="call_route_phone">Phone</string>
+    <string name="call_route_bluetooth">Bluetooth</string>
+    <string name="call_route_headset">Headset</string>
 </resources>

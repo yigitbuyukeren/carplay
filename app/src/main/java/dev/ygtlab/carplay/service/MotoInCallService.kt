@@ -91,16 +91,6 @@ class MotoInCallService : InCallService() {
         publish()
     }
 
-    /** Where to send the sound when the speaker goes off: a headset or helmet if one is connected, else the earpiece. */
-    fun leaveSpeaker() {
-        val supported = (latestAudio ?: @Suppress("DEPRECATION") callAudioState)?.supportedRouteMask ?: CallAudioState.ROUTE_EARPIECE
-        val route = when {
-            supported and CallAudioState.ROUTE_BLUETOOTH != 0 -> CallAudioState.ROUTE_BLUETOOTH
-            supported and CallAudioState.ROUTE_WIRED_HEADSET != 0 -> CallAudioState.ROUTE_WIRED_HEADSET
-            else -> CallAudioState.ROUTE_EARPIECE
-        }
-        setAudioRoute(route)
-    }
 
     /** The call the rider cares about: one that is ringing first, otherwise the first live one. */
     private fun publish() {
@@ -119,7 +109,8 @@ class MotoInCallService : InCallService() {
             phase = InCallHub.phaseOf(main.state),
             startedAtMs = d.connectTimeMillis,
             muted = audio?.isMuted == true,
-            speaker = audio?.route == CallAudioState.ROUTE_SPEAKER,
+            route = audio?.route ?: CallAudioState.ROUTE_EARPIECE,
+            routes = audio?.supportedRouteMask ?: CallAudioState.ROUTE_EARPIECE,
             managed = true,
         )
     }

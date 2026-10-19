@@ -22,6 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Bluetooth
+import androidx.compose.material.icons.rounded.Headset
+import androidx.compose.material.icons.rounded.PhoneInTalk
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.CallEnd
 import androidx.compose.material.icons.rounded.MicOff
@@ -45,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.telecom.CallAudioState
 import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.CallPhase
 import dev.ygtlab.carplay.data.CallState
@@ -58,7 +62,7 @@ fun CallScreen(
     onAnswer: () -> Unit,
     onHangUp: () -> Unit,
     onMute: () -> Unit = {},
-    onSpeaker: () -> Unit = {},
+    onRoute: (Int) -> Unit = {},
 ) {
     val elapsed by produceState(0L, call.startedAtMs, call.phase) {
         while (call.phase == CallPhase.ACTIVE) {
@@ -113,10 +117,8 @@ fun CallScreen(
                     ActionPill(Icons.Rounded.CallEnd, stringResource(R.string.call_decline), MotoColors.Red, onHangUp)
                 } else {
                     if (call.managed) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            ToggleAction(Icons.Rounded.MicOff, stringResource(R.string.call_mute), call.muted, onMute, Modifier.weight(1f))
-                            ToggleAction(Icons.AutoMirrored.Rounded.VolumeUp, stringResource(R.string.call_speaker), call.speaker, onSpeaker, Modifier.weight(1f))
-                        }
+                        ToggleAction(Icons.Rounded.MicOff, stringResource(R.string.call_mute), call.muted, onMute, Modifier.fillMaxWidth())
+                        RoutePicker(call.route, call.routes, onRoute)
                     }
                     ActionPill(Icons.Rounded.CallEnd, stringResource(R.string.call_hangup), MotoColors.Red, onHangUp)
                 }
@@ -164,12 +166,31 @@ private fun ActionPill(icon: ImageVector, label: String, color: Color, onClick: 
 @Composable
 private fun ToggleAction(icon: ImageVector, label: String, on: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.height(88.dp).clip(RoundedCornerShape(24.dp))
+        modifier = modifier.height(56.dp).clip(RoundedCornerShape(20.dp))
             .background(if (on) Color.White else Color(0x26FFFFFF)).clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, null, tint = if (on) Color.Black else Color.White, modifier = Modifier.size(32.dp))
-        Text(label, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = if (on) Color.Black else Color.White)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(icon, null, tint = if (on) Color.Black else Color.White, modifier = Modifier.size(26.dp))
+            Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = if (on) Color.Black else Color.White)
+        }
+    }
+}
+
+/** Phone, speaker and Bluetooth (or a wired headset) as one row, like the phone app: only routes on offer are shown. */
+@Composable
+private fun RoutePicker(route: Int, routes: Int, onRoute: (Int) -> Unit) {
+    val options = listOf(
+        Triple(CallAudioState.ROUTE_EARPIECE, Icons.Rounded.PhoneInTalk, R.string.call_route_phone),
+        Triple(CallAudioState.ROUTE_SPEAKER, Icons.AutoMirrored.Rounded.VolumeUp, R.string.call_speaker),
+        Triple(CallAudioState.ROUTE_BLUETOOTH, Icons.Rounded.Bluetooth, R.string.call_route_bluetooth),
+        Triple(CallAudioState.ROUTE_WIRED_HEADSET, Icons.Rounded.Headset, R.string.call_route_headset),
+    ).filter { routes and it.first != 0 }
+    if (options.size < 2) return
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        options.forEach { (r, icon, label) ->
+            ToggleAction(icon, stringResource(label), route == r, { onRoute(r) }, Modifier.weight(1f))
+        }
     }
 }
