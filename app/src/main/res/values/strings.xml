@@ -251,4 +251,16 @@
     <string name="gpx_open">GPX aç</string>
     <string name="gpx_title">GPX rotası</string>
     <string name="overlay_speed_fmt">%1$d km/sa</string>
+    <string name="phone_recents">Son aramalar</string>
+    <string name="phone_favorites">Favoriler</string>
+    <string name="phone_keypad">Tuş takımı</string>
+    <string name="phone_need_perm">Aramaları ve yıldızlı kişileri göstermek için izin ver</string>
+    <string name="phone_allow">İzin ver</string>
+    <string name="phone_empty_recents">Arama geçmişi boş</string>
+    <string name="phone_empty_favorites">Yıldızlı kişi yok. Rehberde bir kişiyi yıldızla.</string>
+    <string name="phone_keypad_locked">Sürerken numara girilmez. Son aramalardan veya favorilerden ara.</string>
+    <string name="phone_unknown">Bilinmeyen numara</string>
+    <string name="phone_yesterday">Dün</string>
+    <string name="phone_call">Ara</string>
+    <string name="phone_delete">Sil</string>
 </resources>

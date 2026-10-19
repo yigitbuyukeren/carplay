@@ -251,4 +251,16 @@
     <string name="gpx_open">Open GPX</string>
     <string name="gpx_title">GPX route</string>
     <string name="overlay_speed_fmt">%1$d km/h</string>
+    <string name="phone_recents">Recents</string>
+    <string name="phone_favorites">Favorites</string>
+    <string name="phone_keypad">Keypad</string>
+    <string name="phone_need_perm">Allow access to show recent calls and starred contacts</string>
+    <string name="phone_allow">Allow</string>
+    <string name="phone_empty_recents">No recent calls</string>
+    <string name="phone_empty_favorites">No starred contacts. Star a contact in your address book.</string>
+    <string name="phone_keypad_locked">Number entry is locked while riding. Call from recents or favorites.</string>
+    <string name="phone_unknown">Unknown number</string>
+    <string name="phone_yesterday">Yesterday</string>
+    <string name="phone_call">Call</string>
+    <string name="phone_delete">Delete</string>
 </resources>

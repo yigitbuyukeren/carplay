@@ -70,6 +70,15 @@ fun runtimePermissions(): Array<String> {
     return list.toTypedArray()
 }
 
+/** Asked for from the phone screen itself, not at first launch. */
+fun phonebookPermissions() = arrayOf(
+    Manifest.permission.READ_CALL_LOG,
+    Manifest.permission.READ_CONTACTS,
+    Manifest.permission.CALL_PHONE,
+)
+
+fun phonebookGranted(c: Context) = phonebookPermissions().all { c.hasPermission(it) }
+
 data class ToggleItem(val title: String, val description: String, val checked: Boolean, val onChange: (Boolean) -> Unit)
 
 private enum class SettingsTab(val label: Int) {

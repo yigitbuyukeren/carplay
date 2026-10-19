@@ -35,7 +35,6 @@ import dev.ygtlab.carplay.data.CallPhase
 import dev.ygtlab.carplay.data.SosReason
 import dev.ygtlab.carplay.service.OverlayService
 import dev.ygtlab.carplay.util.Prefs
-import dev.ygtlab.carplay.util.openDialer
 import dev.ygtlab.carplay.util.openMusicApp
 import dev.ygtlab.carplay.util.openNavigation
 import dev.ygtlab.carplay.util.openOverlaySettings
@@ -67,6 +66,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val isDay by vm.theme.isDay.collectAsStateWithLifecycle()
     var showMap by remember { mutableStateOf(false) }
     var showNowPlaying by remember { mutableStateOf(false) }
+    var showPhone by remember { mutableStateOf(false) }
+    val recents by vm.phone.recents.collectAsStateWithLifecycle()
+    val favorites by vm.phone.favorites.collectAsStateWithLifecycle()
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
     val mapRequests by vm.mapRequests.collectAsStateWithLifecycle()
     val places by vm.places.collectAsStateWithLifecycle()
@@ -97,6 +99,12 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         vm.onResume()
     }
+    val phonebookLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        vm.phone.refresh()
+        vm.onResume()
+    }
+    // Recents change whenever a call ends, and the permissions may have been granted while away.
+    LaunchedEffect(showPhone, resume, callState.phase) { if (showPhone && callState.phase == CallPhase.IDLE) vm.phone.refresh() }
 
     // Re-evaluated whenever the activity resumes (e.g. coming back from a system settings page).
     val settingItems = remember(resume) {
@@ -125,13 +133,15 @@ fun DashboardScreen(vm: DashboardViewModel) {
         if (mapRequests > 0) {
             showMap = true
             showNowPlaying = false
+            showPhone = false
             showSettings = false
             showTrips = false
         }
     }
 
-    BackHandler(enabled = showMap || showNowPlaying || showTrips) {
+    BackHandler(enabled = showMap || showNowPlaying || showPhone || showTrips) {
         showTrips = false
+        showPhone = false
         showMap = false
         showNowPlaying = false
     }
@@ -141,12 +151,22 @@ fun DashboardScreen(vm: DashboardViewModel) {
             Row(modifier = Modifier.fillMaxSize().padding(end = 16.dp, top = 8.dp, bottom = 12.dp)) {
                 Dock(
                     battery = battery,
-                    onNavigation = { showMap = !showMap; showNowPlaying = false; showSettings = false },
-                    onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showSettings = false },
-                    onPhone = { context.openDialer() },
+                    onNavigation = { showMap = !showMap; showNowPlaying = false; showPhone = false; showSettings = false },
+                    onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showPhone = false; showSettings = false },
+                    onPhone = { showPhone = !showPhone; showMap = false; showNowPlaying = false; showSettings = false },
                     onSettings = { showSettings = true },
                 )
-                if (showNowPlaying) {
+                if (showPhone) {
+                    PhoneScreen(
+                        recents = recents,
+                        favorites = favorites,
+                        hasAccess = phonebookGranted(context),
+                        keypadLocked = gps.speedKmh >= PHONE_LOCK_KMH,
+                        onGrantAccess = { phonebookLauncher.launch(phonebookPermissions()) },
+                        onDial = vm.phone::dial,
+                        modifier = Modifier.weight(1f).fillMaxSize(),
+                    )
+                } else if (showNowPlaying) {
                     NowPlayingScreen(
                         state = mediaState,
                         media = vm.media,
@@ -310,6 +330,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
         }
     }
 }
+
+/** No number entry while riding, same limit as the map search box. */
+private const val PHONE_LOCK_KMH = 5
 
 private fun toggleOverlay(context: Context, enabled: Boolean): Boolean {
     if (enabled && !overlayGranted(context)) {

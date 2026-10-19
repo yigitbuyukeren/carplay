@@ -33,6 +33,11 @@ Bakılanlar: DMD2, Calimoto, Kurviger, Scenic, REVER, RISER, Motolog, AndrOBD, O
 - **Eklenmedi**: viraj ağırlıklı rota (Calimoto/Kurviger'in asıl farkı; Valhalla'da anahtarsız karşılığı yok), radar uyarısı (veri ve yasal durum belirsiz), grup takibi ve canlı konum (sunucu gerekir), mph/mil birimi (hız limiti tabelaları ve her yerde sabit km varsayımı; ayrı iş olarak değerlendirilebilir), yakıt günlüğü (sayı girişi gerekir, sürerken olmaz), TPMS ve gidon kumandası (donanım).
 - **Sınır**: GPX eşleme genel Valhalla sunucusunun sınırlarına tabi (yaklaşık 200 km üstü reddedilebilir); hata mesajı bunu söyler.
 
+## Uygulama içi telefon ekranı (2026-10-19)
+- Dock'taki telefon tuşu artık sistem çeviricisini açmaz; `PhoneScreen` (CarPlay tarzı) açılır: Son aramalar (aynı numaranın art arda kayıtları birleşir, cevapsızlar kırmızı), Favoriler (rehberde yıldızlı kişiler), Tuş takımı. Satıra dokununca doğrudan aranır (`TelecomManager.placeCall`, izin yoksa çeviriciye numarayla düşer).
+- Tuş takımı 5 km/sa üstünde kilitli (haritadaki arama kutusuyla aynı kural). İzinler (`READ_CALL_LOG`, `READ_CONTACTS`, `CALL_PHONE`) ilk açılışta değil, ekrandaki "İzin ver" düğmesiyle istenir.
+- Mantık `PhoneMath` içinde, `PhoneTest` ile 8 test. Emülatörde Son aramalar listesi doğrulandı; Favoriler ve Tuş takımı emülatör takıldığı için ekranda görülmedi, gerçek aramanın başlaması da denenmedi.
+
 ## Sıradaki işler
 1. **Gerçek motorda dene** (TVS Raider 125 + ELM327): PID listesi, vites tablosu öğrenmesi, sıcaklık PID'i var mı (hava-yağ soğutmalı). Ham kayıt "Kaydı paylaş" ile alınır.
 2. **SOS eşiklerini sahada ayarla**: `CrashDetector.IMPACT_G` (4 g) ve 8 sn hareketsizlik yalnızca sentetik verilerle test edildi. Gidonda yanlış alarm olursa önce eşiği artır. Gerçek SIM ile bir test SMS'i (kendi numarana) gönder.
@@ -44,7 +49,7 @@ Bakılanlar: DMD2, Calimoto, Kurviger, Scenic, REVER, RISER, Motolog, AndrOBD, O
 ### Kararlaştırıldı, yapılmayacak
 - Gidon kumandası desteği, yakıt menzili hesabı, TPMS, grup sürüşü/canlı konum paylaşımı (donanım veya sunucu gerektiriyor, anahtarsız/ücretsiz ilkesine uymuyor).
 - Navigasyon kartında varış saatindeki hava: ikinci bir tahmin isteği gerekir, kazancı az.
-- Rehber izni (`READ_CONTACTS`): kişi seçici izin gerektirmeden aynı işi görüyor.
+- SOS kişileri için rehber izni: kişi seçici izin gerektirmeden aynı işi görüyor (telefon ekranı için `READ_CONTACTS` ayrıca istenir).
 - Uygulama arka plandayken kaza algılama: Android arka plan sensörlerini kısıtlar, sürekli foreground servis ve bildirim gerekir. Dashboard zaten ekranda kalan launcher olduğu için ertelendi.
 
 ## Yarım kalan

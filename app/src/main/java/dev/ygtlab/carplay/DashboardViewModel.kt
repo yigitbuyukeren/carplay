@@ -43,6 +43,7 @@ import dev.ygtlab.carplay.data.LocationRepository
 import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.MediaRepository
 import dev.ygtlab.carplay.data.NavigationController
+import dev.ygtlab.carplay.data.PhoneRepository
 import dev.ygtlab.carplay.data.ThemeController
 import dev.ygtlab.carplay.data.Voice
 import dev.ygtlab.carplay.service.CallBridge
@@ -77,6 +78,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val announcer = Voice(app)
 
     val callerName: StateFlow<String?> = CallBridge.callerName
+    val phone = PhoneRepository(app, viewModelScope)
 
     val locationState: StateFlow<LocationState> = location.state
     val nav = NavigationController(
