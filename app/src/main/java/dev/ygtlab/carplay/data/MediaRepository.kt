@@ -1,17 +1,13 @@
 package dev.ygtlab.carplay.data
 
-import android.app.SearchManager
-import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
-import android.provider.MediaStore
 import androidx.core.app.NotificationManagerCompat
 import dev.ygtlab.carplay.service.CarNotificationListener
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +26,8 @@ data class MediaState(
     /** SystemClock.elapsedRealtime() at which [positionMs] was sampled. */
     val positionAt: Long = 0,
     val speed: Float = 1f,
+    /** Packages of every music app that currently has a session, so the screen can offer switching between them. */
+    val sources: List<String> = emptyList(),
 )
 
 class MediaRepository(private val context: Context) {
@@ -41,6 +39,8 @@ class MediaRepository(private val context: Context) {
     val state: StateFlow<MediaState> = _state
 
     private var controller: MediaController? = null
+    private var allSessions: List<MediaController> = emptyList()
+    private var preferred: String? = null
     private var registered = false
 
     private val callback = object : MediaController.Callback() {
@@ -78,7 +78,10 @@ class MediaRepository(private val context: Context) {
     }
 
     private fun pick(list: List<MediaController>) {
-        val best = list.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: list.firstOrNull()
+        allSessions = list
+        // A source the rider picked by hand wins until it goes away or another app starts playing on its own.
+        val chosen = list.firstOrNull { it.packageName == preferred }
+        val best = chosen ?: list.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: list.firstOrNull()
         if (best?.sessionToken != controller?.sessionToken) {
             controller?.unregisterCallback(callback)
             controller = best
@@ -109,6 +112,7 @@ class MediaRepository(private val context: Context) {
             positionMs = c.playbackState?.position ?: 0,
             positionAt = c.playbackState?.lastPositionUpdateTime ?: 0,
             speed = c.playbackState?.playbackSpeed ?: 1f,
+            sources = allSessions.map { it.packageName }.distinct(),
         )
     }
 
@@ -118,29 +122,26 @@ class MediaRepository(private val context: Context) {
         else c.transportControls.play()
     }
 
+    /** Shows and controls the session of [packageName]; false when that app has none yet (the caller opens it instead). */
+    fun select(packageName: String): Boolean {
+        if (allSessions.none { it.packageName == packageName }) return false
+        preferred = packageName
+        pick(allSessions)
+        return true
+    }
+
+    fun play() {
+        controller?.transportControls?.play()
+    }
+
+    val isPlaying: Boolean get() = controller?.playbackState?.state == PlaybackState.STATE_PLAYING
+
+    fun seekTo(ms: Long) {
+        controller?.transportControls?.seekTo(ms.coerceAtLeast(0))
+    }
+
     fun next() = controller?.transportControls?.skipToNext()
     fun previous() = controller?.transportControls?.skipToPrevious()
-
-    /** Asks the active music app to search and play. Returns false when no session or app can take it. */
-    fun playFromSearch(query: String, fallbackPackage: String?): Boolean {
-        val c = controller
-        if (c != null) {
-            c.transportControls.playFromSearch(query, null)
-            return true
-        }
-        val pkg = fallbackPackage ?: return false
-        val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
-            .setPackage(pkg)
-            .putExtra(SearchManager.QUERY, query)
-            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return try {
-            context.startActivity(intent)
-            true
-        } catch (_: ActivityNotFoundException) {
-            false
-        }
-    }
 
     fun volumeUp() = audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
     fun volumeDown() = audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)

@@ -35,7 +35,6 @@ import dev.ygtlab.carplay.data.CallPhase
 import dev.ygtlab.carplay.data.SosReason
 import dev.ygtlab.carplay.service.OverlayService
 import dev.ygtlab.carplay.util.Prefs
-import dev.ygtlab.carplay.util.openDialer
 import dev.ygtlab.carplay.util.openMusicApp
 import dev.ygtlab.carplay.util.openNavigation
 import dev.ygtlab.carplay.util.openOverlaySettings
@@ -45,6 +44,7 @@ import dev.ygtlab.carplay.util.openSettingsAction
 fun DashboardScreen(vm: DashboardViewModel) {
     val context = LocalContext.current
     val gps by vm.gps.collectAsStateWithLifecycle()
+    val locationState by vm.locationState.collectAsStateWithLifecycle()
     val battery by vm.battery.state.collectAsStateWithLifecycle()
     val mediaState by vm.media.state.collectAsStateWithLifecycle()
     val callState by vm.call.state.collectAsStateWithLifecycle()
@@ -52,9 +52,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val resume by vm.resumeTick.collectAsStateWithLifecycle()
 
     val leanEnabled by vm.leanEnabled.collectAsStateWithLifecycle()
-    val obdEnabled by vm.obdEnabled.collectAsStateWithLifecycle()
-    val obdDevice by vm.obdDevice.collectAsStateWithLifecycle()
-    val obdState by vm.obd.state.collectAsStateWithLifecycle()
     val leanState by vm.lean.state.collectAsStateWithLifecycle()
     val speedLimitOn by vm.speedLimitEnabled.collectAsStateWithLifecycle()
     val speedLimit by vm.speedLimit.limit.collectAsStateWithLifecycle()
@@ -67,6 +64,10 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val isDay by vm.theme.isDay.collectAsStateWithLifecycle()
     var showMap by remember { mutableStateOf(false) }
     var showNowPlaying by remember { mutableStateOf(false) }
+    var showPhone by remember { mutableStateOf(false) }
+    val dialRequest by vm.dialRequest.collectAsStateWithLifecycle()
+    val recents by vm.phone.recents.collectAsStateWithLifecycle()
+    val contacts by vm.phone.contacts.collectAsStateWithLifecycle()
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
     val mapRequests by vm.mapRequests.collectAsStateWithLifecycle()
     val places by vm.places.collectAsStateWithLifecycle()
@@ -74,10 +75,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val thermalOn by vm.thermalEnabled.collectAsStateWithLifecycle()
     var heatDismissed by remember { mutableStateOf(false) }
     LaunchedEffect(thermal.warn) { if (!thermal.warn) heatDismissed = false }
-    val odometerM by vm.odometer.meters.collectAsStateWithLifecycle()
-    val service by vm.service.collectAsStateWithLifecycle()
-    val serviceDue by vm.serviceDue.collectAsStateWithLifecycle()
-    var serviceDismissed by remember { mutableStateOf(false) }
     val sosUi by vm.sos.ui.collectAsStateWithLifecycle()
     val sosContacts by vm.sosContacts.collectAsStateWithLifecycle()
     val sosCrash by vm.sosCrashEnabled.collectAsStateWithLifecycle()
@@ -92,11 +89,26 @@ fun DashboardScreen(vm: DashboardViewModel) {
     LaunchedEffect(raining) { if (!raining) rainDismissed = false }
     LaunchedEffect(icy) { if (!icy) iceDismissed = false }
     var showSettings by remember { mutableStateOf(!locationGranted(context)) }
+    LaunchedEffect(dialRequest) {
+        if (dialRequest != null) { showPhone = true; showMap = false; showNowPlaying = false; showSettings = false; showTrips = false }
+    }
     var overlayEnabled by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
 
+    var pendingDial by remember { mutableStateOf<Pair<String, String?>?>(null) }
+    val dialerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        vm.onResume()
+        pendingDial?.let { (number, name) -> vm.dial(number, name) }
+        pendingDial = null
+    }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         vm.onResume()
     }
+    val phonebookLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        vm.phone.refresh()
+        vm.onResume()
+    }
+    // Recents change whenever a call ends, and the permissions may have been granted while away.
+    LaunchedEffect(showPhone, resume, callState.phase) { if (showPhone && callState.phase == CallPhase.IDLE) vm.phone.refresh() }
 
     // Re-evaluated whenever the activity resumes (e.g. coming back from a system settings page).
     val settingItems = remember(resume) {
@@ -106,6 +118,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
             },
             SettingItem(context.getString(R.string.perm_phone), context.getString(R.string.perm_phone_desc), phoneGranted(context), context.getString(R.string.action_allow)) {
                 permissionLauncher.launch(runtimePermissions())
+            },
+            SettingItem(context.getString(R.string.perm_dialer), context.getString(R.string.perm_dialer_desc), isDefaultDialer(context), context.getString(R.string.action_set)) {
+                dialerLauncher.launch(defaultDialerIntent(context))
             },
             SettingItem(context.getString(R.string.perm_notif), context.getString(R.string.perm_notif_desc), notificationAccessGranted(context), context.getString(R.string.action_open)) {
                 context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
@@ -125,32 +140,55 @@ fun DashboardScreen(vm: DashboardViewModel) {
         if (mapRequests > 0) {
             showMap = true
             showNowPlaying = false
+            showPhone = false
             showSettings = false
             showTrips = false
         }
     }
 
-    BackHandler(enabled = showMap || showNowPlaying || showTrips) {
+    BackHandler(enabled = showMap || showNowPlaying || showPhone || showTrips) {
         showTrips = false
+        showPhone = false
         showMap = false
         showNowPlaying = false
     }
 
     Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.wallpaper)) {
+        Box(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(modifier = Modifier.fillMaxSize().padding(end = 16.dp, top = 8.dp, bottom = 12.dp)) {
                 Dock(
                     battery = battery,
-                    onNavigation = { showMap = !showMap; showNowPlaying = false; showSettings = false },
-                    onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showSettings = false },
-                    onPhone = { context.openDialer() },
+                    onNavigation = { showMap = !showMap; showNowPlaying = false; showPhone = false; showSettings = false },
+                    onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showPhone = false; showSettings = false },
+                    onPhone = { vm.dialRequest.value = null; showPhone = !showPhone; showMap = false; showNowPlaying = false; showSettings = false },
                     onSettings = { showSettings = true },
                 )
-                if (showNowPlaying) {
+                if (showPhone) {
+                    PhoneScreen(
+                        recents = recents,
+                        contacts = contacts,
+                        hasAccess = phonebookGranted(context),
+                        keypadLocked = gps.speedKmh >= PHONE_LOCK_KMH,
+                        initialNumber = dialRequest,
+                        onGrantAccess = { phonebookLauncher.launch(phonebookPermissions()) },
+                        dialerHint = !isDefaultDialer(context),
+                        onSetDialer = { dialerLauncher.launch(defaultDialerIntent(context)) },
+                        // Once, offer to make MotoDash the phone app; otherwise the phone's own call screen fights with ours.
+                        onDial = { number, name ->
+                            if (!isDefaultDialer(context) && !Prefs.dialerPrompted(context)) {
+                                Prefs.setDialerPrompted(context)
+                                pendingDial = number to name
+                                dialerLauncher.launch(defaultDialerIntent(context))
+                            } else vm.dial(number, name)
+                        },
+                        modifier = Modifier.weight(1f).fillMaxSize(),
+                    )
+                } else if (showNowPlaying) {
                     NowPlayingScreen(
                         state = mediaState,
                         media = vm.media,
-                        onOpenMusicApp = { context.openMusicApp(mediaState.packageName) },
+                        onOpenApp = { context.openMusicApp(it ?: mediaState.packageName) },
                         onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )
@@ -174,13 +212,14 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, obd = obdState.takeIf { obdEnabled }, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
+                        SpeedCard(gps, speedLimit, leanState.takeIf { leanEnabled }, vm.lean::resetPeaks, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = Modifier.weight(1f).fillMaxSize(), onClick = { showTrips = true })
                         Column(
                             modifier = Modifier.weight(1.15f).fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
                             NavCard(
-                                context, navUi, places, weather.takeIf { weatherOn },
+                                navUi, places, weather.takeIf { weatherOn },
+                                me = locationState, isDay = isDay, lowPower = thermal.lowPower,
                                 onOpenMap = { showMap = true },
                                 onGoTo = { vm.nav.selectPlace(it); showMap = true },
                                 modifier = Modifier.weight(1f).fillMaxSize())
@@ -197,6 +236,45 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 }
             }
 
+            val shownMessage = message?.takeIf { it.id != dismissedMessageId && callState.phase == CallPhase.IDLE }
+            if (shownMessage != null && !showSettings) {
+                MessageBanner(
+                    message = shownMessage,
+                    onRead = { vm.speakMessage(shownMessage) },
+                    onDismiss = { dismissedMessageId = shownMessage.id },
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                )
+            }
+
+            // Not over the map: there the top left holds the route or manoeuvre card, and rain, ice and heat are also spoken.
+            if (!showSettings && !showMap && !showPhone && callState.phase == CallPhase.IDLE && shownMessage == null) {
+                val w = weather
+                val rainIn = w?.rainInMin
+                when {
+                    thermal.warn && !heatDismissed -> AlertStrip(
+                        text = stringResource(R.string.thermal_banner),
+                        accent = MotoColors.Red,
+                        onDismiss = { heatDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
+                    weatherOn && w != null && rainIn != null && !rainDismissed -> AlertStrip(
+                        text = if (rainIn > 0) stringResource(R.string.rain_banner_fmt, rainIn) else stringResource(R.string.rain_banner_now),
+                        accent = MotoColors.Blue,
+                        onDismiss = { rainDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
+                    weatherOn && w != null && w.iceRisk && !iceDismissed -> AlertStrip(
+                        text = stringResource(R.string.ice_banner_fmt, w.tempC),
+                        accent = MotoColors.Cyan,
+                        onDismiss = { iceDismissed = true },
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                    )
+                }
+            }
+
+        }
+
+        // Settings and trips cover the whole screen, cutout strip included; they pad their own content.
             if (showSettings) {
                 val toggles = listOf(
                     ToggleItem(stringResource(R.string.msg_auto_title), stringResource(R.string.msg_auto_desc), autoRead, vm::setReadMessagesAloud),
@@ -232,21 +310,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             onTest = { vm.sos.trigger(SosReason.TEST) },
                         )
                     },
-                    engineCard = {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ObdSettingsCard(
-                            obd = vm.obd,
-                            bluetooth = vm.bluetooth,
-                            state = obdState,
-                            enabled = obdEnabled,
-                            onEnabled = vm::setObdEnabled,
-                            device = obdDevice,
-                            onDevice = vm::setObdDevice,
-                            moving = gps.speedKmh > 2 || (obdState.data.speedKmh ?: 0) > 2,
-                        )
-                        MaintenanceCard(odometerM, service, vm::serviceDone, vm::changeServiceInterval)
-                        }
-                    },
                 )
             }
 
@@ -254,62 +317,24 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 TripsScreen(trips = vm.trips, onClose = { showTrips = false })
             }
 
-            val shownMessage = message?.takeIf { it.id != dismissedMessageId && callState.phase == CallPhase.IDLE }
-            if (shownMessage != null && !showSettings) {
-                MessageBanner(
-                    message = shownMessage,
-                    onRead = { vm.speakMessage(shownMessage) },
-                    onDismiss = { dismissedMessageId = shownMessage.id },
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                )
-            }
 
-            // Not over the map: there the top left holds the route or manoeuvre card, and rain, ice and heat are also spoken.
-            if (!showSettings && !showMap && callState.phase == CallPhase.IDLE && shownMessage == null) {
-                val w = weather
-                val rainIn = w?.rainInMin
-                when {
-                    thermal.warn && !heatDismissed -> AlertStrip(
-                        text = stringResource(R.string.thermal_banner),
-                        accent = MotoColors.Red,
-                        onDismiss = { heatDismissed = true },
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                    )
-                    weatherOn && w != null && rainIn != null && !rainDismissed -> AlertStrip(
-                        text = if (rainIn > 0) stringResource(R.string.rain_banner_fmt, rainIn) else stringResource(R.string.rain_banner_now),
-                        accent = MotoColors.Blue,
-                        onDismiss = { rainDismissed = true },
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                    )
-                    weatherOn && w != null && w.iceRisk && !iceDismissed -> AlertStrip(
-                        text = stringResource(R.string.ice_banner_fmt, w.tempC),
-                        accent = MotoColors.Cyan,
-                        onDismiss = { iceDismissed = true },
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                    )
-                    // Service reminders only while standing still, and once until the app is reopened.
-                    serviceDue != null && !serviceDismissed && gps.speedKmh < 5 -> {
-                        val due = serviceDue!!
-                        AlertStrip(
-                            text = if (due.remainingKm <= 0) stringResource(R.string.svc_banner_overdue_fmt, stringResource(due.item.label), formatKm(-due.remainingKm))
-                            else stringResource(R.string.svc_banner_soon_fmt, stringResource(due.item.label), formatKm(due.remainingKm)),
-                            accent = MotoColors.Orange,
-                            onDismiss = { serviceDismissed = true },
-                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                        )
-                    }
-                }
-            }
+        // The call screen paints edge to edge (it pads its own content); inside the padded box it left a bare strip at the cutout.
+        if (callState.phase != CallPhase.IDLE) {
+            CallScreen(
+                callState, callerName, gps.speedKmh, navUi,
+                onAnswer = vm.call::answer, onHangUp = vm.call::hangUp, onMute = vm.call::toggleMute, onRoute = vm.call::setRoute,
+                onVolumeUp = vm.call::volumeUp, onVolumeDown = vm.call::volumeDown, onDigit = vm.call::sendDigit,
+            )
+        }
 
-            if (callState.phase != CallPhase.IDLE) {
-                CallScreen(callState, callerName, onAnswer = vm.call::answer, onHangUp = vm.call::hangUp)
-            }
-
-            // Last, so nothing can cover an SOS countdown.
-            SosScreen(sosUi, sosContacts.map { it.name }, onCancel = vm.sos::cancel, onDismiss = vm.sos::dismiss)
+        // Last, so nothing can cover an SOS countdown.
+        SosScreen(sosUi, sosContacts.map { it.name }, onCancel = vm.sos::cancel, onDismiss = vm.sos::dismiss)
         }
     }
 }
+
+/** No number entry while riding, same limit as the map search box. */
+private const val PHONE_LOCK_KMH = 5
 
 private fun toggleOverlay(context: Context, enabled: Boolean): Boolean {
     if (enabled && !overlayGranted(context)) {

@@ -14,10 +14,14 @@ val NAV_APPS = listOf(
     NavApp("Yandex Haritalar", "ru.yandex.yandexmaps"),
 )
 
-private val MUSIC_PACKAGES = listOf(
-    "com.spotify.music",
-    "com.google.android.apps.youtube.music",
+data class MusicApp(val label: String, val packageName: String)
+
+val MUSIC_APPS = listOf(
+    MusicApp("Spotify", "com.spotify.music"),
+    MusicApp("YouTube Music", "com.google.android.apps.youtube.music"),
 )
+
+private val MUSIC_PACKAGES = MUSIC_APPS.map { it.packageName }
 
 fun Context.isInstalled(pkg: String): Boolean =
     packageManager.getLaunchIntentForPackage(pkg) != null
@@ -31,8 +35,6 @@ fun Context.launchPackage(pkg: String): Boolean {
 
 fun Context.openNavigation(): Boolean =
     NAV_APPS.firstOrNull { isInstalled(it.packageName) }?.let { launchPackage(it.packageName) } ?: false
-
-fun Context.firstInstalledMusicApp(): String? = MUSIC_PACKAGES.firstOrNull { isInstalled(it) }
 
 fun Context.openMusicApp(preferred: String?): Boolean {
     val candidates = listOfNotNull(preferred) + MUSIC_PACKAGES

@@ -1,6 +1,5 @@
 package dev.ygtlab.carplay.ui
 
-import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,54 +33,80 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import dev.ygtlab.carplay.R
+import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.NavUi
 import dev.ygtlab.carplay.data.Place
 import dev.ygtlab.carplay.data.PlaceKind
 import dev.ygtlab.carplay.data.SavedPlace
 import dev.ygtlab.carplay.data.WeatherMath
 import dev.ygtlab.carplay.data.WeatherSnapshot
-import dev.ygtlab.carplay.util.NAV_APPS
-import dev.ygtlab.carplay.util.isInstalled
-import dev.ygtlab.carplay.util.launchPackage
 
 @Composable
 fun NavCard(
-    context: Context,
     nav: NavUi,
     places: List<SavedPlace>,
     weather: WeatherSnapshot?,
+    me: LocationState,
+    isDay: Boolean,
+    lowPower: Boolean,
     onOpenMap: () -> Unit,
     onGoTo: (Place) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val installed = remember { NAV_APPS.filter { context.isInstalled(it.packageName) } }
     val shape = RoundedCornerShape(28.dp)
+    val maneuver = nav.route?.maneuvers?.getOrNull(nav.maneuverIndex)
+    val guiding = nav.navigating && maneuver != null
     Box(
         modifier = modifier
             .clip(shape)
             .background(Color(0xFF15202B))
-            .border(1.dp, Color(0x26FFFFFF), shape),
+            .border(1.dp, Color(0x26FFFFFF), shape)
+            .pressClickable(onClick = onOpenMap),
     ) {
-        MapBackdrop()
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color(0x99000000), Color.Transparent, Color(0xCC000000)))
+        if (guiding) {
+            // Live map while guiding: the same route the full map shows, at a glance.
+            MiniMap(nav.route, nav.destination, me, isDay, lowPower)
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(listOf(Color(0xCC000000), Color.Transparent, Color.Transparent, Color(0xB3000000)))
+                )
             )
-        )
+        } else {
+            MapBackdrop()
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(listOf(Color(0x99000000), Color.Transparent, Color(0xCC000000)))
+                )
+            )
+        }
         if (weather != null) WeatherChip(weather, Modifier.align(Alignment.TopEnd).padding(12.dp))
         Column(
             modifier = Modifier.fillMaxSize().padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            val maneuver = nav.route?.maneuvers?.getOrNull(nav.maneuverIndex)
-            if (nav.navigating && maneuver != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(maneuverIcon(maneuver.type), null, tint = Color.White, modifier = Modifier.size(48.dp))
+            if (guiding && maneuver != null) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = if (weather != null) 90.dp else 0.dp)) {
+                    Icon(maneuverIcon(maneuver.type), null, tint = Color.White, modifier = Modifier.size(52.dp))
                     Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text(formatDistance(nav.distToNextM), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text(maneuver.instruction, fontSize = 14.sp, color = Color(0xE6FFFFFF), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(formatDistance(nav.distToNextM), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(maneuver.instruction, fontSize = 14.sp, color = Color(0xE6FFFFFF), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                }
+                val arrival = remember(nav.remainingS) {
+                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis() + nav.remainingS * 1000L))
+                }
+                Row(
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(Color(0x99000000)).padding(horizontal = 14.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(formatDistance(nav.remainingM), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("·", fontSize = 20.sp, color = Color(0x99FFFFFF))
+                    Text(arrival, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MotoColors.Green)
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -103,12 +128,7 @@ fun NavCard(
                         }
                     }
                 }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                PillButton(if (nav.navigating) stringResource(R.string.nav_back_to_map) else stringResource(R.string.nav_map_and_route), MotoColors.Blue, onOpenMap, Modifier.weight(1f))
-                installed.firstOrNull()?.let { app ->
-                    PillButton(app.label.substringBefore(' '), MotoColors.Green, { context.launchPackage(app.packageName) })
-                }
+                PillButton(stringResource(R.string.nav_map_and_route), MotoColors.Blue, onOpenMap, Modifier.fillMaxWidth())
             }
         }
     }

@@ -8,11 +8,7 @@ import dev.ygtlab.carplay.data.CrashSensor
 import dev.ygtlab.carplay.data.BoundedInputStream
 import dev.ygtlab.carplay.data.GeoPoint
 import dev.ygtlab.carplay.data.GpxImport
-import dev.ygtlab.carplay.data.MaintenanceMath
-import dev.ygtlab.carplay.data.Odometer
 import dev.ygtlab.carplay.data.Place
-import dev.ygtlab.carplay.data.ServiceDue
-import dev.ygtlab.carplay.data.ServiceItem
 import dev.ygtlab.carplay.data.RouteOptions
 import dev.ygtlab.carplay.data.SosContact
 import dev.ygtlab.carplay.data.SosController
@@ -25,9 +21,6 @@ import dev.ygtlab.carplay.data.WeatherController
 import dev.ygtlab.carplay.data.PlaceKind
 import dev.ygtlab.carplay.data.SavedPlace
 import dev.ygtlab.carplay.data.SavedPlaces
-import dev.ygtlab.carplay.data.EngineAlert
-import dev.ygtlab.carplay.data.ObdRepository
-import dev.ygtlab.carplay.data.BluetoothScanner
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.ygtlab.carplay.data.SpeedLimitController
@@ -43,6 +36,8 @@ import dev.ygtlab.carplay.data.LocationRepository
 import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.MediaRepository
 import dev.ygtlab.carplay.data.NavigationController
+import dev.ygtlab.carplay.data.PhoneMath
+import dev.ygtlab.carplay.data.PhoneRepository
 import dev.ygtlab.carplay.data.ThemeController
 import dev.ygtlab.carplay.data.Voice
 import dev.ygtlab.carplay.service.CallBridge
@@ -69,7 +64,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val location = LocationRepository(app)
     val battery = BatteryRepository(app)
     val media = MediaRepository(app)
-    val call = CallRepository(app)
+    val call = CallRepository(app, viewModelScope)
     val theme = ThemeController(app)
 
     val messages: StateFlow<IncomingMessage?> = MessageBridge.latest
@@ -77,6 +72,20 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val announcer = Voice(app)
 
     val callerName: StateFlow<String?> = CallBridge.callerName
+    val phone = PhoneRepository(app, viewModelScope)
+
+    /** Dials from MotoDash: the call screen comes up at once, with the name when we have one. */
+    fun dial(number: String, name: String?) {
+        if (PhoneMath.dialable(number).isEmpty()) return
+        CallBridge.callerName.value = name ?: number
+        call.markDialing()
+        phone.dial(number)
+    }
+
+    init {
+        // A name left over from one call must not label the next one.
+        viewModelScope.launch { call.state.collect { if (it.phase == CallPhase.IDLE) CallBridge.callerName.value = null } }
+    }
 
     val locationState: StateFlow<LocationState> = location.state
     val nav = NavigationController(
@@ -119,20 +128,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         rainVoice.value = enabled
     }
 
-    val odometer = Odometer(viewModelScope, location.state, Prefs.odometerM(app)) { Prefs.setOdometerM(app, it) }
-    val service = MutableStateFlow(MaintenanceMath.fromJson(Prefs.service(app)))
-    val serviceDue: StateFlow<ServiceDue?> =
-        combine(service, odometer.meters) { list, meters -> MaintenanceMath.mostUrgent(list, meters) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
-    fun serviceDone(item: ServiceItem) = updateService(MaintenanceMath.markDone(service.value, item, odometer.meters.value))
-
-    fun changeServiceInterval(item: ServiceItem, steps: Int) = updateService(MaintenanceMath.changeInterval(service.value, item, steps))
-
-    private fun updateService(list: List<dev.ygtlab.carplay.data.ServiceState>) {
-        service.value = list
-        Prefs.setService(getApplication(), MaintenanceMath.toJson(list))
-    }
+    /** A number handed over by another app's dial link; the phone screen shows it on the keypad. */
+    val dialRequest = MutableStateFlow<String?>(null)
 
     /** Bumped when something outside the map (a GPX file) needs the map screen on top. */
     val mapRequests = MutableStateFlow(0)
@@ -189,35 +186,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         Prefs.setRecordTrips(getApplication(), enabled)
         recordTrips.value = enabled
     }
-
-    val obdEnabled = MutableStateFlow(Prefs.obdEnabled(app))
-    val obdDevice = MutableStateFlow(Prefs.obdDevice(app))
-    val obd: ObdRepository = ObdRepository(app, viewModelScope) { alert ->
-        if (call.state.value.phase != CallPhase.IDLE) return@ObdRepository
-        announcer.speak(
-            when (alert) {
-                EngineAlert.OVERHEAT -> app.getString(R.string.obd_alert_overheat, obd.state.value.data.coolantC ?: 0)
-                EngineAlert.LOW_VOLTAGE -> app.getString(R.string.obd_alert_low_voltage)
-                EngineAlert.HIGH_VOLTAGE -> app.getString(R.string.obd_alert_high_voltage)
-                EngineAlert.MALFUNCTION -> app.getString(R.string.obd_alert_mil)
-            }
-        )
-    }
-
-    fun setObdEnabled(enabled: Boolean) {
-        Prefs.setObdEnabled(getApplication(), enabled)
-        obdEnabled.value = enabled
-        if (enabled) obd.start() else obd.stop()
-    }
-
-    fun setObdDevice(address: String) {
-        Prefs.setObdDevice(getApplication(), address)
-        obdDevice.value = address
-        obd.restart()
-    }
-
-    /** Pairing a new adapter from the settings card selects it and connects right away. */
-    val bluetooth = BluetoothScanner(app, ::setObdDevice)
 
     /** Bumped on every onResume so permission-dependent UI re-checks its state. */
     val resumeTick = MutableStateFlow(0)
@@ -310,12 +278,33 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             MessageBridge.latest.filterNotNull().collect { message ->
                 val fresh = System.currentTimeMillis() - message.postedAtMs < FRESH_MESSAGE_MS
-                if (fresh && readMessagesAloud.value && call.state.value.phase == CallPhase.IDLE) speakMessage(message)
+                if (fresh && onScreen && readMessagesAloud.value && call.state.value.phase == CallPhase.IDLE) speakMessage(message)
+            }
+        }
+    }
+
+    /** True between onResume and onPause: messages are only read aloud while MotoDash is the app on screen. */
+    @Volatile private var onScreen = false
+
+    init {
+        // Music that was playing before a call goes on afterwards, for apps that do not resume by themselves.
+        viewModelScope.launch {
+            var resumeAfter = false
+            var previous = CallPhase.IDLE
+            call.state.collect { c ->
+                if (previous == CallPhase.IDLE && c.phase != CallPhase.IDLE) resumeAfter = media.isPlaying
+                if (previous != CallPhase.IDLE && c.phase == CallPhase.IDLE && resumeAfter) {
+                    resumeAfter = false
+                    delay(RESUME_AFTER_CALL_MS)
+                    if (!media.isPlaying) media.play()
+                }
+                previous = c.phase
             }
         }
     }
 
     fun onResume() {
+        onScreen = true
         location.start()
         battery.start()
         media.start()
@@ -323,7 +312,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         if (leanEnabled.value) lean.start()
         if (sosCrashEnabled.value) crashSensor.start()
         call.start()
-        obd.start()
         resumeTick.value++
     }
 
@@ -340,15 +328,13 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onPause() {
-        odometer.flush()
+        onScreen = false
         crashSensor.stop()
         theme.stop()
         lean.stop()
     }
 
     override fun onCleared() {
-        obd.stop()
-        bluetooth.release()
         announcer.shutdown()
         lean.stop()
         theme.stop()
@@ -359,6 +345,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val FIX_TIMEOUT_MS = 5000L
         const val FRESH_MESSAGE_MS = 30_000L
+        const val RESUME_AFTER_CALL_MS = 1500L
         const val LEAN_MIN_KMH = 15
         const val MAX_GPX_BYTES = 20L * 1024 * 1024
     }

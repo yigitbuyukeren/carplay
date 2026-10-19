@@ -8,6 +8,9 @@ import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,6 +58,18 @@ data class SettingItem(
 fun locationGranted(c: Context) = c.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
 fun phoneGranted(c: Context) =
     c.hasPermission(Manifest.permission.READ_PHONE_STATE) && c.hasPermission(Manifest.permission.ANSWER_PHONE_CALLS)
+fun isDefaultDialer(c: Context) =
+    c.getSystemService(android.telecom.TelecomManager::class.java)?.defaultDialerPackage == c.packageName
+
+/** The system's own "make this your phone app" dialog; on Android 10+ it comes from the role manager. */
+fun defaultDialerIntent(c: Context): android.content.Intent =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        c.getSystemService(android.app.role.RoleManager::class.java).createRequestRoleIntent(android.app.role.RoleManager.ROLE_DIALER)
+    } else {
+        android.content.Intent(android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
+            .putExtra(android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, c.packageName)
+    }
+
 fun notificationAccessGranted(c: Context) =
     NotificationManagerCompat.getEnabledListenerPackages(c).contains(c.packageName)
 fun overlayGranted(c: Context) = Settings.canDrawOverlays(c)
@@ -70,18 +85,26 @@ fun runtimePermissions(): Array<String> {
     return list.toTypedArray()
 }
 
+/** Asked for from the phone screen itself, not at first launch. */
+fun phonebookPermissions() = arrayOf(
+    Manifest.permission.READ_CALL_LOG,
+    Manifest.permission.READ_CONTACTS,
+    Manifest.permission.CALL_PHONE,
+)
+
+fun phonebookGranted(c: Context) = phonebookPermissions().all { c.hasPermission(it) }
+
 data class ToggleItem(val title: String, val description: String, val checked: Boolean, val onChange: (Boolean) -> Unit)
 
 private enum class SettingsTab(val label: Int) {
     SETUP(R.string.settings_tab_setup),
     RIDE(R.string.settings_tab_ride),
     SAFETY(R.string.settings_tab_safety),
-    ENGINE(R.string.settings_tab_engine),
 }
 
 /**
- * Settings in four tabs down the left side, so each page is a short list even on a 360dp-high phone:
- * permissions, ride options, safety (SOS) and engine (OBD).
+ * Settings in three tabs down the left side, so each page is a short list even on a 360dp-high phone:
+ * permissions, ride options, and safety (SOS).
  */
 @Composable
 fun SettingsScreen(
@@ -96,13 +119,12 @@ fun SettingsScreen(
     onThemeMode: (ThemeMode) -> Unit,
     onClose: () -> Unit,
     safetyCard: @Composable () -> Unit = {},
-    engineCard: @Composable () -> Unit = {},
 ) {
     val palette = LocalMotoPalette.current
     // Start on the setup page while a permission is missing, otherwise on the everyday options.
     var tab by rememberSaveable { mutableStateOf(if (items.any { !it.granted }) SettingsTab.SETUP else SettingsTab.RIDE) }
     Box(modifier = Modifier.fillMaxSize().background(palette.scrim).clickable(enabled = false) {}) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 16.dp)) {
+        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 32.dp, vertical = 16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -110,12 +132,12 @@ fun SettingsScreen(
             ) {
                 Text(stringResource(R.string.settings_title), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = palette.text)
                 Box(
-                    modifier = Modifier.size(64.dp).clip(CircleShape).background(MotoColors.CardHigh).clickable(onClick = onClose),
+                    modifier = Modifier.size(72.dp).clip(CircleShape).background(MotoColors.CardHigh).clickable(onClick = onClose),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Rounded.Close, null, tint = palette.text, modifier = Modifier.size(32.dp)) }
             }
             Row(modifier = Modifier.fillMaxSize().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                Column(modifier = Modifier.width(190.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(modifier = Modifier.width(190.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SettingsTab.entries.forEach { t ->
                         PillButton(
                             stringResource(t.label),
@@ -124,6 +146,7 @@ fun SettingsScreen(
                             Modifier.fillMaxWidth(),
                             textColor = if (t == tab) Color.White else palette.text,
                             horizontalPadding = 8.dp,
+                            minHeight = 64.dp,
                         )
                     }
                 }
@@ -144,7 +167,6 @@ fun SettingsScreen(
                             item { ThemeRow(themeMode, onThemeMode) }
                         }
                         SettingsTab.SAFETY -> item { safetyCard() }
-                        SettingsTab.ENGINE -> item { engineCard() }
                     }
                 }
             }
@@ -180,8 +202,10 @@ private fun LeanRow(lean: LeanState, enabled: Boolean, onEnabled: (Boolean) -> U
 
 @Composable
 private fun ToggleRow(t: ToggleItem) {
+    // The whole row toggles, not just the small switch: much easier to hit with gloves.
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card)
+            .clickable { t.onChange(!t.checked) }.padding(horizontal = 16.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {

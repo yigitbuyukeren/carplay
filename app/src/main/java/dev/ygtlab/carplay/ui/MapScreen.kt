@@ -114,12 +114,12 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
-private fun styleUrl(isDay: Boolean) =
+internal fun styleUrl(isDay: Boolean) =
     "https://tiles.openfreemap.org/styles/" + if (isDay) "bright" else "dark"
-private const val SRC_ROUTE = "route"
-private const val SRC_DEST = "dest"
-private const val SRC_ME = "me"
-private const val SRC_FUEL = "fuel"
+internal const val SRC_ROUTE = "route"
+internal const val SRC_DEST = "dest"
+internal const val SRC_ME = "me"
+internal const val SRC_FUEL = "fuel"
 
 /** No typing while riding: the search box locks above this speed. */
 private const val SEARCH_LOCK_KMH = 5
@@ -365,7 +365,7 @@ fun MapScreen(
     }
 }
 
-private fun addMapLayers(style: Style) {
+internal fun addMapLayers(style: Style) {
     style.addSource(GeoJsonSource(SRC_ROUTE))
     style.addLayer(
         LineLayer("route-casing", SRC_ROUTE).withProperties(
@@ -479,7 +479,7 @@ private fun SearchPanel(
                                     Text(place.detail, fontSize = 14.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
-                            Box(Modifier.size(56.dp).clickable { onSave(place) }, contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(68.dp).clickable { onSave(place) }, contentAlignment = Alignment.Center) {
                                 Icon(
                                     if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
                                     tint = if (saved) MotoColors.Orange else MotoColors.Gray, modifier = Modifier.size(28.dp),
@@ -502,7 +502,7 @@ private fun SavedTiles(places: List<SavedPlace>, onGo: (Place) -> Unit, onRemove
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             Row(
-                modifier = Modifier.height(56.dp).clip(RoundedCornerShape(16.dp)).background(MotoColors.PanelHigh)
+                modifier = Modifier.height(68.dp).clip(RoundedCornerShape(16.dp)).background(MotoColors.PanelHigh)
                     .clickable(enabled = onPickGpx != null) { onPickGpx?.invoke() }.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -516,7 +516,7 @@ private fun SavedTiles(places: List<SavedPlace>, onGo: (Place) -> Unit, onRemove
         items(places) { sp ->
             val pending = confirm == sp
             Row(
-                modifier = Modifier.height(56.dp).clip(RoundedCornerShape(16.dp))
+                modifier = Modifier.height(68.dp).clip(RoundedCornerShape(16.dp))
                     .background(if (pending) MotoColors.Red else MotoColors.PanelHigh)
                     .combinedClickable(
                         onClick = { if (pending) { onRemove(sp); confirm = null } else onGo(sp.place) },
@@ -590,7 +590,7 @@ private fun RouteCard(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                if (!isTrack) Box(Modifier.size(56.dp).clickable(onClick = onSave), contentAlignment = Alignment.Center) {
+                if (!isTrack) Box(Modifier.size(68.dp).clickable(onClick = onSave), contentAlignment = Alignment.Center) {
                     Icon(
                         if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
                         tint = if (saved) MotoColors.Orange else MotoColors.Gray, modifier = Modifier.size(28.dp),
@@ -618,7 +618,7 @@ private fun RouteCard(
 @Composable
 private fun OptionChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.height(56.dp).clip(RoundedCornerShape(28.dp))
+        modifier = modifier.height(68.dp).clip(RoundedCornerShape(28.dp))
             .background(if (selected) MotoColors.Blue else MotoColors.PanelHigh)
             .border(1.dp, if (selected) Color.White else Color(0x26FFFFFF), RoundedCornerShape(28.dp))
             .clickable(onClick = onClick).padding(horizontal = 8.dp),
@@ -665,7 +665,7 @@ private fun FuelPanel(
                         fontSize = 14.sp, color = MotoColors.Gray,
                     )
                 }
-                Box(Modifier.size(56.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(68.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(28.dp))
                 }
             }
@@ -747,7 +747,7 @@ private fun Chip(text: String, color: Color) {
 @Composable
 private fun RoundIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Box(
-        modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xE6101114))
+        modifier = Modifier.size(68.dp).clip(CircleShape).background(Color(0xE6101114))
             .border(1.dp, Color(0x26FFFFFF), CircleShape).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(28.dp)) }
