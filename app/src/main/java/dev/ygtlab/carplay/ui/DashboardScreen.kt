@@ -172,7 +172,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         keypadLocked = gps.speedKmh >= PHONE_LOCK_KMH,
                         initialNumber = dialRequest,
                         onGrantAccess = { phonebookLauncher.launch(phonebookPermissions()) },
-                        onDial = vm.phone::dial,
+                        onDial = vm::dial,
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )
                 } else if (showNowPlaying) {
@@ -294,7 +294,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
             }
 
             // Not over the map: there the top left holds the route or manoeuvre card, and rain, ice and heat are also spoken.
-            if (!showSettings && !showMap && callState.phase == CallPhase.IDLE && shownMessage == null) {
+            if (!showSettings && !showMap && !showPhone && callState.phase == CallPhase.IDLE && shownMessage == null) {
                 val w = weather
                 val rainIn = w?.rainInMin
                 when {

@@ -43,6 +43,7 @@ import dev.ygtlab.carplay.data.LocationRepository
 import dev.ygtlab.carplay.data.LocationState
 import dev.ygtlab.carplay.data.MediaRepository
 import dev.ygtlab.carplay.data.NavigationController
+import dev.ygtlab.carplay.data.PhoneMath
 import dev.ygtlab.carplay.data.PhoneRepository
 import dev.ygtlab.carplay.data.ThemeController
 import dev.ygtlab.carplay.data.Voice
@@ -79,6 +80,19 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     val callerName: StateFlow<String?> = CallBridge.callerName
     val phone = PhoneRepository(app, viewModelScope)
+
+    /** Dials from MotoDash: the call screen comes up at once, with the name when we have one. */
+    fun dial(number: String, name: String?) {
+        if (PhoneMath.dialable(number).isEmpty()) return
+        CallBridge.callerName.value = name ?: number
+        call.markDialing()
+        phone.dial(number)
+    }
+
+    init {
+        // A name left over from one call must not label the next one.
+        viewModelScope.launch { call.state.collect { if (it.phase == CallPhase.IDLE) CallBridge.callerName.value = null } }
+    }
 
     val locationState: StateFlow<LocationState> = location.state
     val nav = NavigationController(

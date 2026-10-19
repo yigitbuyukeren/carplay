@@ -268,4 +268,7 @@
     <string name="call_speaker">Hoparlör</string>
     <string name="perm_dialer">Varsayılan telefon uygulaması</string>
     <string name="perm_dialer_desc">Arama ekranı da MotoDash\'in içinde açılsın</string>
+    <string name="call_hangup">Bitir</string>
+    <string name="call_decline">Reddet</string>
+    <string name="call_answer">Cevapla</string>
 </resources>

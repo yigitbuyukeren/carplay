@@ -13,6 +13,8 @@ import android.telephony.TelephonyManager
 import dev.ygtlab.carplay.util.hasPermission
 import dev.ygtlab.carplay.service.InCallHub
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,19 +32,37 @@ data class CallState(
     val managed: Boolean = false,
 )
 
-class CallRepository(private val context: Context, scope: CoroutineScope) {
+class CallRepository(private val context: Context, private val scope: CoroutineScope) {
     private val telephony = context.getSystemService(TelephonyManager::class.java)
     private val telecom = context.getSystemService(TelecomManager::class.java)
 
     private val phoneState = MutableStateFlow(CallState())
+    private val dialingUntil = MutableStateFlow(0L)
 
     /** The in-call service knows more (dialing, mute), so it wins whenever MotoDash is the default phone app. */
-    val state: StateFlow<CallState> = combine(phoneState, InCallHub.state) { phone, managed -> managed ?: phone }
-        .stateIn(scope, SharingStarted.Eagerly, CallState())
+    val state: StateFlow<CallState> = combine(phoneState, InCallHub.state, dialingUntil) { phone, managed, until ->
+        when {
+            managed != null -> managed
+            // Without the in-call service the phone only reports "off hook"; show "calling" for the first seconds.
+            until > 0 && phone.phase != CallPhase.RINGING -> CallState(CallPhase.DIALING, phone.startedAtMs)
+            else -> phone
+        }
+    }.stateIn(scope, SharingStarted.Eagerly, CallState())
+
+    /** Called the moment a call is placed from MotoDash so its call screen is up before the system reports anything. */
+    fun markDialing() {
+        dialingUntil.value = System.currentTimeMillis()
+        scope.launch {
+            delay(DIALING_GRACE_MS)
+            dialingUntil.value = 0
+        }
+    }
 
     private var started = false
 
     private fun handle(raw: Int) {
+        // A call that ends (or fails) right after being placed must not leave the screen on "calling".
+        if (raw == TelephonyManager.CALL_STATE_IDLE && phoneState.value.phase == CallPhase.ACTIVE) dialingUntil.value = 0
         phoneState.value = when (raw) {
             TelephonyManager.CALL_STATE_RINGING -> CallState(CallPhase.RINGING)
             TelephonyManager.CALL_STATE_OFFHOOK -> {
@@ -99,5 +119,9 @@ class CallRepository(private val context: Context, scope: CoroutineScope) {
 
     fun toggleSpeaker() {
         InCallHub.service?.setAudioRoute(if (state.value.speaker) (CallAudioState.ROUTE_EARPIECE or CallAudioState.ROUTE_BLUETOOTH) else CallAudioState.ROUTE_SPEAKER)
+    }
+
+    private companion object {
+        const val DIALING_GRACE_MS = 8000L
     }
 }

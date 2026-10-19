@@ -1,10 +1,13 @@
 package dev.ygtlab.carplay.service
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.ContactsContract
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.InCallService
@@ -13,6 +16,7 @@ import dev.ygtlab.carplay.MainActivity
 import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.CallPhase
 import dev.ygtlab.carplay.data.CallState
+import dev.ygtlab.carplay.util.hasPermission
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** What the dashboard knows about calls while MotoDash is the default phone app; null state means "not managing". */
@@ -93,7 +97,7 @@ class MotoInCallService : InCallService() {
             return
         }
         val d = main.details
-        CallBridge.callerName.value = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) d.contactDisplayName else null)?.takeIf { it.isNotBlank() } ?: d.handle?.schemeSpecificPart
+        CallBridge.callerName.value = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) d.contactDisplayName else lookupName(d.handle?.schemeSpecificPart))?.takeIf { it.isNotBlank() } ?: d.handle?.schemeSpecificPart
         val audio = callAudioState
         InCallHub.state.value = CallState(
             phase = InCallHub.phaseOf(main.state),
@@ -102,6 +106,18 @@ class MotoInCallService : InCallService() {
             speaker = audio?.route == CallAudioState.ROUTE_SPEAKER,
             managed = true,
         )
+    }
+
+    private fun lookupName(number: String?): String? {
+        if (number.isNullOrBlank() || !hasPermission(Manifest.permission.READ_CONTACTS)) return null
+        return try {
+            contentResolver.query(
+                Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number)),
+                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null,
+            )?.use { if (it.moveToFirst()) it.getString(0) else null }
+        } catch (_: RuntimeException) {
+            null
+        }
     }
 
     private companion object {

@@ -63,7 +63,7 @@ fun PhoneScreen(
     keypadLocked: Boolean,
     initialNumber: String?,
     onGrantAccess: () -> Unit,
-    onDial: (String) -> Unit,
+    onDial: (String, String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var tab by remember(initialNumber) { mutableStateOf(if (initialNumber != null) PhoneTab.KEYPAD else PhoneTab.RECENTS) }
@@ -110,7 +110,7 @@ private fun Notice(text: String, action: String?, onAction: () -> Unit) {
 }
 
 @Composable
-private fun RecentsList(recents: List<RecentCall>, onDial: (String) -> Unit) {
+private fun RecentsList(recents: List<RecentCall>, onDial: (String, String?) -> Unit) {
     if (recents.isEmpty()) return Notice(stringResource(R.string.phone_empty_recents), null) {}
     val unknown = stringResource(R.string.phone_unknown)
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
@@ -130,14 +130,14 @@ private fun RecentsList(recents: List<RecentCall>, onDial: (String) -> Unit) {
                     }
                     Icon(icon, null, tint = tint, modifier = Modifier.size(28.dp))
                 },
-                onClick = { onDial(call.number) },
+                onClick = { onDial(call.number, call.name) },
             )
         }
     }
 }
 
 @Composable
-private fun FavoritesList(favorites: List<Favorite>, onDial: (String) -> Unit) {
+private fun FavoritesList(favorites: List<Favorite>, onDial: (String, String?) -> Unit) {
     if (favorites.isEmpty()) return Notice(stringResource(R.string.phone_empty_favorites), null) {}
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
         items(favorites, key = { it.name }) { fav ->
@@ -149,7 +149,7 @@ private fun FavoritesList(favorites: List<Favorite>, onDial: (String) -> Unit) {
                         Text(fav.name.take(1).uppercase(), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 },
-                onClick = { onDial(fav.number) },
+                onClick = { onDial(fav.number, fav.name) },
             )
         }
     }
@@ -187,7 +187,7 @@ private fun ContactRow(
 private val KEY_ROWS = listOf("123", "456", "789", "*0#")
 
 @Composable
-private fun Keypad(locked: Boolean, initial: String, onDial: (String) -> Unit) {
+private fun Keypad(locked: Boolean, initial: String, onDial: (String, String?) -> Unit) {
     var number by remember(initial) { mutableStateOf(PhoneMath.dialable(initial)) }
     val palette = LocalMotoPalette.current
     Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -205,7 +205,7 @@ private fun Keypad(locked: Boolean, initial: String, onDial: (String) -> Unit) {
                 Box(
                     modifier = Modifier
                         .size(72.dp).clip(CircleShape).background(if (canCall) MotoColors.Green else palette.track)
-                        .clickable(enabled = canCall) { onDial(number) },
+                        .clickable(enabled = canCall) { onDial(number, null) },
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Rounded.Call, stringResource(R.string.phone_call), tint = Color.White, modifier = Modifier.size(36.dp)) }
                 Box(
