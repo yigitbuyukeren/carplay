@@ -3,32 +3,50 @@ package dev.ygtlab.carplay.data
 import android.Manifest
 import android.content.Context
 import android.os.Build
+import android.telecom.Call
+import android.telecom.CallAudioState
 import android.telecom.TelecomManager
+import android.telecom.VideoProfile
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
 import dev.ygtlab.carplay.util.hasPermission
+import dev.ygtlab.carplay.service.InCallHub
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 
-enum class CallPhase { IDLE, RINGING, ACTIVE }
+enum class CallPhase { IDLE, RINGING, DIALING, ACTIVE }
 
-data class CallState(val phase: CallPhase = CallPhase.IDLE, val startedAtMs: Long = 0L)
+/** [managed] is true when MotoDash is the default phone app and so can mute and switch to the speaker itself. */
+data class CallState(
+    val phase: CallPhase = CallPhase.IDLE,
+    val startedAtMs: Long = 0L,
+    val muted: Boolean = false,
+    val speaker: Boolean = false,
+    val managed: Boolean = false,
+)
 
-class CallRepository(private val context: Context) {
+class CallRepository(private val context: Context, scope: CoroutineScope) {
     private val telephony = context.getSystemService(TelephonyManager::class.java)
     private val telecom = context.getSystemService(TelecomManager::class.java)
 
-    private val _state = MutableStateFlow(CallState())
-    val state: StateFlow<CallState> = _state
+    private val phoneState = MutableStateFlow(CallState())
+
+    /** The in-call service knows more (dialing, mute), so it wins whenever MotoDash is the default phone app. */
+    val state: StateFlow<CallState> = combine(phoneState, InCallHub.state) { phone, managed -> managed ?: phone }
+        .stateIn(scope, SharingStarted.Eagerly, CallState())
 
     private var started = false
 
     private fun handle(raw: Int) {
-        _state.value = when (raw) {
+        phoneState.value = when (raw) {
             TelephonyManager.CALL_STATE_RINGING -> CallState(CallPhase.RINGING)
             TelephonyManager.CALL_STATE_OFFHOOK -> {
-                val prev = _state.value
+                val prev = phoneState.value
                 CallState(CallPhase.ACTIVE, if (prev.phase == CallPhase.ACTIVE) prev.startedAtMs else System.currentTimeMillis())
             }
             else -> CallState()
@@ -54,6 +72,7 @@ class CallRepository(private val context: Context) {
     }
 
     fun answer() {
+        InCallHub.call?.let { it.answer(VideoProfile.STATE_AUDIO_ONLY); return }
         if (!context.hasPermission(Manifest.permission.ANSWER_PHONE_CALLS)) return
         try {
             telecom.acceptRingingCall()
@@ -63,10 +82,22 @@ class CallRepository(private val context: Context) {
 
     @Suppress("DEPRECATION")
     fun hangUp() {
+        InCallHub.call?.let {
+            if (it.state == Call.STATE_RINGING) it.reject(false, null) else it.disconnect()
+            return
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || !context.hasPermission(Manifest.permission.ANSWER_PHONE_CALLS)) return
         try {
             telecom.endCall()
         } catch (_: SecurityException) {
         }
+    }
+
+    fun toggleMute() {
+        InCallHub.service?.setMuted(!state.value.muted)
+    }
+
+    fun toggleSpeaker() {
+        InCallHub.service?.setAudioRoute(if (state.value.speaker) (CallAudioState.ROUTE_EARPIECE or CallAudioState.ROUTE_BLUETOOTH) else CallAudioState.ROUTE_SPEAKER)
     }
 }

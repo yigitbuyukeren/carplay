@@ -61,11 +61,12 @@ fun PhoneScreen(
     favorites: List<Favorite>,
     hasAccess: Boolean,
     keypadLocked: Boolean,
+    initialNumber: String?,
     onGrantAccess: () -> Unit,
     onDial: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var tab by remember { mutableStateOf(PhoneTab.RECENTS) }
+    var tab by remember(initialNumber) { mutableStateOf(if (initialNumber != null) PhoneTab.KEYPAD else PhoneTab.RECENTS) }
     val palette = LocalMotoPalette.current
     Column(modifier = modifier.padding(start = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -87,7 +88,7 @@ fun PhoneScreen(
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when {
-                tab == PhoneTab.KEYPAD -> Keypad(keypadLocked, onDial)
+                tab == PhoneTab.KEYPAD -> Keypad(keypadLocked, initialNumber.orEmpty(), onDial)
                 !hasAccess -> Notice(stringResource(R.string.phone_need_perm), stringResource(R.string.phone_allow), onGrantAccess)
                 tab == PhoneTab.RECENTS -> RecentsList(recents, onDial)
                 else -> FavoritesList(favorites, onDial)
@@ -186,8 +187,8 @@ private fun ContactRow(
 private val KEY_ROWS = listOf("123", "456", "789", "*0#")
 
 @Composable
-private fun Keypad(locked: Boolean, onDial: (String) -> Unit) {
-    var number by remember { mutableStateOf("") }
+private fun Keypad(locked: Boolean, initial: String, onDial: (String) -> Unit) {
+    var number by remember(initial) { mutableStateOf(PhoneMath.dialable(initial)) }
     val palette = LocalMotoPalette.current
     Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Column(

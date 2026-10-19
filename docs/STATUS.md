@@ -37,6 +37,7 @@ Bakılanlar: DMD2, Calimoto, Kurviger, Scenic, REVER, RISER, Motolog, AndrOBD, O
 - Dock'taki telefon tuşu artık sistem çeviricisini açmaz; `PhoneScreen` (CarPlay tarzı) açılır: Son aramalar (aynı numaranın art arda kayıtları birleşir, cevapsızlar kırmızı), Favoriler (rehberde yıldızlı kişiler), Tuş takımı. Satıra dokununca doğrudan aranır (`TelecomManager.placeCall`, izin yoksa çeviriciye numarayla düşer).
 - Tuş takımı 5 km/sa üstünde kilitli (haritadaki arama kutusuyla aynı kural). İzinler (`READ_CALL_LOG`, `READ_CONTACTS`, `CALL_PHONE`) ilk açılışta değil, ekrandaki "İzin ver" düğmesiyle istenir.
 - Mantık `PhoneMath` içinde, `PhoneTest` ile 8 test. Emülatörde Son aramalar listesi doğrulandı; Favoriler ve Tuş takımı emülatör takıldığı için ekranda görülmedi, gerçek aramanın başlaması da denenmedi.
+- **Arama ekranı da uygulamada**: MotoDash varsayılan telefon uygulaması seçilirse (Ayarlar > Kurulum > "Varsayılan telefon uygulaması") `MotoInCallService` aramayı taşır; sistemin kendi arama ekranı açılmaz. `CallScreen` arıyor / çalıyor / görüşmede durumlarını, sessiz ve hoparlör düğmelerini gösterir. Seçilmezse eski davranış (telefonun kendi ekranı + `CallScreen` üstte) sürer. Başka uygulamanın `tel:` bağlantıları tuş takımına numarayla düşer. **Gerçek telefonda denenmedi**; Android 11 altında arayan adı yerine numara görünür.
 
 ## Sıradaki işler
 1. **Gerçek motorda dene** (TVS Raider 125 + ELM327): PID listesi, vites tablosu öğrenmesi, sıcaklık PID'i var mı (hava-yağ soğutmalı). Ham kayıt "Kaydı paylaş" ile alınır.

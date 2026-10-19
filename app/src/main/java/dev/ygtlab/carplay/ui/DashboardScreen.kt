@@ -67,6 +67,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showMap by remember { mutableStateOf(false) }
     var showNowPlaying by remember { mutableStateOf(false) }
     var showPhone by remember { mutableStateOf(false) }
+    val dialRequest by vm.dialRequest.collectAsStateWithLifecycle()
     val recents by vm.phone.recents.collectAsStateWithLifecycle()
     val favorites by vm.phone.favorites.collectAsStateWithLifecycle()
     val navUi by vm.nav.ui.collectAsStateWithLifecycle()
@@ -94,8 +95,12 @@ fun DashboardScreen(vm: DashboardViewModel) {
     LaunchedEffect(raining) { if (!raining) rainDismissed = false }
     LaunchedEffect(icy) { if (!icy) iceDismissed = false }
     var showSettings by remember { mutableStateOf(!locationGranted(context)) }
+    LaunchedEffect(dialRequest) {
+        if (dialRequest != null) { showPhone = true; showMap = false; showNowPlaying = false; showSettings = false; showTrips = false }
+    }
     var overlayEnabled by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
 
+    val dialerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.onResume() }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         vm.onResume()
     }
@@ -114,6 +119,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
             },
             SettingItem(context.getString(R.string.perm_phone), context.getString(R.string.perm_phone_desc), phoneGranted(context), context.getString(R.string.action_allow)) {
                 permissionLauncher.launch(runtimePermissions())
+            },
+            SettingItem(context.getString(R.string.perm_dialer), context.getString(R.string.perm_dialer_desc), isDefaultDialer(context), context.getString(R.string.action_set)) {
+                dialerLauncher.launch(defaultDialerIntent(context))
             },
             SettingItem(context.getString(R.string.perm_notif), context.getString(R.string.perm_notif_desc), notificationAccessGranted(context), context.getString(R.string.action_open)) {
                 context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
@@ -153,7 +161,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     battery = battery,
                     onNavigation = { showMap = !showMap; showNowPlaying = false; showPhone = false; showSettings = false },
                     onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showPhone = false; showSettings = false },
-                    onPhone = { showPhone = !showPhone; showMap = false; showNowPlaying = false; showSettings = false },
+                    onPhone = { vm.dialRequest.value = null; showPhone = !showPhone; showMap = false; showNowPlaying = false; showSettings = false },
                     onSettings = { showSettings = true },
                 )
                 if (showPhone) {
@@ -162,6 +170,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         favorites = favorites,
                         hasAccess = phonebookGranted(context),
                         keypadLocked = gps.speedKmh >= PHONE_LOCK_KMH,
+                        initialNumber = dialRequest,
                         onGrantAccess = { phonebookLauncher.launch(phonebookPermissions()) },
                         onDial = vm.phone::dial,
                         modifier = Modifier.weight(1f).fillMaxSize(),
@@ -322,7 +331,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
             }
 
             if (callState.phase != CallPhase.IDLE) {
-                CallScreen(callState, callerName, onAnswer = vm.call::answer, onHangUp = vm.call::hangUp)
+                CallScreen(callState, callerName, onAnswer = vm.call::answer, onHangUp = vm.call::hangUp, onMute = vm.call::toggleMute, onSpeaker = vm.call::toggleSpeaker)
             }
 
             // Last, so nothing can cover an SOS countdown.

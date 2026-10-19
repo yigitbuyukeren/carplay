@@ -263,4 +263,9 @@
     <string name="phone_yesterday">Dün</string>
     <string name="phone_call">Ara</string>
     <string name="phone_delete">Sil</string>
+    <string name="call_dialing">Aranıyor</string>
+    <string name="call_mute">Sessiz</string>
+    <string name="call_speaker">Hoparlör</string>
+    <string name="perm_dialer">Varsayılan telefon uygulaması</string>
+    <string name="perm_dialer_desc">Arama ekranı da MotoDash\'in içinde açılsın</string>
 </resources>

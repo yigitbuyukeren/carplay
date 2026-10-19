@@ -55,6 +55,18 @@ data class SettingItem(
 fun locationGranted(c: Context) = c.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
 fun phoneGranted(c: Context) =
     c.hasPermission(Manifest.permission.READ_PHONE_STATE) && c.hasPermission(Manifest.permission.ANSWER_PHONE_CALLS)
+fun isDefaultDialer(c: Context) =
+    c.getSystemService(android.telecom.TelecomManager::class.java)?.defaultDialerPackage == c.packageName
+
+/** The system's own "make this your phone app" dialog; on Android 10+ it comes from the role manager. */
+fun defaultDialerIntent(c: Context): android.content.Intent =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        c.getSystemService(android.app.role.RoleManager::class.java).createRequestRoleIntent(android.app.role.RoleManager.ROLE_DIALER)
+    } else {
+        android.content.Intent(android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
+            .putExtra(android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, c.packageName)
+    }
+
 fun notificationAccessGranted(c: Context) =
     NotificationManagerCompat.getEnabledListenerPackages(c).contains(c.packageName)
 fun overlayGranted(c: Context) = Settings.canDrawOverlays(c)

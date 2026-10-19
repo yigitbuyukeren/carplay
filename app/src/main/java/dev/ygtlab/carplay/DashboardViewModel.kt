@@ -70,7 +70,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val location = LocationRepository(app)
     val battery = BatteryRepository(app)
     val media = MediaRepository(app)
-    val call = CallRepository(app)
+    val call = CallRepository(app, viewModelScope)
     val theme = ThemeController(app)
 
     val messages: StateFlow<IncomingMessage?> = MessageBridge.latest
@@ -135,6 +135,9 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         service.value = list
         Prefs.setService(getApplication(), MaintenanceMath.toJson(list))
     }
+
+    /** A number handed over by another app's dial link; the phone screen shows it on the keypad. */
+    val dialRequest = MutableStateFlow<String?>(null)
 
     /** Bumped when something outside the map (a GPX file) needs the map screen on top. */
     val mapRequests = MutableStateFlow(0)

@@ -57,6 +57,10 @@ class MainActivity : ComponentActivity() {
 
     /** A GPX file arrives as a view or share intent; the HOME and launcher intents carry no file. */
     private fun handleGpxIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_DIAL && intent.data?.scheme == "tel") {
+            viewModel.dialRequest.value = intent.data?.schemeSpecificPart.orEmpty()
+            return
+        }
         val uri = when (intent?.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)

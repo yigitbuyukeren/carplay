@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.CallEnd
+import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +35,10 @@ import dev.ygtlab.carplay.data.CallState
 import kotlinx.coroutines.delay
 
 @Composable
-fun CallScreen(call: CallState, callerName: String?, onAnswer: () -> Unit, onHangUp: () -> Unit) {
+fun CallScreen(
+    call: CallState, callerName: String?, onAnswer: () -> Unit, onHangUp: () -> Unit,
+    onMute: () -> Unit = {}, onSpeaker: () -> Unit = {},
+) {
     val elapsed by produceState(0L, call.startedAtMs, call.phase) {
         while (call.phase == CallPhase.ACTIVE) {
             value = (System.currentTimeMillis() - call.startedAtMs) / 1000
@@ -46,7 +51,11 @@ fun CallScreen(call: CallState, callerName: String?, onAnswer: () -> Unit, onHan
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
-                if (call.phase == CallPhase.RINGING) stringResource(R.string.call_incoming) else stringResource(R.string.call_active),
+                when (call.phase) {
+                    CallPhase.RINGING -> stringResource(R.string.call_incoming)
+                    CallPhase.DIALING -> stringResource(R.string.call_dialing)
+                    else -> stringResource(R.string.call_active)
+                },
                 fontSize = 22.sp, color = MotoColors.Gray,
             )
             Text(
@@ -57,12 +66,18 @@ fun CallScreen(call: CallState, callerName: String?, onAnswer: () -> Unit, onHan
                 Text("%02d:%02d".format(elapsed / 60, elapsed % 60), fontSize = 28.sp, color = MotoColors.Green)
             }
             Spacer(Modifier.size(36.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(72.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(48.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (call.managed && call.phase != CallPhase.RINGING) {
+                    ToggleAction(Icons.Rounded.MicOff, stringResource(R.string.call_mute), call.muted, onMute)
+                }
                 if (call.phase == CallPhase.RINGING) {
                     RoundAction(Icons.Rounded.CallEnd, MotoColors.Red, onHangUp)
                     RoundAction(Icons.Rounded.Call, MotoColors.Green, onAnswer)
                 } else {
                     RoundAction(Icons.Rounded.CallEnd, MotoColors.Red, onHangUp)
+                }
+                if (call.managed && call.phase != CallPhase.RINGING) {
+                    ToggleAction(Icons.AutoMirrored.Rounded.VolumeUp, stringResource(R.string.call_speaker), call.speaker, onSpeaker)
                 }
             }
         }
@@ -76,5 +91,18 @@ private fun RoundAction(icon: ImageVector, color: Color, onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, null, tint = Color.White, modifier = Modifier.size(56.dp))
+    }
+}
+
+@Composable
+private fun ToggleAction(icon: ImageVector, label: String, on: Boolean, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            modifier = Modifier.size(72.dp).clip(CircleShape).background(if (on) Color.White else Color(0x33FFFFFF)).clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, label, tint = if (on) Color.Black else Color.White, modifier = Modifier.size(34.dp))
+        }
+        Text(label, fontSize = 14.sp, color = MotoColors.Gray)
     }
 }
