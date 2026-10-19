@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,7 +56,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Dialpad
 import androidx.compose.ui.unit.sp
 import android.telecom.CallAudioState
@@ -90,6 +92,7 @@ fun CallScreen(
     val initial = name.firstOrNull()?.takeIf { it.isLetter() }?.uppercase()
     val ringing = call.phase == CallPhase.RINGING
     var keys by remember { mutableStateOf(false) }
+    var typed by remember { mutableStateOf("") }
 
     Box(
         modifier = Modifier
@@ -98,9 +101,9 @@ fun CallScreen(
             .clickable(enabled = false) {},
     ) {
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 28.dp, vertical = 10.dp)) {
-            RideStrip(speedKmh, nav)
+            RideStrip(speedKmh, nav, call)
             Row(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(28.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -135,8 +138,10 @@ fun CallScreen(
                             ActionPill(Icons.Rounded.CallEnd, stringResource(R.string.call_decline), MotoColors.Red, onHangUp)
                         }
                         keys -> {
-                            InCallKeypad(onDigit, modifier = Modifier.weight(1f))
-                            ToggleAction(Icons.Rounded.Dialpad, stringResource(R.string.call_keys_hide), true, { keys = false }, Modifier.fillMaxWidth())
+                            // What has been sent so far, so a long menu ("press 1, then 3") can be followed.
+                            Text(typed.takeLast(14), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, modifier = Modifier.height(36.dp))
+                            InCallKeypad({ typed += it; onDigit(it) }, modifier = Modifier.weight(1f))
+                            ToggleAction(Icons.Rounded.Dialpad, stringResource(R.string.call_keys_hide), false, { keys = false }, Modifier.fillMaxWidth())
                         }
                         else -> {
                             if (call.managed) {
@@ -157,7 +162,7 @@ fun CallScreen(
 
 /** Clock, speed and the next turn: what the dashboard shows, so a call does not blind the rider to the road. */
 @Composable
-private fun RideStrip(speedKmh: Int, nav: NavUi) {
+private fun RideStrip(speedKmh: Int, nav: NavUi, call: CallState) {
     val now by produceState(System.currentTimeMillis()) {
         while (true) {
             value = System.currentTimeMillis()
@@ -181,16 +186,30 @@ private fun RideStrip(speedKmh: Int, nav: NavUi) {
                 Text(formatDistance(nav.distToNextM), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 Text(maneuver.instruction, fontSize = 15.sp, color = Color(0xE6FFFFFF), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+        } else {
+            // No route to show: use the room for where the call sound is going.
+            Spacer(Modifier.weight(1f))
+            if (call.managed) routeLabel(call.route)?.let { Text(stringResource(it), fontSize = 17.sp, color = MotoColors.Gray) }
         }
     }
 }
 
 @Composable
+private fun routeLabel(route: Int): Int? = when (route) {
+    CallAudioState.ROUTE_SPEAKER -> R.string.call_speaker
+    CallAudioState.ROUTE_BLUETOOTH -> R.string.call_route_bluetooth
+    CallAudioState.ROUTE_WIRED_HEADSET -> R.string.call_route_headset
+    CallAudioState.ROUTE_EARPIECE -> R.string.call_route_phone
+    else -> null
+}
+
+@Composable
 private fun VolumeRow(onDown: () -> Unit, onUp: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        VolumeButton(Icons.AutoMirrored.Rounded.VolumeDown, onDown)
+        VolumeButton(Icons.Rounded.Remove, onDown)
+        Icon(Icons.AutoMirrored.Rounded.VolumeUp, null, tint = MotoColors.Gray, modifier = Modifier.size(26.dp))
         Text(stringResource(R.string.call_volume), fontSize = 17.sp, color = MotoColors.Gray)
-        VolumeButton(Icons.AutoMirrored.Rounded.VolumeUp, onUp)
+        VolumeButton(Icons.Rounded.Add, onUp)
     }
 }
 
