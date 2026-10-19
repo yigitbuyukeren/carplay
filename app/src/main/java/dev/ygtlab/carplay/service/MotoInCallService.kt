@@ -53,6 +53,56 @@ class MotoInCallService : InCallService() {
         InCallHub.service = null
         InCallHub.call = null
         InCallHub.state.value = null
+        CallBridge.callerName.value = null
+        super.onDestroy()
+    }
+
+    override fun onCallAdded(call: Call) {
+        call.registerCallback(callback)
+        publish()
+        val incoming = call.state == Call.STATE_RINGING
+        val open = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        if (incoming) {
+            // A full-screen notification is how the system lets a dialer come up over whatever is on screen.
+            val nm = getSystemService(NotificationManager::class.java)
+            nm.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.call_incoming), NotificationManager.IMPORTANCE_HIGH))
+            val pi = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            nm.notify(NOTIFICATION_ID, NotificationCompat.Builder(this, CHANNEL)
+                .setSmallIcon(android.R.drawable.sym_call_incoming)
+                .setContentTitle(getString(R.string.call_incoming))
+                .setContentText(CallBridge.callerName.value ?: getString(R.string.phone_unknown))
+                .setCategory(NotificationCompat.CATEGORY_CALL)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setOngoing(true)
+                .setFullScreenIntent(pi, true)
+                .build())
+        }
+        try { startActivity(open) } catch (_: RuntimeException) { }
+    }
+
+    override fun onCallRemoved(call: Call) {
+        call.unregisterCallback(callback)
+        getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
+        publish()
+    }
+
+    override fun onCallAudioStateChanged(audioState: CallAudioState) {
+        latestAudio = audioState
+        publish()
+    }
+
+
+    /** The call the rider cares about: one that is ringing first, otherwise the first live one. */
+    private fun publish() {
+        val live = calls.filter { it.state != Call.STATE_DISCONNECTED }
+        val main = live.firstOrNull { it.state == Call.STATE_RINGING } ?: live.firstOrNull()
+        InCallHub.call = main
+        if (main == null) {
+            InCallHub.state.value = CallState(CallPhase.IDLE, managed = true)
+            CallBridge.callerName.value = null
+            return
+        }
+        val d = main.details
         val number = d.handle?.schemeSpecificPart
         val saved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) d.contactDisplayName else lookupName(number)
         // Last resort before the bare number: the name the carrier sends with the call, when it sends one.
