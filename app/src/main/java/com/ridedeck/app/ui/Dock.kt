@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
@@ -76,26 +78,29 @@ fun Dock(
     BoxWithConstraints(modifier = Modifier.fillMaxHeight().width(96.dp).padding(vertical = 8.dp)) {
         // Tiles take whatever height the status block leaves, up to a glove-sized 76dp (never below the old 62dp).
         val gap = 8.dp
-        // The logo only goes in when the four 62dp tiles, their gaps, the status block and the logo all fit.
-        val logoSpace = LOGO_SIZE + gap
-        val logo = showLogo && maxHeight >= STATUS_HEIGHT + logoSpace + 62.dp * 4 + gap * 3
-        val tile = ((maxHeight - STATUS_HEIGHT - gap * 4 - (if (logo) logoSpace else 0.dp)) / 4).coerceIn(62.dp, 76.dp)
+        // The logo takes what the four 62dp tiles leave, up to 28dp; below 14dp it is left out.
+        val logoSize = (maxHeight - STATUS_HEIGHT - 62.dp * 4 - gap * 3 - LOGO_GAP).coerceAtMost(LOGO_SIZE)
+        val logo = showLogo && logoSize >= LOGO_MIN
+        val tile = ((maxHeight - STATUS_HEIGHT - gap * 4 - (if (logo) logoSize + LOGO_GAP else 0.dp)) / 4).coerceIn(62.dp, 76.dp)
         Column(
             modifier = Modifier.fillMaxHeight(),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(gap), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (logo) {
                     Image(
                         painterResource(R.drawable.ic_logo), null,
-                        modifier = Modifier.size(LOGO_SIZE).clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier.size(logoSize).clip(RoundedCornerShape(logoSize / 4)),
                     )
+                    Spacer(Modifier.height(LOGO_GAP))
                 }
-                DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation, active == DockTab.NAV)
-                DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic, active == DockTab.MUSIC)
-                DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone, active == DockTab.PHONE)
-                DockTile(Icons.Rounded.Apps, MotoColors.Gray, tile, onApps, active == DockTab.APPS)
+                Column(verticalArrangement = Arrangement.spacedBy(gap), horizontalAlignment = Alignment.CenterHorizontally) {
+                    DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation, active == DockTab.NAV)
+                    DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic, active == DockTab.MUSIC)
+                    DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone, active == DockTab.PHONE)
+                    DockTile(Icons.Rounded.Apps, MotoColors.Gray, tile, onApps, active == DockTab.APPS)
+                }
             }
             DockStatus(battery)
         }
@@ -105,6 +110,8 @@ fun Dock(
 /** Height of the clock, battery and temperature block under the tiles. */
 private val STATUS_HEIGHT = 78.dp
 private val LOGO_SIZE = 28.dp
+private val LOGO_MIN = 14.dp
+private val LOGO_GAP = 4.dp
 
 @Composable
 private fun DockTile(icon: ImageVector, color: Color, tile: Dp, onClick: () -> Unit, active: Boolean = false) {
