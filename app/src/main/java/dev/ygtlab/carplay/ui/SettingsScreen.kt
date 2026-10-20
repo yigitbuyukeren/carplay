@@ -221,12 +221,12 @@ fun SettingsScreen(
                             }
                             listOf(R.string.dash_slot_one to 0, R.string.dash_slot_two to 1).forEach { (title, index) ->
                                 item {
-                                    val order = listOf(DashCard.NAV, DashCard.MEDIA, DashCard.APPS, DashCard.NONE)
+                                    val order = listOf(DashCard.NAV, DashCard.MEDIA, DashCard.APPS, DashCard.WIDGET, DashCard.NONE)
                                     ChoiceRow(
                                         stringResource(title), stringResource(R.string.dash_slot_desc),
                                         listOf(
                                             stringResource(R.string.dash_nav), stringResource(R.string.dash_media),
-                                            stringResource(R.string.dash_apps), stringResource(R.string.dash_none),
+                                            stringResource(R.string.dash_apps), stringResource(R.string.dash_widget), stringResource(R.string.dash_none),
                                         ).mapIndexed { i, label -> label to (dashSlots.getOrNull(index) == order[i]) },
                                     ) { onDashSlot(index, order[it]) }
                                 }
@@ -327,19 +327,23 @@ fun ChoiceRow(title: String, description: String, choices: List<Pair<String, Boo
     ) {
         Text(title, fontSize = 20.sp, color = palette.text, fontWeight = FontWeight.SemiBold)
         Text(description, fontSize = 15.sp, color = palette.muted)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            choices.forEachIndexed { i, (label, selected) ->
-                // One line each: a long name such as "Motorcycle" must not wrap inside a third of the width.
-                Box(
-                    modifier = Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(32.dp))
-                        .background(if (selected) MotoColors.Blue else palette.cardHigh)
-                        .clickable { onSelect(i) }.padding(horizontal = 4.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false,
-                        color = if (selected) Color.White else palette.text,
-                    )
+        // At most three buttons per line, so every name stays on one line even on a narrow phone.
+        choices.withIndex().chunked(3).forEach { rowItems ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowItems.forEach { (i, choice) ->
+                    val (label, selected) = choice
+                    // One line each: a long name such as "Motorcycle" must not wrap inside a third of the width.
+                    Box(
+                        modifier = Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(32.dp))
+                            .background(if (selected) MotoColors.Blue else palette.cardHigh)
+                            .clickable { onSelect(i) }.padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false,
+                            color = if (selected) Color.White else palette.text,
+                        )
+                    }
                 }
             }
         }

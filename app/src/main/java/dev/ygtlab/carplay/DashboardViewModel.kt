@@ -179,6 +179,13 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         Prefs.setDashSlots(getApplication(), DashLayout.toString(next))
     }
 
+    val widgetId = MutableStateFlow(Prefs.widgetId(app))
+
+    fun setWidget(id: Int) {
+        widgetId.value = id
+        Prefs.setWidgetId(getApplication(), id)
+    }
+
     val pinnedApps = MutableStateFlow(PinnedApps.fromJson(Prefs.pinnedApps(app)))
 
     private fun updatePinned(list: List<String>) {

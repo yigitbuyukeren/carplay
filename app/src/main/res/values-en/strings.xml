@@ -266,4 +266,6 @@
     <string name="dash_apps">Apps</string>
     <string name="dash_none">Empty</string>
     <string name="apps_card_empty">Add apps</string>
+    <string name="dash_widget">Widget</string>
+    <string name="widget_pick">Pick a widget</string>
 </resources>

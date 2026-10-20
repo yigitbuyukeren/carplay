@@ -266,4 +266,6 @@
     <string name="dash_apps">Uygulama</string>
     <string name="dash_none">Boş</string>
     <string name="apps_card_empty">Uygulama ekle</string>
+    <string name="dash_widget">Widget</string>
+    <string name="widget_pick">Widget seç</string>
 </resources>

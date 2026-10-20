@@ -78,6 +78,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showPhone by remember { mutableStateOf(false) }
     var showApps by remember { mutableStateOf(false) }
     val dashSlots by vm.dashSlots.collectAsStateWithLifecycle()
+    val widgetId by vm.widgetId.collectAsStateWithLifecycle()
+    var showWidgetPicker by remember { mutableStateOf(false) }
+    if (dashSlots.contains(DashCard.WIDGET)) WidgetUpdates()
     val voiceUi by vm.voiceAssistant.ui.collectAsStateWithLifecycle()
     val voiceOpenMap by vm.voiceOpenMap.collectAsStateWithLifecycle()
     var pendingSearchFallback by remember { mutableStateOf(false) }
@@ -282,6 +285,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             DashCard.NAV -> navCard(mod)
                             DashCard.MEDIA -> mediaCard(mod)
                             DashCard.APPS -> appsCard(mod)
+                            DashCard.WIDGET -> WidgetCard(widgetId, canEdit = gps.speedKmh < PHONE_LOCK_KMH, onPick = { showWidgetPicker = true }, modifier = mod)
                             DashCard.NONE -> {}
                         }
                     }
@@ -410,6 +414,14 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             onTest = { vm.sos.trigger(SosReason.TEST) },
                         )
                     },
+                )
+            }
+
+            if (showWidgetPicker) {
+                WidgetPicker(
+                    currentId = widgetId,
+                    onChosen = { vm.setWidget(it); showWidgetPicker = false },
+                    onClose = { showWidgetPicker = false },
                 )
             }
 

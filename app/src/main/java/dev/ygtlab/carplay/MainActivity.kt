@@ -73,6 +73,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == dev.ygtlab.carplay.data.WidgetHost.REQUEST_CONFIGURE) {
+            dev.ygtlab.carplay.data.WidgetBridge.onConfigured?.invoke(resultCode == android.app.Activity.RESULT_OK)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         OverlayService.appInForeground = true
