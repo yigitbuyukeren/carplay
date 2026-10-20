@@ -8,4 +8,7 @@ Bekleyen maddeler. Uygulama, kullanıcı "planı yap" diyene kadar başlamaz; ya
 2. Kartlar dikeyde ortalanmamış, üste yapışık; altta ekranın yaklaşık beşte biri boş kalıyor. İçerik dikeyde ortalanır.
 3. Kart açıklamalarındaki gri metin zeminle düşük kontrastlı, güneş altında zor okunur. Metin rengi `textSecondary` yerine daha açık bir tona çekilir (kontrast en az 4.5:1).
 
+4. Araç kartına dokununca seçim hemen uygulanmaz: kart seçili olur (vurgu), altta "Devam et" düğmesi çıkar; seçim ancak ona basınca kaydedilir. Yanlış dokunuşta başka karta geçilebilir. Düğme eldivene uygun büyüklükte olur.
+5. Araç seçimi bittiğinde Ayarlar > Kurulum artık otomatik açılmaz (`DashboardScreen.kt` içindeki `showSettings = !locationGranted`). Yerine kısa bir izin ekranı gelir: konum, bildirim erişimi, telefon, SMS satırları ve her biri için "İzin ver"; altta "Sonra" ile atlanır ve dashboard hemen görünür. Atlanan izinler Ayarlar > Kurulum'da durur.
+
 Telefonda ve kaskla denenmesi gerekenler (kod hazır, doğrulama kullanıcıda; ayrıntı `docs/STATUS.md`): sesle komut tanıma kalitesi, kask mikrofonu, kaskın sesli komut düğmesi ve çift basış tetikleyicisi, "Hey RideDeck", `playFromSearch` ile ada göre çalma, bildirimden mesaja cevap, başka rota ve yolda durak.
