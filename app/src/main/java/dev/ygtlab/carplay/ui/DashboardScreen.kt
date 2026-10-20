@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.util.Units
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -315,7 +316,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
                     )
                     weatherOn && w != null && windy && !windDismissed -> AlertStrip(
-                        text = stringResource(R.string.wind_banner_fmt, w.windKmh),
+                        text = stringResource(if (Units.miles) R.string.wind_banner_fmt_mph else R.string.wind_banner_fmt, Units.speed(w.windKmh)),
                         accent = MotoColors.Orange,
                         onDismiss = { windDismissed = true },
                         modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
@@ -333,6 +334,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     ToggleItem(stringResource(R.string.rain_voice_title), stringResource(R.string.rain_voice_desc), rainVoice, vm::setRainVoice),
                     ToggleItem(stringResource(R.string.thermal_title), stringResource(R.string.thermal_desc), thermalOn, vm::setThermalEnabled),
                     ToggleItem(stringResource(R.string.speed_limit_title), stringResource(R.string.speed_limit_desc), speedLimitOn, vm::setSpeedLimitEnabled),
+                    ToggleItem(stringResource(R.string.units_title), stringResource(R.string.units_desc), Units.miles) { Units.set(context, it) },
                     ToggleItem(stringResource(R.string.record_trips_title), stringResource(R.string.record_trips_desc), recordTrips, vm::setRecordTrips),
                     ToggleItem(stringResource(R.string.overlay_title), stringResource(R.string.overlay_desc), overlayEnabled) { enabled ->
                         overlayEnabled = toggleOverlay(context, enabled)

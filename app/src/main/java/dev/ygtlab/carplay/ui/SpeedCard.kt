@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.util.Units
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
@@ -76,12 +77,12 @@ fun SpeedCard(
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                gps.speedKmh.toString(),
+                Units.speed(gps.speedKmh).toString(),
                 fontSize = cappedSp(92f),
                 fontWeight = FontWeight.Bold,
                 color = if (SpeedLimitMath.isOver(gps.speedKmh, limit)) MotoColors.Red else LocalMotoPalette.current.text,
             )
-            Text(stringResource(R.string.speed_unit), fontSize = cappedSp(22f), color = LocalMotoPalette.current.muted, fontWeight = FontWeight.Medium)
+            Text(stringResource(if (Units.miles) R.string.speed_unit_mph else R.string.speed_unit), fontSize = cappedSp(22f), color = LocalMotoPalette.current.muted, fontWeight = FontWeight.Medium)
             if (!gps.hasFix) {
                 Text(stringResource(R.string.gps_waiting), fontSize = cappedSp(16f), color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
             } else {

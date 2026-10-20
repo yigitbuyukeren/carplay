@@ -41,7 +41,9 @@ import dev.ygtlab.carplay.service.CallBridge
 import dev.ygtlab.carplay.service.OverlayService
 import dev.ygtlab.carplay.service.IncomingMessage
 import dev.ygtlab.carplay.service.MessageBridge
+import dev.ygtlab.carplay.data.RouteRepository
 import dev.ygtlab.carplay.util.Prefs
+import dev.ygtlab.carplay.util.Units
 import dev.ygtlab.carplay.util.simplifyMessage
 import kotlinx.coroutines.flow.Flow
 import dev.ygtlab.carplay.data.NavUi
@@ -95,6 +97,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     val nav = NavigationController(
         app::getString, viewModelScope, location.state, Voice(app),
+        repo = RouteRepository(miles = { Units.miles }),
         initialOptions = Prefs.routeOptions(app, profileNow),
         onOptionsChanged = { Prefs.setRouteOptions(app, it) },
     )

@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.util.Units
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -195,8 +196,8 @@ private fun RideStrip(speedKmh: Int, nav: NavUi, call: CallState) {
     ) {
         Text(SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now)), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("$speedKmh", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            Text(stringResource(R.string.speed_unit), fontSize = 15.sp, color = MotoColors.Gray, modifier = Modifier.padding(bottom = 4.dp))
+            Text("${Units.speed(speedKmh)}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(stringResource(if (Units.miles) R.string.speed_unit_mph else R.string.speed_unit), fontSize = 15.sp, color = MotoColors.Gray, modifier = Modifier.padding(bottom = 4.dp))
         }
         if (maneuver != null) {
             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

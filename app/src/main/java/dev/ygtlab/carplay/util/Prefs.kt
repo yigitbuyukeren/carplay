@@ -27,6 +27,14 @@ object Prefs {
     private const val KEY_THERMAL = "thermal_guard"
     private const val KEY_WEATHER = "weather_enabled"
     private const val KEY_RAIN_VOICE = "rain_voice"
+    private const val KEY_MILES = "units_miles"
+
+    fun milesUnit(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_MILES, false)
+
+    fun setMilesUnit(context: Context, miles: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_MILES, miles).apply()
+    }
 
     fun overlayEnabled(context: Context): Boolean =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_OVERLAY, false)

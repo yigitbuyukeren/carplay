@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.util.Units
 import dev.ygtlab.carplay.data.SpeedLimitMath
 import dev.ygtlab.carplay.data.Geo
 import dev.ygtlab.carplay.data.PlaceKind
@@ -778,15 +779,12 @@ private fun SpeedChip(speedKmh: Int, over: Boolean) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(speedKmh.toString(), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = if (over) MotoColors.Red else Color.White)
-        Text(stringResource(R.string.speed_unit), fontSize = 11.sp, color = MotoColors.Gray)
+        Text(Units.speed(speedKmh).toString(), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = if (over) MotoColors.Red else Color.White)
+        Text(stringResource(if (Units.miles) R.string.speed_unit_mph else R.string.speed_unit), fontSize = 11.sp, color = MotoColors.Gray)
     }
 }
 
-fun formatDistance(meters: Int): String = when {
-    meters < 1000 -> "${(meters / 10 * 10).coerceAtLeast(10)} m"
-    else -> "%.1f km".format(Locale.US, meters / 1000.0)
-}
+fun formatDistance(meters: Int): String = Units.distance(meters)
 
 fun formatDuration(context: Context, seconds: Int): String {
     val minutes = (seconds + 30) / 60

@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.util.Units
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -28,8 +29,8 @@ fun SpeedLimitSign(limit: Int, modifier: Modifier = Modifier, size: Dp = 72.dp) 
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            limit.toString(),
-            fontSize = (size.value * if (limit >= 100) 0.30f else 0.38f).sp,
+            Units.speed(limit).toString(),
+            fontSize = (size.value * if (Units.speed(limit) >= 100) 0.30f else 0.38f).sp,
             fontWeight = FontWeight.Bold,
             color = Color.Black,
         )

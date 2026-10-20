@@ -92,23 +92,29 @@ object PlaceNames {
     }
 }
 
+private const val METRES_PER_MILE = 1609.344
+
 /** Valhalla (OSM) routing for the chosen vehicle and Nominatim geocoding, both public no-key services. */
-class RouteRepository : Routing {
+class RouteRepository(
+    /** Spoken and written route texts follow the rider's unit choice; lengths are converted back to metres. */
+    private val miles: () -> Boolean = { false },
+) : Routing {
     override suspend fun route(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<Route> = withContext(Dispatchers.IO) {
         safely("route") {
+            val useMiles = miles()
             val body = JSONObject()
                 .put("locations", JSONArray()
                     .put(JSONObject().put("lat", from.lat).put("lon", from.lon))
                     .put(JSONObject().put("lat", to.lat).put("lon", to.lon)))
                 .put("costing", options.profile.config.costing)
-                .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", "kilometers"))
+                .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", if (useMiles) "miles" else "kilometers"))
             options.costingOptions()?.let { body.put("costing_options", it) }
-            parseTrip(Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString()))
+            parseTrip(Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString()), if (useMiles) METRES_PER_MILE else 1000.0)
         }
     }
 
     /** Parses a Valhalla `route` or `trace_route` reply. */
-    private fun parseTrip(reply: String): Route {
+    private fun parseTrip(reply: String, metresPerUnit: Double): Route {
         val json = JSONObject(reply)
         val trip = json.getJSONObject("trip")
         val leg = trip.getJSONArray("legs").getJSONObject(0)
@@ -120,7 +126,7 @@ class RouteRepository : Routing {
                     instruction = InstructionText.clean(m.optString("instruction")),
                     alert = InstructionText.clean(m.optString("verbal_transition_alert_instruction")),
                     verbal = InstructionText.clean(m.optString("verbal_pre_transition_instruction", m.optString("instruction"))),
-                    lengthM = m.getDouble("length") * 1000,
+                    lengthM = m.getDouble("length") * metresPerUnit,
                     beginIndex = m.getInt("begin_shape_index"),
                 )
             }
@@ -129,7 +135,7 @@ class RouteRepository : Routing {
         return Route(
             shape = Geo.decodePolyline(leg.getString("shape")),
             maneuvers = maneuvers,
-            distanceM = summary.getDouble("length") * 1000,
+            distanceM = summary.getDouble("length") * metresPerUnit,
             durationS = summary.getDouble("time"),
         )
     }

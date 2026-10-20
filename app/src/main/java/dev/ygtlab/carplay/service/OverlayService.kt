@@ -25,7 +25,9 @@ import android.widget.TextView
 import dev.ygtlab.carplay.MainActivity
 import dev.ygtlab.carplay.R
 import dev.ygtlab.carplay.data.LocationRepository
+import dev.ygtlab.carplay.util.Prefs
 import dev.ygtlab.carplay.util.SpeedUtil
+import dev.ygtlab.carplay.util.UnitMath
 import dev.ygtlab.carplay.util.hasPermission
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -46,7 +48,7 @@ class OverlayService : Service() {
             // MotoDash already shows the speed itself: the strip is only for when another app is on screen.
             bar?.visibility = if (appInForeground) View.GONE else View.VISIBLE
             val fresh = System.currentTimeMillis() - loc.fixAtMs < 5000
-            speedView.text = getString(R.string.overlay_speed_fmt, if (fresh) loc.speedKmh else 0)
+            speedView.text = getString(R.string.overlay_speed_fmt, if (fresh) UnitMath.speed(loc.speedKmh, Prefs.milesUnit(this@OverlayService)) else 0)
             clockView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
             handler.postDelayed(this, 1000)
         }

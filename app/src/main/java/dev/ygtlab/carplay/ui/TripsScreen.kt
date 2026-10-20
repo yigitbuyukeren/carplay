@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.util.Units
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -151,8 +152,8 @@ private fun TripDetail(trip: Trip, onDelete: () -> Unit, modifier: Modifier = Mo
             Stat(R.string.stat_duration, formatDuration(context, (trip.durationMs / 1000).toInt()), Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            Stat(R.string.stat_avg, "${trip.stats.avgKmh} ${stringResource(R.string.speed_unit)}", Modifier.weight(1f))
-            Stat(R.string.stat_max, "${trip.stats.maxKmh} ${stringResource(R.string.speed_unit)}", Modifier.weight(1f))
+            Stat(R.string.stat_avg, "${Units.speed(trip.stats.avgKmh)} ${stringResource(if (Units.miles) R.string.speed_unit_mph else R.string.speed_unit)}", Modifier.weight(1f))
+            Stat(R.string.stat_max, "${Units.speed(trip.stats.maxKmh)} ${stringResource(if (Units.miles) R.string.speed_unit_mph else R.string.speed_unit)}", Modifier.weight(1f))
         }
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
