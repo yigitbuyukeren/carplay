@@ -1,11 +1,46 @@
-# MotoDash
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="MotoDash ana ekran" width="100%">
+</p>
 
-[![CI](https://github.com/yigitbuyukeren/carplay/actions/workflows/ci.yml/badge.svg)](https://github.com/yigitbuyukeren/carplay/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+<h1 align="center">MotoDash</h1>
 
-Motosiklet, araba ve bisiklet için CarPlay tarzı Android sürüş paneli (launcher). Telefonu gidona veya torpido üstüne takınca hız, harita, müzik ve telefon tek ekranda toplanır. İlk açılışta aracını seçersin (Ayarlar'dan değişir); rota, uyarılar ve düzen ona göre ayarlanır.
+<p align="center">
+  <b>Telefonunu gidona tak, CarPlay tarzı sürüş paneline çevir.</b><br>
+  <sub>Motosiklet, araba ve bisiklet için açık kaynak Android launcher · hesap yok, anahtar yok, sunucu yok</sub>
+</p>
 
-![Dashboard](docs/screenshots/dashboard.png)
+<p align="center">
+  <a href="https://github.com/yigitbuyukeren/carplay/releases/latest"><img src="https://img.shields.io/github/v/release/yigitbuyukeren/carplay?style=for-the-badge&color=7F52FF" alt="Sürüm"></a>
+  <a href="https://github.com/yigitbuyukeren/carplay/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/yigitbuyukeren/carplay/ci.yml?style=for-the-badge&label=CI" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-Apache%202.0-blue?style=for-the-badge" alt="Lisans"></a>
+  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android 8.0+">
+  <img src="https://img.shields.io/badge/Kotlin-Jetpack_Compose-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin, Jetpack Compose">
+</p>
+
+<p align="center">
+  <a href="https://github.com/yigitbuyukeren/carplay/releases/latest"><b>⬇️ APK indir</b></a> ·
+  <a href="#özellikler">Özellikler</a> ·
+  <a href="#derleme">Derleme</a> ·
+  <a href="CONTRIBUTING.md">Katkı</a> ·
+  <a href="#-in-english">English</a>
+</p>
+
+---
+
+Telefonu gidona veya torpido üstüne takınca **hız, harita, müzik ve telefon tek ekranda** toplanır. İlk açılışta aracını seçersin (Ayarlar'dan değişir); rota, uyarılar ve düzen ona göre ayarlanır. Tüm arayüz eldivenle kullanılacak büyüklükte, sürerken yazı girişi yoktur.
+
+## Öne çıkanlar
+
+| | |
+|---|---|
+| 🧭 **Sesli navigasyon** | OpenStreetMap haritası, motosiklet / araba / bisiklet rotası, ara durak, benzinlik ve şarj |
+| 🎙️ **Türkçe sesli asistan** | "Eve git", "Ali'yi ara", "son mesajı oku"; kask mikrofonu desteği |
+| 🆘 **SOS ve kaza algılama** | Sert darbe ve hareketsizlikte geri sayım, sonra konum linkli tek SMS |
+| 🎵 **Müzik ve telefon** | Kapak kaydırma, uygulama içi rehber, tuş takımı ve arama ekranı |
+| 🌦️ **Uyarılar** | Yağmur, buzlanma ve rüzgâr uyarısı; telefon ısınınca ekran kısılır |
+| 🔒 **Gizlilik** | Veriler telefonda kalır; yalnızca ücretsiz genel harita servislerine sorgu gider |
+
+## Ekran görüntüleri
 
 | İlk açılışta araç seçimi | Rota |
 |---|---|
@@ -23,20 +58,37 @@ Bisiklet profilinde telefon dik de durabilir:
 
 <img src="docs/screenshots/bicycle-portrait.png" alt="Dik bisiklet ana ekranı" width="240">
 
+## Kurulum
+1. [Son sürümün](https://github.com/yigitbuyukeren/carplay/releases/latest) APK'sını indir ve kur (bilinmeyen kaynaklardan kuruluma izin ver).
+2. İlk açılışta aracını seç; istersen MotoDash'i ana ekran (HOME) uygulaması yap.
+3. Müzik ve mesaj okuma için Ayarlar > Kurulum'dan bildirim erişimini ver.
+
 ## Özellikler
-**Araç profilleri**
+Ayrıntılar için başlıklara dokun.
+
+<details>
+<summary><b>Araç profilleri</b></summary>
+
 - İlk açılışta Motosiklet / Araba / Bisiklet seçimi; Ayarlar > Kurulum'dan değişir, kendi ayarların korunur
 - Rota araca göre: Valhalla `motorcycle`, `auto` veya `bicycle`; bisiklette yokuşsuz, düz zemin ve bisiklet tipi (yol / şehir / dağ)
 - ⛽ düğmesi: motosiklette benzinlik, arabada benzinlik ve şarj istasyonu, bisiklette tamir noktası, bisiklet dükkânı ve içme suyu
 - Kaza algılama eşikleri ve hız göstergesi ölçeği araca göre; bisiklette rüzgâr uyarısı ve dik ekran desteği (ana ekran, müzik, telefon, ayarlar dikey de çalışır)
 
-**Gösterge ve sürüş**
+</details>
+
+<details>
+<summary><b>Gösterge ve sürüş</b></summary>
+
 - GPS hız göstergesi, saat, pil ve telefon sıcaklığı; gündüz/gece teması (ortam ışığına göre otomatik)
 - Yolculuk kaydı: otomatik, geçmiş ekranı
 - Hız kartında GPS durumu; büyük, eldivenle basılan tuşlar; ekranlar arasında kısa geçiş animasyonları (ısı koruması açıkken kapanır)
 - Türkçe ve İngilizce arayüz
 
-**Navigasyon**
+</details>
+
+<details>
+<summary><b>Navigasyon</b></summary>
+
 - Gömülü harita ve sesli yönlendirme: MapLibre + OpenStreetMap (OpenFreeMap), Nominatim arama, Valhalla araç rotası, rota dışına çıkınca yeniden hesaplama
 - Rota seçenekleri: otoyolsuz ve ücretsiz yol (bisiklette yokuşsuz ve düz zemin), seçim hatırlanır
 - Kayıtlı yerler: Ev, İş ve favoriler; büyük karolarla tek dokunuşla rota, dashboard'da "Eve git"
@@ -47,7 +99,11 @@ Bisiklet profilinde telefon dik de durabilir:
 - Navigasyon sürerken ana ekranda canlı mini harita, sıradaki dönüş, kalan mesafe ve varış saati
 - Arama kutusu için uygulamanın kendi Türkçe klavyesi
 
-**Uygulamalar, kartlar ve ses**
+</details>
+
+<details>
+<summary><b>Uygulamalar, kartlar ve ses</b></summary>
+
 - Uygulama rafı (dock'taki son karo): mesajlaşma, video veya istediğin uygulamayı sabitle, büyük karolarla tek dokunuşla başlat; ekleme ve sıralama sürerken kilitli; Ayarlar rafın sağ üstündeki dişli düğmesinden açılır
 - Ana ekran kartları ayarlanır (Ayarlar > Sürüş): harita, müzik, uygulama kartı (sabitlediğin uygulamalar tek sırada) veya boş
 - Rota kartında "Navigasyon uygulamasında aç" (Google Haritalar, Waze, Yandex Navi derin bağlantıları, yalnızca dururken); rota hâlâ MotoDash'te hesaplanır, canlı trafik isteyen bu uygulamalara geçer
@@ -56,17 +112,27 @@ Bisiklet profilinde telefon dik de durabilir:
 - Mil ve mph ayarı (Ayarlar > Sürüş): hız, mesafe, hız limiti ve rota sesleri
 - Mesaj uygulamalarını tek tek sessize alma (Ayarlar'da görülen uygulamalar için anahtar)
 
-**Güvenlik**
+</details>
+
+<details>
+<summary><b>Güvenlik</b></summary>
+
 - Hava durumu: sıcaklık, 1 saat içinde yağmur ve buzlanma uyarısı, bisiklette sert rüzgâr (şerit + sesli)
 - Isınma koruması: telefon 42°C'yi aşınca ekran kısılır ve harita yavaşlar, araç durunca ekran kararır
 - SOS (varsayılan kapalı): otomatik kaza algılama (sert darbe + hareketsizlik; iki tekerlekte telefonun yönü de değişmiş olmalı, çukur ve kırmızı ışık alarm vermez) veya uzun basmalı düğme; geri sayımdan sonra en fazla 3 kişiye konum linkli **tek** SMS, arama yok
 
-**Telefon ve medya**
+</details>
+
+<details>
+<summary><b>Telefon ve medya</b></summary>
+
 - Uygulama içi telefon: son aramalar, tüm rehber ve tuş takımı (eşleşen kişi önerisi, büyük silme tuşu, `0` uzun basınca `+`; yatay telefonda listede 4 satır görünür); sürerken tuş takımı kilitli
 - MotoDash'i varsayılan telefon uygulaması yaparsan arama ekranı da uygulamanın içinde: sessiz, ses yolu (telefon, hoparlör, Bluetooth), ses seviyesi, görüşme tuş takımı
 - Müzik: yalnızca müzik uygulamalarının oturumu, ilerleme çubuğu, kapağı kaydırarak şarkı geçme, ses tuşları; hiçbir şey çalmıyorken Oynat son müziği başlatır (bildirim erişimi gerekir)
 - Mesajları sesli okuma (yalnızca MotoDash ekrandayken)
 - Diğer uygulamaların üstünde hız/saat şeridi; ana ekran (HOME) launcher olarak ayarlanabilir
+
+</details>
 
 ## Derleme
 ```bash
@@ -101,3 +167,6 @@ Issue ve PR'lar açık. Başlamak için [CONTRIBUTING.md](CONTRIBUTING.md) dosya
 
 ## Lisans
 [Apache 2.0](LICENSE)
+
+## 🇬🇧 In English
+MotoDash is a free, open-source Android app (Kotlin, Jetpack Compose, minSdk 26) that turns a phone into a CarPlay-style landscape dashboard for motorcycles, cars and bicycles: GPS speedometer, voice-guided OpenStreetMap navigation, fuel/charging/repair stops, weather alerts, music, an in-app phone, a Turkish voice assistant and crash-detecting SOS. No accounts, no API keys, no servers: it only talks to free public map services. The UI has Turkish and English; voice commands are Turkish only. Build with `./gradlew assembleDebug` (JDK 17). Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md).
