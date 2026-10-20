@@ -30,7 +30,6 @@ object Prefs {
     private const val KEY_MILES = "units_miles"
     private const val KEY_PINNED_APPS = "pinned_apps"
     private const val KEY_DASH_SLOTS = "dash_slots"
-    private const val KEY_WIDGET_ID = "dash_widget_id"
     private const val KEY_MESSAGE_APPS_SEEN = "message_apps_seen"
     private const val KEY_MESSAGE_APPS_MUTED = "message_apps_muted"
 
@@ -62,13 +61,6 @@ object Prefs {
 
     fun setDashSlots(context: Context, value: String) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_DASH_SLOTS, value).apply()
-    }
-
-    fun widgetId(context: Context): Int =
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getInt(KEY_WIDGET_ID, -1)
-
-    fun setWidgetId(context: Context, id: Int) {
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putInt(KEY_WIDGET_ID, id).apply()
     }
 
     fun milesUnit(context: Context): Boolean =

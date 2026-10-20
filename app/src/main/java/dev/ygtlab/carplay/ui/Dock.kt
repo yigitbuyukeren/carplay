@@ -1,5 +1,9 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.border
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +35,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.ygtlab.carplay.data.BatteryState
 
+/** Which dock tile belongs to the screen that is open; it gets a light ring. */
+enum class DockTab { NONE, NAV, MUSIC, PHONE, APPS }
+
 @Composable
 fun Dock(
     battery: BatteryState,
@@ -38,6 +45,7 @@ fun Dock(
     onMusic: () -> Unit,
     onPhone: () -> Unit,
     onApps: () -> Unit,
+    active: DockTab = DockTab.NONE,
     /** A bar along the bottom for an upright phone; the default is the column down the left side. */
     horizontal: Boolean = false,
 ) {
@@ -51,10 +59,10 @@ fun Dock(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation)
-                DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic)
-                DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone)
-                DockTile(Icons.Rounded.Apps, MotoColors.Gray, tile, onApps)
+                DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation, active == DockTab.NAV)
+                DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic, active == DockTab.MUSIC)
+                DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone, active == DockTab.PHONE)
+                DockTile(Icons.Rounded.Apps, MotoColors.Gray, tile, onApps, active == DockTab.APPS)
                 Box(Modifier.width(statusWidth), contentAlignment = Alignment.Center) { DockStatus(battery) }
             }
         }
@@ -70,10 +78,10 @@ fun Dock(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(gap), horizontalAlignment = Alignment.CenterHorizontally) {
-                DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation)
-                DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic)
-                DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone)
-                DockTile(Icons.Rounded.Apps, MotoColors.Gray, tile, onApps)
+                DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation, active == DockTab.NAV)
+                DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic, active == DockTab.MUSIC)
+                DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone, active == DockTab.PHONE)
+                DockTile(Icons.Rounded.Apps, MotoColors.Gray, tile, onApps, active == DockTab.APPS)
             }
             DockStatus(battery)
         }
@@ -84,12 +92,14 @@ fun Dock(
 private val STATUS_HEIGHT = 78.dp
 
 @Composable
-private fun DockTile(icon: ImageVector, color: Color, tile: Dp, onClick: () -> Unit) {
+private fun DockTile(icon: ImageVector, color: Color, tile: Dp, onClick: () -> Unit, active: Boolean = false) {
+    val ring by animateColorAsState(if (active) Color.White else Color.Transparent, tween(150), label = "dockRing")
     Box(
         modifier = Modifier
             .pressClickable(onClick = onClick)
             .size(tile)
             .clip(RoundedCornerShape(18.dp))
+            .border(3.dp, ring, RoundedCornerShape(18.dp))
             .background(Brush.verticalGradient(listOf(lerp(color, Color.White, 0.28f), color))),
         contentAlignment = Alignment.Center,
     ) {

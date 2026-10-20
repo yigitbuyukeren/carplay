@@ -1,5 +1,13 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -62,23 +70,58 @@ import kotlinx.coroutines.launch
 
 private const val HOLD_MS = 1500L
 
-/** Red 68dp button that needs a 1.5 second hold, with a ring that fills while held. */
+/** How the SOS button reacts to a hold: the scale and the halo follow the 0..1 progress of the hold. */
+object SosHoldMath {
+    /** 1.0 at rest, a small pop (1.06) the moment it is pressed, growing to 1.20 as the hold completes. */
+    fun scale(progress: Float, pressed: Boolean): Float =
+        if (!pressed) 1f else 1.06f + 0.14f * progress.coerceIn(0f, 1f)
+
+    /** Strength (0..1) of the red halo around the button. */
+    fun halo(progress: Float): Float = progress.coerceIn(0f, 1f)
+
+    /** Which of the two mid-hold taps (a third and two thirds of the way) have been crossed. */
+    fun ticks(progress: Float): Int = when {
+        progress >= 2f / 3f -> 2
+        progress >= 1f / 3f -> 1
+        else -> 0
+    }
+}
+
+/** Red 68dp button that needs a 1.5 second hold; it grows, glows and buzzes while held, with a ring that fills. */
 @Composable
 fun SosButton(onTrigger: () -> Unit, modifier: Modifier = Modifier) {
     var progress by remember { mutableFloatStateOf(0f) }
+    var pressed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    val scale by animateFloatAsState(
+        SosHoldMath.scale(progress, pressed),
+        spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "sosScale",
+    )
     Box(
         modifier = modifier
             .size(68.dp)
-            .clip(CircleShape)
-            .background(MotoColors.Red)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .drawBehind {
+                val halo = SosHoldMath.halo(progress)
+                if (halo > 0f) drawCircle(MotoColors.Red.copy(alpha = 0.35f * halo), radius = size.minDimension / 2f + 6.dp.toPx() * halo)
+            }
             .pointerInput(Unit) {
                 detectTapGestures(onPress = {
+                    pressed = true
                     val hold = scope.launch {
                         val startedAt = System.currentTimeMillis()
+                        var ticks = 0
                         while (true) {
                             progress = ((System.currentTimeMillis() - startedAt) / HOLD_MS.toFloat()).coerceAtMost(1f)
+                            val crossed = SosHoldMath.ticks(progress)
+                            if (crossed > ticks) {
+                                ticks = crossed
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
                             if (progress >= 1f) {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onTrigger()
                                 break
                             }
@@ -87,11 +130,13 @@ fun SosButton(onTrigger: () -> Unit, modifier: Modifier = Modifier) {
                     }
                     tryAwaitRelease()
                     hold.cancel()
+                    pressed = false
                     progress = 0f
                 })
             },
         contentAlignment = Alignment.Center,
     ) {
+        Box(Modifier.fillMaxSize().clip(CircleShape).background(lerp(MotoColors.Red, Color(0xFF8E0B0B), SosHoldMath.halo(progress) * 0.6f)))
         Canvas(Modifier.fillMaxSize().padding(3.dp)) {
             if (progress > 0f) {
                 drawArc(Color.White, -90f, 360f * progress, false, Offset.Zero, Size(size.width, size.height), style = Stroke(4.dp.toPx(), cap = StrokeCap.Round))

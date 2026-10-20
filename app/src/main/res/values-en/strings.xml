@@ -184,11 +184,9 @@
     <string name="call_volume">Volume</string>
     <string name="play">Play</string>
     <string name="phone_enter_number">Enter a number</string>
-    <string name="phone_paste">Paste</string>
     <string name="gps_good">GPS good</string>
     <string name="gps_fair">GPS fair</string>
     <string name="gps_poor">GPS weak</string>
-    <string name="altitude_fmt">▲ %1$d m</string>
 
     <!-- Vehicle profile -->
     <string name="vehicle_title">What are you riding?</string>
@@ -266,6 +264,4 @@
     <string name="dash_apps">Apps</string>
     <string name="dash_none">Empty</string>
     <string name="apps_card_empty">Add apps</string>
-    <string name="dash_widget">Widget</string>
-    <string name="widget_pick">Pick a widget</string>
 </resources>

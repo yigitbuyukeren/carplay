@@ -94,7 +94,7 @@ fun SpeedCard(
     }
 }
 
-/** Altitude and how good the GPS fix is: the accuracy radius turned into a word and a colour. */
+/** How good the GPS fix is: the accuracy radius turned into a word and a colour. */
 @Composable
 private fun GpsInfo(gps: GpsUi, modifier: Modifier = Modifier) {
     val muted = LocalMotoPalette.current.muted
@@ -105,7 +105,6 @@ private fun GpsInfo(gps: GpsUi, modifier: Modifier = Modifier) {
         else -> R.string.gps_poor to MotoColors.Red
     }
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        gps.altitudeM?.let { Text(stringResource(R.string.altitude_fmt, it), fontSize = cappedSp(17f), maxLines = 1, fontWeight = FontWeight.Medium, color = muted) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(Modifier.size(10.dp).clip(CircleShape).background(color))
             Text(stringResource(label), fontSize = cappedSp(17f), fontWeight = FontWeight.Medium, color = muted, maxLines = 1)

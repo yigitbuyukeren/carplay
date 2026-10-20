@@ -25,6 +25,12 @@ class DashLayoutTest {
     }
 
     @Test
+    fun anOldWidgetSettingLeavesThatSlotEmpty() {
+        assertEquals(listOf(DashCard.NONE, DashCard.NAV), DashLayout.fromString("WIDGET,NAV"))
+        assertEquals(listOf(DashCard.MEDIA, DashCard.NONE), DashLayout.fromString("MEDIA,WIDGET"))
+    }
+
+    @Test
     fun settingACardAlreadyInTheOtherSlotSwaps() {
         assertEquals(listOf(DashCard.MEDIA, DashCard.NAV), DashLayout.set(listOf(DashCard.NAV, DashCard.MEDIA), 0, DashCard.MEDIA))
         assertEquals(listOf(DashCard.NAV, DashCard.APPS), DashLayout.set(listOf(DashCard.NAV, DashCard.MEDIA), 1, DashCard.APPS))

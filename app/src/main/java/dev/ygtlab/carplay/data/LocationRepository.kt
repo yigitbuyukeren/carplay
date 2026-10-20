@@ -19,8 +19,7 @@ data class LocationState(
     val lon: Double = 0.0,
     /** Heading in degrees, or null while standing still / unknown. */
     val bearing: Float? = null,
-    /** Height above sea level in metres and the horizontal accuracy radius, when the fix has them. */
-    val altitudeM: Int? = null,
+    /** Horizontal accuracy radius in metres, when the fix has it. */
     val accuracyM: Int? = null,
 )
 
@@ -42,7 +41,6 @@ class LocationRepository(private val context: Context) {
                 lat = location.latitude,
                 lon = location.longitude,
                 bearing = if (location.hasBearing() && kmh > 0) location.bearing else _state.value.bearing,
-                altitudeM = if (location.hasAltitude()) Math.round(location.altitude).toInt() else null,
                 accuracyM = if (location.hasAccuracy()) Math.round(location.accuracy) else null,
             )
         }

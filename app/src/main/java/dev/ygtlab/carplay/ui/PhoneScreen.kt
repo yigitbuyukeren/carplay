@@ -7,7 +7,6 @@ import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.composed
-import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -16,7 +15,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.core.animateFloatAsState
-import android.content.ClipboardManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
@@ -221,9 +219,14 @@ private fun ContactsList(contacts: List<Contact>, onDial: (String, String?) -> U
 
 private const val STARRED = "starred"
 
-/** A list row is [ROW_HEIGHT] tall with [ROW_GAP] between rows. */
+/** A list row is at most [ROW_HEIGHT] tall (never under [ROW_MIN]) with [ROW_GAP] between rows. */
 private val ROW_HEIGHT = 80.dp
+private val ROW_MIN = 64.dp
 private val ROW_GAP = 8.dp
+private const val WANTED_ROWS = 4
+
+/** The row height the paged list chose for the room it has; rows read it to size their contents. */
+private val LocalRowHeight = androidx.compose.runtime.compositionLocalOf { ROW_HEIGHT }
 
 /**
  * A list with big page up / page down buttons on the right, because flicking a long list is hard with gloves.
@@ -236,24 +239,29 @@ private fun PagedList(content: androidx.compose.foundation.lazy.LazyListScope.(L
     val scope = rememberCoroutineScope()
     val palette = LocalMotoPalette.current
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val pitch = ROW_HEIGHT + ROW_GAP
+        // Four rows when they fit at a glove-sized height (64-80 dp each), else as many 80 dp rows as fit.
+        val fourFit = (maxHeight - ROW_GAP * (WANTED_ROWS - 1)) / WANTED_ROWS
+        val rowHeight = if (fourFit >= ROW_MIN) fourFit.coerceAtMost(ROW_HEIGHT) else ROW_HEIGHT
+        val pitch = rowHeight + ROW_GAP
         val rows = ((maxHeight + ROW_GAP) / pitch).toInt().coerceAtLeast(1)
         val viewport = pitch * rows - ROW_GAP
         val pagePx = with(LocalDensity.current) { (pitch * rows).toPx() }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().height(viewport)) {
-            LazyColumn(
-                state = state, verticalArrangement = Arrangement.spacedBy(ROW_GAP),
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-            ) {
-                content(state)
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(if (isNarrowScreen()) 44.dp else 56.dp)) {
-                listOf(Icons.Rounded.KeyboardArrowUp to -1, Icons.Rounded.KeyboardArrowDown to 1).forEach { (icon, dir) ->
-                    Box(
-                        modifier = Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)
-                            .pressClickable { scope.launch { state.animateScrollBy(dir * pagePx) } },
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(icon, null, tint = palette.text, modifier = Modifier.size(34.dp)) }
+        androidx.compose.runtime.CompositionLocalProvider(LocalRowHeight provides rowHeight) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().height(viewport)) {
+                LazyColumn(
+                    state = state, verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                ) {
+                    content(state)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(if (isNarrowScreen()) 44.dp else 56.dp)) {
+                    listOf(Icons.Rounded.KeyboardArrowUp to -1, Icons.Rounded.KeyboardArrowDown to 1).forEach { (icon, dir) ->
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)
+                                .pressClickable { scope.launch { state.animateScrollBy(dir * pagePx) } },
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(icon, null, tint = palette.text, modifier = Modifier.size(34.dp)) }
+                    }
                 }
             }
         }
@@ -270,12 +278,13 @@ private fun ContactRow(
     onClick: () -> Unit,
 ) {
     val palette = LocalMotoPalette.current
+    val rowHeight = LocalRowHeight.current
     // Upright, the time joins the number underneath so the name gets the whole width.
     val compact = isNarrowScreen()
     val sub = if (compact) listOfNotNull(subtitle, trailing).joinToString(" · ").ifBlank { null } else subtitle
     Row(
         modifier = Modifier
-            .fillMaxWidth().height(ROW_HEIGHT).clip(RoundedCornerShape(20.dp)).background(palette.card)
+            .fillMaxWidth().height(rowHeight).clip(RoundedCornerShape(20.dp)).background(palette.card)
             .clickable(onClick = onClick).padding(horizontal = if (compact) 10.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 14.dp),
@@ -286,8 +295,8 @@ private fun ContactRow(
             if (sub != null) Text(sub, fontSize = 14.sp, color = palette.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (trailing != null && !compact) Text(trailing, fontSize = 15.sp, color = palette.textSecondary)
-        Box(Modifier.size(60.dp).clip(CircleShape).background(MotoColors.Green), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.Call, stringResource(R.string.phone_call), tint = Color.White, modifier = Modifier.size(30.dp))
+        Box(Modifier.size(minOf(60.dp, rowHeight - 12.dp)).clip(CircleShape).background(MotoColors.Green), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Call, stringResource(R.string.phone_call), tint = Color.White, modifier = Modifier.size(28.dp))
         }
     }
 }
@@ -306,7 +315,6 @@ private fun Keypad(
     var number by remember(initial) { mutableStateOf(PhoneMath.dialable(initial)) }
     var name by remember(initial) { mutableStateOf<String?>(null) }
     val palette = LocalMotoPalette.current
-    val clipboard = LocalContext.current.getSystemService(ClipboardManager::class.java)
     val suggestions = remember(number, contacts, recents) { PhoneMath.matches(number, contacts, recents) }
     val canCall = !locked && PhoneMath.dialable(number).isNotEmpty()
     val portrait = isNarrowScreen()
@@ -346,24 +354,23 @@ private fun Keypad(
     }
     val actions: @Composable () -> Unit = {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                if (number.isEmpty() && !locked) {
-                    KeypadAction(Icons.Rounded.ContentPaste, stringResource(R.string.phone_paste), palette.card) {
-                        val text = clipboard?.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
-                        number = PhoneMath.dialable(text).take(PhoneMath.MAX_DIGITS)
-                        name = null
-                    }
-                } else {
-                    // Tap deletes one digit, a long press clears the lot.
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp).clip(CircleShape).background(palette.card)
-                            .combinedClickable(
-                                enabled = !locked && number.isNotEmpty(),
-                                onClick = { number = PhoneMath.backspace(number); name = null },
-                                onLongClick = { number = ""; name = null },
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.AutoMirrored.Rounded.Backspace, stringResource(R.string.phone_delete), tint = palette.text, modifier = Modifier.size(32.dp)) }
+                // Tap deletes one digit, a long press clears the lot. Always in the same place, so "Call" does not jump.
+                val deleteSize = if (portrait) 76.dp else 84.dp
+                val canDelete = !locked && number.isNotEmpty()
+                Box(
+                    modifier = Modifier
+                        .size(deleteSize).clip(CircleShape).background(palette.card)
+                        .combinedClickable(
+                            enabled = canDelete,
+                            onClick = { number = PhoneMath.backspace(number); name = null },
+                            onLongClick = { number = ""; name = null },
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.Backspace, stringResource(R.string.phone_delete),
+                        tint = if (canDelete) palette.text else palette.muted, modifier = Modifier.size(40.dp),
+                    )
                 }
                 Row(
                     modifier = Modifier
@@ -418,18 +425,6 @@ private fun Keypad(
             }
             keys(Modifier.weight(1.2f).fillMaxHeight())
         }
-    }
-}
-
-@Composable
-private fun KeypadAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, background: Color, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier.size(72.dp).clip(CircleShape).background(background).pressClickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(icon, null, tint = LocalMotoPalette.current.text, modifier = Modifier.size(26.dp))
-        Text(label, fontSize = 11.sp, color = LocalMotoPalette.current.textSecondary)
     }
 }
 

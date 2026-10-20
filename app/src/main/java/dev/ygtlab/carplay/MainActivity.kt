@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Units.load(this)
+        dev.ygtlab.carplay.util.LegacyCleanup.run(this)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (savedInstanceState == null) handleDialIntent(intent)
@@ -70,14 +71,6 @@ class MainActivity : ComponentActivity() {
     private fun handleDialIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_DIAL && intent.data?.scheme == "tel") {
             viewModel.dialRequest.value = intent.data?.schemeSpecificPart.orEmpty()
-        }
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == dev.ygtlab.carplay.data.WidgetHost.REQUEST_CONFIGURE) {
-            dev.ygtlab.carplay.data.WidgetBridge.onConfigured?.invoke(resultCode == android.app.Activity.RESULT_OK)
         }
     }
 

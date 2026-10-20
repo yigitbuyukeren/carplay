@@ -1,5 +1,8 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import dev.ygtlab.carplay.data.DashCard
 import dev.ygtlab.carplay.util.Units
 import android.content.Context
@@ -78,9 +81,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showPhone by remember { mutableStateOf(false) }
     var showApps by remember { mutableStateOf(false) }
     val dashSlots by vm.dashSlots.collectAsStateWithLifecycle()
-    val widgetId by vm.widgetId.collectAsStateWithLifecycle()
-    var showWidgetPicker by remember { mutableStateOf(false) }
-    if (dashSlots.contains(DashCard.WIDGET)) WidgetUpdates()
     val voiceUi by vm.voiceAssistant.ui.collectAsStateWithLifecycle()
     val voiceOpenMap by vm.voiceOpenMap.collectAsStateWithLifecycle()
     var pendingSearchFallback by remember { mutableStateOf(false) }
@@ -200,6 +200,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
 
     Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.wallpaper)) {
         Box(modifier = Modifier.fillMaxSize()) {
+        val risePx = with(LocalDensity.current) { 32.dp.roundToPx() }
+        val overlayEnter = MotoMotion.overlayEnter(lowPower, risePx)
+        val overlayExit = MotoMotion.overlayExit(lowPower, risePx)
         Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             val dock: @Composable () -> Unit = {
                 Dock(
@@ -208,11 +211,18 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showPhone = false; showSettings = false; showApps = false },
                     onPhone = { vm.dialRequest.value = null; showPhone = !showPhone; showMap = false; showNowPlaying = false; showSettings = false; showApps = false },
                     onApps = { showApps = !showApps; showMap = false; showNowPlaying = false; showPhone = false; showSettings = false },
+                    active = when { showMap -> DockTab.NAV; showNowPlaying -> DockTab.MUSIC; showPhone -> DockTab.PHONE; showApps -> DockTab.APPS; else -> DockTab.NONE },
                     horizontal = portrait,
                 )
             }
-            val content: @Composable (Modifier) -> Unit = { m ->
-                if (showPhone) {
+            val content: @Composable (Modifier) -> Unit = { outer ->
+                val screen = when { showPhone -> MotoScreen.PHONE; showNowPlaying -> MotoScreen.MUSIC; showMap -> MotoScreen.MAP; else -> MotoScreen.HOME }
+                AnimatedContent(
+                    targetState = screen, modifier = outer, label = "screen",
+                    transitionSpec = { MotoMotion.screen(initialState, targetState, lowPower) },
+                ) { target ->
+                val m = Modifier.fillMaxSize()
+                if (target == MotoScreen.PHONE) {
                     PhoneScreen(
                         recents = recents,
                         contacts = contacts,
@@ -232,14 +242,14 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         },
                         modifier = m,
                     )
-                } else if (showNowPlaying) {
+                } else if (target == MotoScreen.MUSIC) {
                     NowPlayingScreen(
                         state = mediaState,
                         media = vm.media,
                         onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
                         modifier = m,
                     )
-                } else if (showMap) {
+                } else if (target == MotoScreen.MAP) {
                     MapScreen(
                         nav = vm.nav,
                         locationState = vm.locationState,
@@ -285,7 +295,6 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             DashCard.NAV -> navCard(mod)
                             DashCard.MEDIA -> mediaCard(mod)
                             DashCard.APPS -> appsCard(mod)
-                            DashCard.WIDGET -> WidgetCard(widgetId, canEdit = gps.speedKmh < PHONE_LOCK_KMH, onPick = { showWidgetPicker = true }, modifier = mod)
                             DashCard.NONE -> {}
                         }
                     }
@@ -314,6 +323,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             }
                         }
                     }
+                }
                 }
             }
             if (portrait) {
@@ -373,7 +383,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
         }
 
         // Settings and trips cover the whole screen, cutout strip included; they pad their own content.
-            if (showSettings) {
+            AnimatedVisibility(visible = showSettings, enter = overlayEnter, exit = overlayExit) {
                 val toggles = listOf(
                     ToggleItem(stringResource(R.string.msg_auto_title), stringResource(R.string.msg_auto_desc), autoRead, vm::setReadMessagesAloud),
                     ) + messageApps.map { row ->
@@ -417,15 +427,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 )
             }
 
-            if (showWidgetPicker) {
-                WidgetPicker(
-                    currentId = widgetId,
-                    onChosen = { vm.setWidget(it); showWidgetPicker = false },
-                    onClose = { showWidgetPicker = false },
-                )
-            }
-
-            if (showApps) {
+            AnimatedVisibility(visible = showApps, enter = overlayEnter, exit = overlayExit) {
                 AppsScreen(
                     pinned = pinnedApps,
                     locked = gps.speedKmh >= PHONE_LOCK_KMH,
@@ -435,7 +437,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                 )
             }
 
-            if (showTrips) {
+            AnimatedVisibility(visible = showTrips, enter = overlayEnter, exit = overlayExit) {
                 TripsScreen(trips = vm.trips, onClose = { showTrips = false })
             }
 
