@@ -27,71 +27,95 @@ Madde 3'ün sistem widget'ı kısmı geri alınır; düzenlenebilir kartlar (har
 - Test: `DashLayoutTest`'e "WIDGET kaydı boş yuva olur" testi.
 - Belgeler: README, proje rehberi (mimari satırı), STATUS, `docs/PLAN.md` durum satırı, EKSIKLER.md (madde 9'daki widget ibaresi) güncellenir.
 
-## 10. Kapsamlı sesli asistan (eklendi 2026-10-20, bekliyor; açık sorular en altta)
+## 10. Kapsamlı sesli asistan (planlandı 2026-10-20, bekliyor; başlanmadı)
 
-Amaç: kasklı, eldivenli, gürültülü sürüşte ekrana dokunmadan gidiş, telefon, müzik, mesaj ve bilgi işlerini sesle yapmak. İlke aynı kalır: anahtarsız, hesapsız, ücretsiz; bulut yapay zekâ servisi **yok**. Bugünkü hali: tek seferlik `SpeechRecognizer` + kural tabanlı `VoiceParser` (≈12 komut, tek tur, yalnız ekran düğmesi).
+Amaç: kasklı, eldivenli, gürültülü sürüşte ekrana dokunmadan gidiş, telefon, müzik, mesaj ve bilgi işlerini sesle yapmak. İlke aynı: anahtarsız, hesapsız, ücretsiz, bulut yapay zekâ yok. Bugün: tek seferlik `SpeechRecognizer` + kural tabanlı `VoiceParser` (~12 komut, tek tur, yalnız ekran düğmesi).
 
-### A. Tetikleme (el değmeden başlat)
-1. **Bluetooth kask düğmesi**: `ACTION_VOICE_COMMAND` ve `ACTION_ASSIST` niyetleri `MainActivity`'de yakalanır, dinleme başlar; kask ahizesinin ses tuşu (HFP voice recognition) ve uzun basış bununla çalışır. İsteğe bağlı olarak MotoDash'i "varsayılan dijital asistan" (`RoleManager.ROLE_ASSISTANT`) seçmek için ayar satırı (Google Asistan'ı değiştirir, kullanıcı karar verir).
-2. **Medya tuşu / gidon kumandası**: oynat tuşuna çift basış gibi `MediaSession` düğmesi isteğe bağlı tetikleyici.
-3. **Uyandırma sözcüğü ("Hey MotoDash")** deneysel, varsayılan kapalı: ekran açıkken (Android 14 mikrofon kuralı) çevrimdışı anahtar sözcük tanıma (Vosk küçük Türkçe model gibi açık lisanslı, anahtarsız seçenek; Porcupine gibi anahtar isteyenler elenir). Model APK'ya girmez, ayardan isteğe bağlı indirilir (APK ~41 MB kalır). Pil ve ısı ölçülür; sürekli mikrofon olduğu için açık gizlilik notu.
-4. Dinlemeye başlama/bitme için kısa **bip sesleri** (kasklı kullanıcı ekrana bakmaz) ve titreşim.
+### 0. Kararlar (kullanıcı "en iyisini planla" dedi; öneriler karar kabul edildi)
+1. **Uyandırma sözcüğü**: son aşama, deneysel, varsayılan kapalı; önce ölçüm deneyi (aşağıda S6).
+2. **Bluetooth kask mikrofonu**: kask bağlıysa varsayılan kullan (ayardan kapatılır).
+3. **Sesli yanıt**: varsayılan açık ("yalnız ekranda göster" ayarı var).
+4. **Mesaj gönderme**: kapsamda, Faz 3, her zaman sesli onayla.
+5. **Varsayılan dijital asistan rolü**: isteğe bağlı ayar (Faz 4); Faz 1'de rol olmadan `VOICE_COMMAND` / `ASSIST` niyetleri yakalanır.
+6. **Cihaz içi dil modeli**: ilk sürümlerde yok; kural tabanlı + bulanık eşleştirme.
 
-### B. Ses girişi kalitesi
-1. **Bluetooth kask mikrofonu**: kask bağlıysa `AudioManager` ile SCO/iletişim cihazı üzerinden onun mikrofonu kullanılır (telefon cebindeyken rüzgârda en büyük kazanç).
-2. **Bağlamsal ipucu**: Android 13+ `EXTRA_BIASING_STRINGS` ile rehber isimleri, kayıtlı yer adları (Ev, İş, favoriler) ve sabitlenmiş uygulama adları tanıyıcıya verilir.
-3. **Çevrimdışı Türkçe modeli**: `RecognitionSupport` ile var mı bakılır, yoksa ayarda "çevrimdışı Türkçe tanıma paketini indir" kısayolu (sistem ayarına gider).
-4. **Güven puanı** (`CONFIDENCE_SCORES`): düşük güvenli komutlar çalıştırılmaz, "… mı dedin?" diye sorulur.
-5. Sessizlik süresi ve bekleme sınırı sürüşe göre ayarlanır (rüzgârda erken kesmesin); "iptal", "dur", "vazgeç" her an dinlemeyi keser.
+### 1. Başlamadan önce kısa deneyler (spike; her biri yarım gün, kod ana dala girmez)
+Araştırmada kesinleşmeyenler gerçek telefonda (A059) ve kullanıcının kaskıyla doğrulanır; sonuç bu plana yazılır, plan ona göre ayarlanır.
+- **S1, kask mikrofonu**: Bluetooth kask bağlıyken SCO / iletişim cihazı ile `SpeechRecognizer` tanıma başarısı; telefon mikrofonuyla karşılaştırma (sessiz oda, rüzgâr/motor kaydı).
+- **S2, tanıyıcı özellikleri**: `RecognizerIntent` ipucu listesi (`EXTRA_BIASING_STRINGS`, API 33; sabit adı ve etkisi doğrulanacak), `checkRecognitionSupport` ile çevrimdışı Türkçe, `createOnDeviceSpeechRecognizer`; hangi Android sürümünde ne çalışıyor tablosu.
+- **S3, kask düğmesi**: kaskın düğmesi telefonda hangi niyeti yolluyor (`VOICE_COMMAND`, `ASSIST` veya yalnızca medya tuşu). Araştırma, `VOICE_COMMAND` niyetinin başka tetiklerde de geldiğini, bazı kulaklıkların yalnızca varsayılan asistan Google iken çalıştığını gösterdi; MotoDash'in rol olmadan alıp alamayacağı denenir.
+- **S4, müzik araması**: Spotify ve YouTube Music `playFromSearch` ile ada göre çalıyor mu.
+- **S5, mesaj cevabı**: WhatsApp ve SMS uygulamasının bildirimi yanıtla eylemi (`RemoteInput`) sunuyor mu, uygulamayı açmadan gönderilebiliyor mu.
+- **S6, uyandırma sözcüğü**: çevrimdışı Türkçe anahtar sözcük tanıma seçenekleri (Vosk Türkçe küçük modelin boyutu ve lisansı alphacephei.com modellerinden okunur; openWakeWord benzeri hafif modeller); CPU, pil, ısı ölçümü. Anahtar isteyen çözümler elenir. Android 14'te sürekli mikrofon için `FOREGROUND_SERVICE_MICROPHONE` ve "uygulama görünürken başlat" kuralı: MotoDash ekranı açık kalan launcher olduğu için ekran açıkken dinleme yeterli kabul edilir.
 
-### C. Anlama (NLU), yine cihaz içinde
-1. **Türkçe biçimbilim**: ek ayıklama (eve/işe/Ali'yi/annemi/Kadıköy'e), ünlü uyumu, ç/ş/ğ/ı/ö/ü yazım farkları, sayı ve saat sözcükleri ("on beş dakika", "yarım saat").
-2. **Eş anlamlılar ve çok kalıp**: her komut için onlarca söyleniş ("rotayı bitir", "gitmekten vazgeç", "navigasyonu kapat"); kalıplar kod yerine veri tablosunda (kolay genişler).
-3. **Bulanık eşleştirme** (Levenshtein + Türkçe ses benzerliği) rehber, kayıtlı yer, uygulama adı için; birden çok aday varsa sormak.
-4. **Çok turlu konuşma** (durum makinesi): eksik bilgiyi sorar ("Nereye gideyim?"), belirsizi netleştirir ("Ali Yılmaz mı, Ali Kaya mı?"), sesle "evet / hayır / ikincisi / tekrar" kabul eder; zaman aşımında vazgeçer.
-5. Bağlam: "oraya", "buraya kaydet", "bir daha", "geri al" bir önceki komuta göre çözülür.
-6. İsteğe bağlı deney: cihazda çalışan küçük dil modeli (ör. ML Kit GenAI/Gemini Nano, yalnız destekleyen cihazlarda) yalnızca kural tabanlı çözümleyici anlamayınca yedek olarak. Bulut modeli kullanılmaz. Kapsam dışı olabilir; ilk sürüm sadece kural + bulanık eşleştirme.
+### 2. Mimari (yeni dosyalar `data/voice/` altında, ViewModel tek bağlantı noktası kalır)
+- `Turkish.kt`: normalleştirme, ek ayıklama, ünlü uyumu, ç/ş/ğ/ı/ö/ü ve sesli sayı/saat sözcükleri, Levenshtein + Türkçe ses benzerliği. Saf, testli.
+- `VoiceGrammar.kt`: komut kalıpları **veri tablosu** (kalıp, alanlar, eş anlamlılar, risk düzeyi); yeni komut = bir satır.
+- `VoiceIntent.kt`: kapalı komut ailesi (şimdiki `VoiceCommand` genişler): navigasyon, telefon, mesaj, müzik, bilgi, uygulama/ayar, sistem.
+- `VoiceDialog.kt`: çok turlu durum makinesi (bekle, soru sor, belirsizi seç, onay, zaman aşımı, iptal); saf, sahte motorla test.
+- `VoiceInput.kt`: tanıyıcı sarmalayıcı: ipuçları, güven puanı, SCO mikrofonu, sessizlik süresi, bip sesleri.
+- `VoiceSpeaker.kt`: TTS kuyruğu ve öncelik (dönüş anonsu > asistan), müzik kısma, hız ve ses ayarı.
+- `VoiceActions.kt`: komutu çalıştıran küçük arayüzler (`NavActions`, `PhoneActions`, `MessageActions`, `MediaActions`, `InfoActions`, `AppActions`), mevcut denetleyicilere bağlanır; testte sahtesi.
+- `VoiceHistory.kt`: son 10 komutun metni (kapatılabilir, ses kaydı yok).
+- Arayüz: `VoiceUi.kt` (dinleme kartı, seçenek karoları, yardım), `Ayarlar > Ses`.
 
-### D. Komut kataloğu (genişletilen)
-- **Navigasyon**: git, ara durak ekle ("yolda benzinlik", "yolda kafe"), en yakın X (kafe, eczane, hastane, ATM, otopark, market, lokanta: Nominatim/Overpass kategorileri), "kalan süre / kaç km kaldı / ne zaman varırım", "sıradaki dönüş ne", "otoyolsuz git / ücretsiz yol", "alternatif rota", "rotayı tekrar hesapla", "burayı favoriye ekle", "park yerime git", "evimi buraya ayarla".
-- **Telefon**: ara (isim, "son aradığımı ara", "cevapsız aramalara bak"), gelen aramada "cevapla / reddet / sustur / hoparlör", numarayı rakamla söyleyerek arama.
-- **Mesaj**: "son mesajı oku", "kim yazdı", "cevap yaz: …" (dikte, tekrar okuma, "gönder"/"iptal" onayı; bildirimin yanıtla eylemi `RemoteInput` ile, uygulamayı açmadan; olmazsa SMS). Yanlış kişiye gitmesin diye gönderim her zaman sesli onay ister.
-- **Müzik**: açık/kapat, sonraki/önceki, **ada göre çalma** ("X sanatçısını çal", "Y çalma listesi") `transportControls.playFromSearch`, "bunu kaç dakika kaldı", ses seviyesi yüzdesi ("sesi yüzde elli yap").
-- **Bilgi soruları**: hava ("yağmur var mı", "kaç derece"), saat, pil durumu, hız ve hız limiti, yolculuk özeti (mesafe, ortalama hız), bir sonraki dinlenme/benzin tavsiyesi yok (yakıt menzili yapılmayacak kararı sürer).
-- **Uygulama ve ayar**: "WhatsApp'ı aç" (rafta olan ve kurulu uygulamalar), "gece/gündüz modu", "mil / kilometre", "sesli uyarıları kapat", "ekranı kıs".
-- **Güvenlik**: "yardım çağır" SOS'u **doğrudan tetiklemez**, mevcut SOS geri sayım ekranını açar (yanlış tanımaya karşı); "iptal" geri sayımı durdurur.
+### 3. Tetikleme
+- Ekrandaki mikrofon her ekranda aynı yerde (ana ekran kartı, harita, telefon, müzik, uygulama rafı), ≥64 dp.
+- `ACTION_VOICE_COMMAND` ve `ACTION_ASSIST` niyetlerini `MainActivity` yakalar (kask düğmesi, sistem uzun basışı); ekran kapalı/arka plandaysa önce MotoDash öne gelir.
+- Medya tuşu (çift basış, ayardan seçilir) ve isteğe bağlı varsayılan asistan rolü (`RoleManager`).
+- Dinleme başlayınca/bitince bip + hafif titreşim; "iptal / dur / vazgeç" her an keser.
+- Uyandırma sözcüğü yalnız S6 olumluysa, ekran açıkken, açık gizlilik notuyla.
 
-### E. Ses çıkışı
-1. Her işin sonunda kısa sesli geri bildirim (TTS): "Eve rota hazır, 18 dakika. Başlatayım mı?"; kapatılabilir ("yalnız ekranda göster").
-2. **Konuşma kuyruğu ve öncelik**: dönüş anonsları önce gelir, asistan cümlesi anonsu bölmez; müzik kısılır (`USAGE_ASSISTANCE_NAVIGATION_GUIDANCE` / odak yönetimi).
-3. Konuşma hızı ve ses ayarı, Türkçe ses seçimi.
+### 4. Ses girişi kalitesi
+- Kask bağlıysa SCO mikrofon; yoksa telefon.
+- İpucu listesi: rehber adları, Ev/İş/favori adları, sabitlenmiş uygulama adları, sık hedefler.
+- Güven puanı eşiği: düşük güvende "… mı dedin?" diye sorulur, çalıştırılmaz.
+- Çevrimdışı Türkçe paket yoksa Ayarlar'da sistem ayarına kısayol; çevrimdışı tercih ayarı.
+- Rüzgâr için sessizlik süresi uzun, "dinleme süresi doldu" kısa uyarı.
 
-### F. Güvenlik ve onay katmanları
-- **Düşük risk** (müzik, ses, bilgi): hemen yapılır.
-- **Orta** (rota başlat, uygulama aç): sesli veya ekran onayı, 3 sn varsayılan.
-- **Yüksek** (arama, mesaj gönderme, SOS): açık "evet" ya da geri sayım + iptal; rehberde tek eşleşme olsa bile.
-- Konuşulan her şey cihazda kalır; ses kaydı saklanmaz; yalnız son 10 komutun **metni** isteğe bağlı kayıtta (hata ayıklama için, kapatılabilir, kendiliğinden silinir).
+### 5. Komut kataloğu
+- **Navigasyon**: git; ara durak ("yolda benzinlik/kafe"); en yakın kategori (kafe, eczane, hastane, ATM, otopark, market, lokanta; Nominatim/Overpass); kalan süre / kaç km kaldı / ne zaman varırım; sıradaki dönüş; otoyolsuz / ücretsiz yol; alternatif rota; yeniden hesapla; burayı favoriye ekle; evimi buraya ayarla; park yerime git; navigasyonu bitir.
+- **Telefon**: ara (isim, "son aradığımı ara", "cevapsızlara bak"); gelen aramada cevapla / reddet / sustur / hoparlör; rakamlı numara.
+- **Mesaj**: "son mesajı oku", "kim yazdı", "cevap yaz …" (dikte, tekrar okuma, "gönder/iptal"); bildirim yanıtla eylemi, olmazsa SMS.
+- **Müzik**: aç/durdur/sonraki/önceki; ada göre çalma (`playFromSearch`); "yüzde elli yap"; "bu ne çalıyor".
+- **Bilgi**: hava, yağmur, saat, pil, hız ve hız limiti, yolculuk özeti.
+- **Uygulama ve ayar**: rafta/kurulu uygulamayı aç; gündüz/gece; km/mil; sesli uyarıları kapat; ekran parlaklığı (ısı korumasıyla çakışmaz).
+- **Güvenlik**: "yardım çağır" SOS'u doğrudan tetiklemez, SOS geri sayım ekranını açar; "iptal" geri sayımı durdurur.
 
-### G. Arayüz
-- Dinleme kartı: dalga göstergesi, duyulan metin, "ne diyebilirim?" önerileri (bağlama göre 3 örnek).
-- **"Ne diyebilirim?" ekranı**: kategorilere göre örnek komut listesi (Ayarlar'dan ve kartın yardım düğmesinden).
-- Ayarlar > Ses: asistanı aç/kapa, sesli yanıt, çevrimdışı tercih, Bluetooth kask mikrofonu, tetikleyiciler, uyandırma sözcüğü (deneysel), komut geçmişi.
-- Eldiven kuralı: tüm düğmeler ≥64 dp; mikrofon her ekranda aynı yerde (şimdi navigasyon kartında ve harita arama kutusunda; ana ekranda ve telefon/müzik ekranlarında da).
+### 6. Ses çıkışı
+- Kısa sesli geri bildirim ("Eve rota hazır, on sekiz dakika. Başlatayım mı?"); kapatılabilir.
+- Konuşma kuyruğu: dönüş anonsu asistan cümlesini bekletir, asistan anonsu bölmez; müzik kısılır.
+- Konuşma hızı/ses ayarı, Türkçe ses.
 
-### H. Test ve ölçüm
-- Yüzlerce örnek cümlelik **birim test derlemi** (Türkçe ek ve ses varyantlarıyla), bulanık eşleştirme testleri, çok turlu diyalog durum makinesi testleri (sahte ses motoruyla).
-- Saha testi: rüzgâr/motor gürültüsünde başarı oranı, kask mikrofonuyla ve telefon mikrofonuyla karşılaştırma; her sürümde "anlamadım" nedenleri yerel günlükten (sunucu yok).
+### 7. Güvenlik ve onay
+- Düşük risk (müzik, ses, bilgi): hemen.
+- Orta (rota başlat, uygulama aç): 3 sn sesli/ekran onayı.
+- Yüksek (arama, mesaj gönderme, SOS ekranı): açık "evet" ya da geri sayım + iptal; tek eşleşme olsa bile.
+- Ses kaydı saklanmaz; komut geçmişi yalnız metin, kapatılabilir, 10 kayıttan fazlası silinir.
+- Sürerken tüm komutlar serbest (eller serbest), ama ayar değiştiren komutlar yalnız bir sesli onayla.
 
-### I. Aşamalar (öneri)
-1. **Faz 1, temel**: tetikleyiciler (kask düğmesi, `VOICE_COMMAND`), bip sesleri, bağlamsal ipucu, güven puanı, çok turlu diyalog iskeleti, sesli geri bildirim, "Ne diyebilirim?" ekranı, veri tablosu kalıpları.
-2. **Faz 2, komut kataloğu**: navigasyon sorguları, bilgi soruları, uygulama/ayar, müzik arama, gelen aramaya sesle cevap.
-3. **Faz 3, mesaj**: sesli okuma, dikte ile cevap, onay akışı.
-4. **Faz 4, deneysel**: uyandırma sözcüğü, cihaz içi dil modeli, varsayılan asistan rolü.
+### 8. Arayüz
+- Dinleme kartı: dalga, duyulan metin, bağlama göre 3 örnek.
+- **"Ne diyebilirim?"** ekranı: kategoriye göre örnek komutlar, kartın yardım düğmesinden ve Ayarlar'dan.
+- Belirsizlikte büyük seçenek karoları ("Ali Yılmaz / Ali Kaya"), sesle "birincisi" de çalışır.
+- Ayarlar > Ses: asistan aç/kapa, sesli yanıt, çevrimdışı tercih, kask mikrofonu, tetikleyiciler, geçmiş, uyandırma sözcüğü (deneysel).
 
-### Açık sorular (cevapla, plana işlerim)
-1. Uyandırma sözcüğü ("Hey MotoDash") istiyor musun? (Pil, ısı ve ~40 MB isteğe bağlı model indirmesi getirir; öneri: Faz 4'e bırak.)
-2. Bluetooth kask mikrofonunu varsayılan kullanalım mı? (Öneri: evet, kask bağlıysa.)
-3. Sesli yanıt (TTS) varsayılan açık mı? (Öneri: açık, ayardan kapatılır.)
-4. Mesaj göndermeyi (WhatsApp/SMS cevabı) kapsama alalım mı? (Öneri: evet, her zaman sesli onayla.)
-5. MotoDash'i "varsayılan dijital asistan" yapma seçeneği olsun mu? (Kask düğmesi için en sağlam yol, ama Google Asistan'ın yerini alır; öneri: isteğe bağlı ayar.)
-6. Cihaz içi dil modeli deneyine izin var mı, yoksa yalnızca kural tabanlı mı kalalım? (Öneri: ilk sürümde kural tabanlı.)
+### 9. Test ve ölçüm
+- Birim: Türkçe ek ve ses varyantlı **en az 300 cümlelik** derlem (beklenen komut ve alanlar), bulanık eşleştirme, durum makinesi (sahte ses motoru), onay katmanı, kuyruk önceliği.
+- Saha: sessiz oda, kasksız/kasklı, rüzgârlı; başarı oranı tablosu telefon mikrofonu vs kask mikrofonu (S1 ile aynı betik).
+- Yerel günlükte "anlamadım" nedenleri (sunucu yok), hangi kalıp eksik çıktığını görmek için.
+
+### 10. Aşamalar (her biri kendi commit/PR'ı, sonunda emülatör + telefon doğrulaması)
+1. **Faz 0**: S1-S6 deneyleri, sonuçların bu plana işlenmesi.
+2. **Faz 1, temel**: `Turkish`, `VoiceGrammar` veri tablosu, `VoiceDialog` iskeleti, bip/titreşim, ipucu listesi, güven puanı, kask mikrofonu, `VOICE_COMMAND` niyeti, sesli geri bildirim kuyruğu, "Ne diyebilirim?" ekranı; mevcut komutlar yeni yapıya taşınır. Ölçüt: eski komutlar aynen çalışır, derlem testleri geçer.
+3. **Faz 2, katalog**: navigasyon sorguları, bilgi, uygulama/ayar, gelen aramaya sesle cevap, ada göre müzik. Ölçüt: kataloğun her satırı için en az 10 cümlelik test.
+4. **Faz 3, mesaj**: okuma, dikte ile cevap, onay akışı. Ölçüt: yanlış kişiye gönderim imkânsız (her gönderim sesli onaylı).
+5. **Faz 4, deneysel**: uyandırma sözcüğü (S6 olumluysa), varsayılan asistan rolü, medya tuşu tetikleyici. Ölçüt: pil/ısı ölçümü eşik altında, açık gizlilik notu.
+
+### Riskler
+- Rüzgâr/motor gürültüsü başarıyı düşürür: kask mikrofonu (S1) belirleyici.
+- Tanıyıcı telefona göre Google servisini kullanır (ses dışarı gidebilir); çevrimdışı paket yoksa başarı değişir.
+- Kask düğmesi her kaskta aynı niyeti göndermez (S3).
+- Mesaj uygulamalarının yanıtla eylemi garanti değil (S5).
+- Sürekli mikrofon (uyandırma) pil, ısı ve gizlilik riski; bu yüzden en sona bırakıldı.
+- Kapsam büyük: aşamalara bölündü, her aşama tek başına yayınlanabilir.
