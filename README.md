@@ -2,6 +2,10 @@
   <img src="docs/screenshots/dashboard.png" alt="RideDeck ana ekran" width="100%">
 </p>
 
+<p align="center">
+  <img src="docs/logo.png" alt="RideDeck logosu" width="128">
+</p>
+
 <h1 align="center">RideDeck</h1>
 
 <p align="center">
