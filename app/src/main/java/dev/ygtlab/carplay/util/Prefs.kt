@@ -29,12 +29,30 @@ object Prefs {
     private const val KEY_RAIN_VOICE = "rain_voice"
     private const val KEY_MILES = "units_miles"
     private const val KEY_PINNED_APPS = "pinned_apps"
+    private const val KEY_MESSAGE_APPS_SEEN = "message_apps_seen"
+    private const val KEY_MESSAGE_APPS_MUTED = "message_apps_muted"
 
     fun pinnedApps(context: Context): String? =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_PINNED_APPS, null)
 
     fun setPinnedApps(context: Context, json: String) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_PINNED_APPS, json).apply()
+    }
+
+    /** Packages that posted a chat notification so far (to list them in Settings). */
+    fun messageAppsSeen(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_MESSAGE_APPS_SEEN, null)
+
+    fun setMessageAppsSeen(context: Context, json: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_MESSAGE_APPS_SEEN, json).apply()
+    }
+
+    /** Chat apps the rider does not want on the dashboard or read aloud. */
+    fun messageAppsMuted(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_MESSAGE_APPS_MUTED, null)
+
+    fun setMessageAppsMuted(context: Context, json: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_MESSAGE_APPS_MUTED, json).apply()
     }
 
     fun milesUnit(context: Context): Boolean =

@@ -115,6 +115,28 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         if (!Prefs.speedLimitChosen(app)) speedLimitEnabled.value = profile.config.speedLimitDefault
     }
 
+    /** Chat apps seen in notifications, each with whether the rider silenced it. */
+    data class MessageAppRow(val pkg: String, val label: String, val muted: Boolean)
+
+    val messageApps = MutableStateFlow(readMessageApps())
+
+    private fun readMessageApps(): List<MessageAppRow> {
+        val pm = getApplication<Application>().packageManager
+        val muted = PinnedApps.fromJson(Prefs.messageAppsMuted(getApplication<Application>()))
+        return PinnedApps.fromJson(Prefs.messageAppsSeen(getApplication<Application>())).map { pkg ->
+            val label = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+            MessageAppRow(pkg, label, pkg in muted)
+        }.sortedBy { it.label.lowercase() }
+    }
+
+    fun refreshMessageApps() { messageApps.value = readMessageApps() }
+
+    fun setMessageAppMuted(pkg: String, muted: Boolean) {
+        val now = PinnedApps.fromJson(Prefs.messageAppsMuted(getApplication<Application>()))
+        Prefs.setMessageAppsMuted(getApplication<Application>(), PinnedApps.toJson(if (muted) PinnedApps.add(now, pkg) else PinnedApps.remove(now, pkg)))
+        refreshMessageApps()
+    }
+
     val pinnedApps = MutableStateFlow(PinnedApps.fromJson(Prefs.pinnedApps(app)))
 
     private fun updatePinned(list: List<String>) {

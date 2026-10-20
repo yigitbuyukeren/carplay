@@ -236,4 +236,6 @@
     <string name="apps_locked">Apps cannot be added or edited while riding.</string>
     <string name="apps_settings">Settings</string>
     <string name="open_external_nav">Open in a navigation app</string>
+    <string name="msg_app_title_fmt">%1$s messages</string>
+    <string name="msg_app_desc">Turn off to hide this app\'s messages on the dashboard and stop reading them aloud.</string>
 </resources>

@@ -4,6 +4,8 @@ import android.app.Notification
 import android.service.notification.NotificationListenerService
 import androidx.core.app.NotificationCompat
 import android.service.notification.StatusBarNotification
+import dev.ygtlab.carplay.data.PinnedApps
+import dev.ygtlab.carplay.util.Prefs
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -43,6 +45,11 @@ class CarNotificationListener : NotificationListenerService() {
         val isMessage = n.category == Notification.CATEGORY_MESSAGE ||
             n.extras.getString(Notification.EXTRA_TEMPLATE) == Notification.MessagingStyle::class.java.name
         if (!isMessage) return
+
+        // Remember the app so Settings can offer to silence it, and drop apps the rider muted.
+        val seen = PinnedApps.fromJson(Prefs.messageAppsSeen(this))
+        if (sbn.packageName !in seen) Prefs.setMessageAppsSeen(this, PinnedApps.toJson(PinnedApps.add(seen, sbn.packageName)))
+        if (sbn.packageName in PinnedApps.fromJson(Prefs.messageAppsMuted(this))) return
 
         val (sender, text) = parse(n) ?: return
         // Chat apps re-post the same notification when other things change; ignore repeats.

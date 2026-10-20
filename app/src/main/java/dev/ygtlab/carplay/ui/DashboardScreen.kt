@@ -77,6 +77,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showPhone by remember { mutableStateOf(false) }
     var showApps by remember { mutableStateOf(false) }
     val pinnedApps by vm.pinnedApps.collectAsStateWithLifecycle()
+    val messageApps by vm.messageApps.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.refreshMessageApps() }
     val dialRequest by vm.dialRequest.collectAsStateWithLifecycle()
     val recents by vm.phone.recents.collectAsStateWithLifecycle()
     val contacts by vm.phone.contacts.collectAsStateWithLifecycle()
@@ -333,6 +335,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
             if (showSettings) {
                 val toggles = listOf(
                     ToggleItem(stringResource(R.string.msg_auto_title), stringResource(R.string.msg_auto_desc), autoRead, vm::setReadMessagesAloud),
+                    ) + messageApps.map { row ->
+                        ToggleItem(stringResource(R.string.msg_app_title_fmt, row.label), stringResource(R.string.msg_app_desc), !row.muted) { on -> vm.setMessageAppMuted(row.pkg, !on) }
+                    } + listOf(
                     ToggleItem(stringResource(R.string.weather_title), stringResource(R.string.weather_desc), weatherOn, vm::setWeatherEnabled),
                     ToggleItem(stringResource(R.string.rain_voice_title), stringResource(R.string.rain_voice_desc), rainVoice, vm::setRainVoice),
                     ToggleItem(stringResource(R.string.thermal_title), stringResource(R.string.thermal_desc), thermalOn, vm::setThermalEnabled),
