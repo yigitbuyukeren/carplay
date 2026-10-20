@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MotoDash</string>
+    <string name="app_name">RideDeck</string>
     <string name="call_incoming">Incoming call</string>
     <string name="settings_title">Setup and settings</string>
     <string name="overlay_title">Speed strip (over other apps)</string>
@@ -17,7 +17,7 @@
     <string name="perm_overlay">Display over other apps</string>
     <string name="perm_overlay_desc">For the speed strip</string>
     <string name="perm_home">Set as home app</string>
-    <string name="perm_home_desc">Home button opens MotoDash</string>
+    <string name="perm_home_desc">Home button opens RideDeck</string>
     <string name="perm_battery">Battery restriction</string>
     <string name="perm_battery_desc">Set the app to \"Unrestricted\"</string>
     <string name="action_allow">Allow</string>
@@ -138,8 +138,8 @@
     <string name="sos_voice_auto">Crash detected. Are you OK? If you do not answer within %1$d seconds your location will be sent to your emergency contacts.</string>
     <string name="sos_voice_manual">Emergency call. The message will be sent in %1$d seconds unless you cancel.</string>
     <string name="sos_voice_test">SOS test. No message will be sent.</string>
-    <string name="sos_sms_auto">EMERGENCY (MotoDash): A %1$s crash was detected and there was no answer.</string>
-    <string name="sos_sms_manual">EMERGENCY (MotoDash): I need help.</string>
+    <string name="sos_sms_auto">EMERGENCY (RideDeck): A %1$s crash was detected and there was no answer.</string>
+    <string name="sos_sms_manual">EMERGENCY (RideDeck): I need help.</string>
     <string name="sos_loc">Location: %1$s</string>
     <string name="sos_loc_stale">Last known location: %1$s</string>
     <string name="sos_loc_none">Location unavailable.</string>
@@ -169,11 +169,11 @@
     <string name="call_mute">Mute</string>
     <string name="call_speaker">Speaker</string>
     <string name="perm_dialer">Default phone app</string>
-    <string name="perm_dialer_desc">Show the call screen inside MotoDash too</string>
+    <string name="perm_dialer_desc">Show the call screen inside RideDeck too</string>
     <string name="call_hangup">End</string>
     <string name="call_decline">Decline</string>
     <string name="call_answer">Answer</string>
-    <string name="dialer_hint">Show the call screen in MotoDash</string>
+    <string name="dialer_hint">Show the call screen in RideDeck</string>
     <string name="call_route_phone">Phone</string>
     <string name="call_route_bluetooth">Bluetooth</string>
     <string name="call_route_headset">Headset</string>
@@ -341,7 +341,7 @@
     <string name="voice_speed_short_kmh_fmt">%1$d kilometres per hour</string>
     <string name="voice_speed_short_mph_fmt">%1$d miles per hour</string>
     <string name="perm_assistant">Default assistant</string>
-    <string name="perm_assistant_desc">If you pick MotoDash as the default digital assistant, a Bluetooth helmet\'s voice button and the system assist gesture open MotoDash\'s voice assistant. It replaces Google Assistant.</string>
+    <string name="perm_assistant_desc">If you pick RideDeck as the default digital assistant, a Bluetooth helmet\'s voice button and the system assist gesture open RideDeck\'s voice assistant. It replaces Google Assistant.</string>
     <string name="action_download">Download</string>
     <string name="perm_offline_voice">Offline Turkish recognition</string>
     <string name="perm_offline_voice_desc">Voice commands without internet need the phone\'s Turkish speech pack; download it if it is missing.</string>
@@ -349,10 +349,10 @@
     <string name="voice_history_title">Command history</string>
     <string name="voice_history_desc">Keeps the text (not audio) of the last 10 voice commands on the phone; shown on the \"What can I say?\" screen.</string>
     <string name="voice_button_title">Helmet button (double press)</string>
-    <string name="voice_button_desc">A double press of the headset or helmet play/pause key starts the voice assistant; a single press still plays or pauses the music (after a short wait). Works while MotoDash is on screen.</string>
-    <string name="voice_wake_title">\"Hey MotoDash\" (experimental)</string>
-    <string name="voice_wake_desc">While MotoDash is on screen the phone listens offline and opens the assistant when it hears \"Hey MotoDash\". The microphone stays on, which costs battery and heat; needs Android 13+ and the offline Turkish pack.</string>
-    <string name="voice_wake_unavailable">This phone has no offline recognition; \"Hey MotoDash\" will not work (needs Android 13+ and the Turkish pack).</string>
+    <string name="voice_button_desc">A double press of the headset or helmet play/pause key starts the voice assistant; a single press still plays or pauses the music (after a short wait). Works while RideDeck is on screen.</string>
+    <string name="voice_wake_title">\"Hey RideDeck\" (experimental)</string>
+    <string name="voice_wake_desc">While RideDeck is on screen the phone listens offline and opens the assistant when it hears \"Hey RideDeck\". The microphone stays on, which costs battery and heat; needs Android 13+ and the offline Turkish pack.</string>
+    <string name="voice_wake_unavailable">This phone has no offline recognition; \"Hey RideDeck\" will not work (needs Android 13+ and the Turkish pack).</string>
     <string name="voice_history_header">Recent commands</string>
     <string name="voice_history_clear">Clear</string>
 </resources>

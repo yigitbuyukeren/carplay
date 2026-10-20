@@ -1,12 +1,12 @@
 # Android Auto / Apple CarPlay karşısında eksikler
 
-Tarih: 2026-10-20. MotoDash tarafı `docs/STATUS.md` ve koddan, Android Auto/CarPlay tarafı web araştırmasından (çoğu teknoloji basını, resmi sayfalar sınırlı) alındı. Rakip ayrıntıları yaklaşık kabul edilmeli.
+Tarih: 2026-10-20. RideDeck tarafı `docs/STATUS.md` ve koddan, Android Auto/CarPlay tarafı web araştırmasından (çoğu teknoloji basını, resmi sayfalar sınırlı) alındı. Rakip ayrıntıları yaklaşık kabul edilmeli.
 
-Not: MotoDash bir yansıtma sistemi değil, telefonun kendisini gösterge paneline çeviren launcher. Aşağıdaki maddeler bu farkın doğurduğu eksiklerdir.
+Not: RideDeck bir yansıtma sistemi değil, telefonun kendisini gösterge paneline çeviren launcher. Aşağıdaki maddeler bu farkın doğurduğu eksiklerdir.
 
 Durum sütunu: **Yapılabilir** = anahtarsız/ücretsiz ilkeye uyuyor. **Kısıtlı** = kısmen yapılabilir. **Yapılmaz** = sunucu, donanım, ortaklık veya ilke engeli.
 
-| # | Eksik özellik | Android Auto / CarPlay'de | MotoDash'te | Durum |
+| # | Eksik özellik | Android Auto / CarPlay'de | RideDeck'te | Durum |
 |---|---|---|---|---|
 | 1 | Sesle komut ve dikte | Gemini / Siri: sesle hedef, arama, mesaj, müzik | Yok. TTS yalnızca çıkış yönünde | Yapılabilir (`SpeechRecognizer`) |
 | 2 | Mesajlara sesle cevap | Okuma ve sesle cevap, WhatsApp/Signal dahil | Bildirimleri sesli okur, cevap veremez | Kısıtlı (bildirim "yanıtla" eylemi) |

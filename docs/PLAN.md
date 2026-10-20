@@ -4,4 +4,4 @@ Bekleyen maddeler. Uygulama, kullanıcı "planı yap" diyene kadar başlamaz; ya
 
 Şu an uygulanmamış plan maddesi yok.
 
-Telefonda ve kaskla denenmesi gerekenler (kod hazır, doğrulama kullanıcıda; ayrıntı `docs/STATUS.md`): sesle komut tanıma kalitesi, kask mikrofonu, kaskın sesli komut düğmesi ve çift basış tetikleyicisi, "Hey MotoDash", `playFromSearch` ile ada göre çalma, bildirimden mesaja cevap, başka rota ve yolda durak.
+Telefonda ve kaskla denenmesi gerekenler (kod hazır, doğrulama kullanıcıda; ayrıntı `docs/STATUS.md`): sesle komut tanıma kalitesi, kask mikrofonu, kaskın sesli komut düğmesi ve çift basış tetikleyicisi, "Hey RideDeck", `playFromSearch` ile ada göre çalma, bildirimden mesaja cevap, başka rota ve yolda durak.

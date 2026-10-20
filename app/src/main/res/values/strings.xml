@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MotoDash</string>
+    <string name="app_name">RideDeck</string>
     <string name="call_incoming">Gelen arama</string>
     <string name="settings_title">Kurulum ve ayarlar</string>
     <string name="overlay_title">Hız şeridi (diğer uygulamaların üstünde)</string>
@@ -17,7 +17,7 @@
     <string name="perm_overlay">Üstte göster</string>
     <string name="perm_overlay_desc">Hız şeridi için</string>
     <string name="perm_home">Ana ekran olarak ayarla</string>
-    <string name="perm_home_desc">Home tuşu MotoDash\'i açsın</string>
+    <string name="perm_home_desc">Home tuşu RideDeck\'i açsın</string>
     <string name="perm_battery">Pil kısıtlaması</string>
     <string name="perm_battery_desc">Uygulamayı \"Kısıtlanmamış\" yap</string>
     <string name="action_allow">İzin ver</string>
@@ -138,8 +138,8 @@
     <string name="sos_voice_auto">Kaza algılandı. İyi misin? %1$d saniye içinde cevap vermezsen acil durum kişilerine konumun gönderilecek.</string>
     <string name="sos_voice_manual">Acil durum çağrısı. %1$d saniye içinde iptal etmezsen mesaj gönderilecek.</string>
     <string name="sos_voice_test">SOS testi. Hiçbir mesaj gönderilmeyecek.</string>
-    <string name="sos_sms_auto">ACİL DURUM (MotoDash): %1$s kazası algılandı ve yanıt vermedi.</string>
-    <string name="sos_sms_manual">ACİL DURUM (MotoDash): Yardıma ihtiyacım var.</string>
+    <string name="sos_sms_auto">ACİL DURUM (RideDeck): %1$s kazası algılandı ve yanıt vermedi.</string>
+    <string name="sos_sms_manual">ACİL DURUM (RideDeck): Yardıma ihtiyacım var.</string>
     <string name="sos_loc">Konum: %1$s</string>
     <string name="sos_loc_stale">Son bilinen konum: %1$s</string>
     <string name="sos_loc_none">Konum alınamadı.</string>
@@ -169,11 +169,11 @@
     <string name="call_mute">Sessiz</string>
     <string name="call_speaker">Hoparlör</string>
     <string name="perm_dialer">Varsayılan telefon uygulaması</string>
-    <string name="perm_dialer_desc">Arama ekranı da MotoDash\'in içinde açılsın</string>
+    <string name="perm_dialer_desc">Arama ekranı da RideDeck\'in içinde açılsın</string>
     <string name="call_hangup">Bitir</string>
     <string name="call_decline">Reddet</string>
     <string name="call_answer">Cevapla</string>
-    <string name="dialer_hint">Arama ekranı MotoDash\'te açılsın</string>
+    <string name="dialer_hint">Arama ekranı RideDeck\'te açılsın</string>
     <string name="call_route_phone">Telefon</string>
     <string name="call_route_bluetooth">Bluetooth</string>
     <string name="call_route_headset">Kulaklık</string>
@@ -341,7 +341,7 @@
     <string name="voice_speed_short_kmh_fmt">saatte %1$d kilometre</string>
     <string name="voice_speed_short_mph_fmt">saatte %1$d mil</string>
     <string name="perm_assistant">Varsayılan asistan</string>
-    <string name="perm_assistant_desc">MotoDash\'i varsayılan dijital asistan seçersen Bluetooth kaskın sesli komut düğmesi ve sistem asistan hareketi MotoDash\'in sesli asistanını açar. Google Asistan\'ın yerini alır.</string>
+    <string name="perm_assistant_desc">RideDeck\'i varsayılan dijital asistan seçersen Bluetooth kaskın sesli komut düğmesi ve sistem asistan hareketi RideDeck\'in sesli asistanını açar. Google Asistan\'ın yerini alır.</string>
     <string name="action_download">İndir</string>
     <string name="perm_offline_voice">Çevrimdışı Türkçe tanıma</string>
     <string name="perm_offline_voice_desc">İnternetsiz sesli komut için telefonun Türkçe konuşma paketi gerekir; indirilmediyse indir.</string>
@@ -349,10 +349,10 @@
     <string name="voice_history_title">Komut geçmişi</string>
     <string name="voice_history_desc">Son 10 sesli komutun metnini (ses kaydı değil) telefonda tutar; \"Ne diyebilirim?\" ekranında görünür.</string>
     <string name="voice_button_title">Kask tuşu (çift basış)</string>
-    <string name="voice_button_desc">Kulaklık veya kaskın oynat/duraklat tuşuna çift basınca sesli asistan dinler; tek basış müziği durdurur/oynatır (biraz gecikmeyle). MotoDash ekrandayken çalışır.</string>
-    <string name="voice_wake_title">\"Hey MotoDash\" (deneysel)</string>
-    <string name="voice_wake_desc">MotoDash ekrandayken telefonda çevrimdışı dinleyip \"Hey MotoDash\" duyunca asistanı açar. Mikrofon sürekli açık kalır, pil ve ısıyı artırır; Android 13+ ve çevrimdışı Türkçe paket gerekir.</string>
-    <string name="voice_wake_unavailable">Bu telefonda çevrimdışı tanıma yok; \"Hey MotoDash\" çalışmaz (Android 13+ ve Türkçe paket gerekir).</string>
+    <string name="voice_button_desc">Kulaklık veya kaskın oynat/duraklat tuşuna çift basınca sesli asistan dinler; tek basış müziği durdurur/oynatır (biraz gecikmeyle). RideDeck ekrandayken çalışır.</string>
+    <string name="voice_wake_title">\"Hey RideDeck\" (deneysel)</string>
+    <string name="voice_wake_desc">RideDeck ekrandayken telefonda çevrimdışı dinleyip \"Hey RideDeck\" duyunca asistanı açar. Mikrofon sürekli açık kalır, pil ve ısıyı artırır; Android 13+ ve çevrimdışı Türkçe paket gerekir.</string>
+    <string name="voice_wake_unavailable">Bu telefonda çevrimdışı tanıma yok; \"Hey RideDeck\" çalışmaz (Android 13+ ve Türkçe paket gerekir).</string>
     <string name="voice_history_header">Son komutlar</string>
     <string name="voice_history_clear">Temizle</string>
 </resources>

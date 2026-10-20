@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="MotoDash ana ekran" width="100%">
+  <img src="docs/screenshots/dashboard.png" alt="RideDeck ana ekran" width="100%">
 </p>
 
-<h1 align="center">MotoDash</h1>
+<h1 align="center">RideDeck</h1>
 
 <p align="center">
   <b>Telefonunu gidona tak, CarPlay tarzı sürüş paneline çevir.</b><br>
@@ -10,15 +10,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/yigitbuyukeren/carplay/releases/latest"><img src="https://img.shields.io/github/v/release/yigitbuyukeren/carplay?style=for-the-badge&color=7F52FF" alt="Sürüm"></a>
-  <a href="https://github.com/yigitbuyukeren/carplay/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/yigitbuyukeren/carplay/ci.yml?style=for-the-badge&label=CI" alt="CI"></a>
+  <a href="https://github.com/yigitbuyukeren/ridedeck/releases/latest"><img src="https://img.shields.io/github/v/release/yigitbuyukeren/ridedeck?style=for-the-badge&color=7F52FF" alt="Sürüm"></a>
+  <a href="https://github.com/yigitbuyukeren/ridedeck/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/yigitbuyukeren/ridedeck/ci.yml?style=for-the-badge&label=CI" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-Apache%202.0-blue?style=for-the-badge" alt="Lisans"></a>
   <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android 8.0+">
   <img src="https://img.shields.io/badge/Kotlin-Jetpack_Compose-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin, Jetpack Compose">
 </p>
 
 <p align="center">
-  <a href="https://github.com/yigitbuyukeren/carplay/releases/latest"><b>⬇️ APK indir</b></a> ·
+  <a href="https://github.com/yigitbuyukeren/ridedeck/releases/latest"><b>⬇️ APK indir</b></a> ·
   <a href="#özellikler">Özellikler</a> ·
   <a href="#derleme">Derleme</a> ·
   <a href="CONTRIBUTING.md">Katkı</a> ·
@@ -59,8 +59,8 @@ Bisiklet profilinde telefon dik de durabilir:
 <img src="docs/screenshots/bicycle-portrait.png" alt="Dik bisiklet ana ekranı" width="240">
 
 ## Kurulum
-1. [Son sürümün](https://github.com/yigitbuyukeren/carplay/releases/latest) APK'sını indir ve kur (bilinmeyen kaynaklardan kuruluma izin ver).
-2. İlk açılışta aracını seç; istersen MotoDash'i ana ekran (HOME) uygulaması yap.
+1. [Son sürümün](https://github.com/yigitbuyukeren/ridedeck/releases/latest) APK'sını indir ve kur (bilinmeyen kaynaklardan kuruluma izin ver).
+2. İlk açılışta aracını seç; istersen RideDeck'i ana ekran (HOME) uygulaması yap.
 3. Müzik ve mesaj okuma için Ayarlar > Kurulum'dan bildirim erişimini ver.
 
 ## Özellikler
@@ -106,9 +106,9 @@ Ayrıntılar için başlıklara dokun.
 
 - Uygulama rafı (dock'taki son karo): mesajlaşma, video veya istediğin uygulamayı sabitle, büyük karolarla tek dokunuşla başlat; ekleme ve sıralama sürerken kilitli; Ayarlar rafın sağ üstündeki dişli düğmesinden açılır
 - Ana ekran kartları ayarlanır (Ayarlar > Sürüş): harita, müzik, uygulama kartı (sabitlediğin uygulamalar tek sırada) veya boş
-- Rota kartında "Navigasyon uygulamasında aç" (Google Haritalar, Waze, Yandex Navi derin bağlantıları, yalnızca dururken); rota hâlâ MotoDash'te hesaplanır, canlı trafik isteyen bu uygulamalara geçer
+- Rota kartında "Navigasyon uygulamasında aç" (Google Haritalar, Waze, Yandex Navi derin bağlantıları, yalnızca dururken); rota hâlâ RideDeck'te hesaplanır, canlı trafik isteyen bu uygulamalara geçer
 - Sesle komut (Türkçe, yaklaşık 130 kalıp): mikrofon düğmesi (navigasyon kartı, harita arama kutusu), Bluetooth kaskın sesli komut düğmesi veya sistem "asistan" hareketi dinlemeyi başlatır; bip ve titreşim başlangıcı ve bitişi bildirir. Hedefe git, eve/işe/park yerine git, en yakın benzinlik/kafe/eczane/hastane/ATM, kalan süre ve varış saati, sıradaki dönüş, otoyolsuz/ücretsiz yol, burayı kaydet; "Ali'yi ara" (birden çok Ali varsa "hangisi?" diye sorar, 3 sn geri sayım), son arananı/cevapsızı ara, gelen aramada cevapla/reddet/sessize al/hoparlör; son mesajı oku, "cevap yaz" (ne yazacağını sorar, göndermeden önce sesli onay ister); müzik, ada göre çalma, ses seviyesi yüzdesi; hava, saat, pil, hız, hız sınırı; uygulama aç, gece/gündüz, mil/km. "Ne diyebilirim?" ekranı tüm komutları listeler. Sesli yanıt ve kask mikrofonu Ayarlar > Sürüş'ten kapatılır. Ses tanıma telefonun kendi servisiyle yapılır (çevrimdışı tercih edilir), telefona göre ses Google'a gidebilir; sürekli dinleme ve uyandırma sözcüğü yok
-- Sesli asistan ayarları (Ayarlar > Sürüş): sesli yanıt, kask mikrofonu, komut geçmişi (son 10 komutun metni), kask tuşuna çift basış, "Hey MotoDash" (deneysel, cihaz içi tanıma ister; mikrofonu sürekli açık tutar). Ayarlar > Kurulum'dan MotoDash varsayılan dijital asistan seçilebilir (kaskın sesli komut düğmesi için) ve çevrimdışı Türkçe tanıma paketi indirilebilir. Komutlara ayrıca başka rota, yolda kafe/eczane gibi ara durak, yolculuk özeti, ekran parlaklığı ve sesli hava uyarısını kapatma eklendi; belirsiz duyulan komut "şunu mu dedin?" diye sorulur
+- Sesli asistan ayarları (Ayarlar > Sürüş): sesli yanıt, kask mikrofonu, komut geçmişi (son 10 komutun metni), kask tuşuna çift basış, "Hey RideDeck" (deneysel, cihaz içi tanıma ister; mikrofonu sürekli açık tutar). Ayarlar > Kurulum'dan RideDeck varsayılan dijital asistan seçilebilir (kaskın sesli komut düğmesi için) ve çevrimdışı Türkçe tanıma paketi indirilebilir. Komutlara ayrıca başka rota, yolda kafe/eczane gibi ara durak, yolculuk özeti, ekran parlaklığı ve sesli hava uyarısını kapatma eklendi; belirsiz duyulan komut "şunu mu dedin?" diye sorulur
 - Mil ve mph ayarı (Ayarlar > Sürüş): hız, mesafe, hız limiti ve rota sesleri
 - Mesaj uygulamalarını tek tek sessize alma (Ayarlar'da görülen uygulamalar için anahtar)
 
@@ -127,9 +127,9 @@ Ayrıntılar için başlıklara dokun.
 <summary><b>Telefon ve medya</b></summary>
 
 - Uygulama içi telefon: son aramalar, tüm rehber ve tuş takımı (eşleşen kişi önerisi, büyük silme tuşu, `0` uzun basınca `+`; yatay telefonda listede 4 satır görünür); sürerken tuş takımı kilitli
-- MotoDash'i varsayılan telefon uygulaması yaparsan arama ekranı da uygulamanın içinde: sessiz, ses yolu (telefon, hoparlör, Bluetooth), ses seviyesi, görüşme tuş takımı
+- RideDeck'i varsayılan telefon uygulaması yaparsan arama ekranı da uygulamanın içinde: sessiz, ses yolu (telefon, hoparlör, Bluetooth), ses seviyesi, görüşme tuş takımı
 - Müzik: yalnızca müzik uygulamalarının oturumu, ilerleme çubuğu, kapağı kaydırarak şarkı geçme, ses tuşları; hiçbir şey çalmıyorken Oynat son müziği başlatır (bildirim erişimi gerekir)
-- Mesajları sesli okuma (yalnızca MotoDash ekrandayken)
+- Mesajları sesli okuma (yalnızca RideDeck ekrandayken)
 - Diğer uygulamaların üstünde hız/saat şeridi; ana ekran (HOME) launcher olarak ayarlanabilir
 
 </details>
@@ -169,4 +169,4 @@ Issue ve PR'lar açık. Başlamak için [CONTRIBUTING.md](CONTRIBUTING.md) dosya
 [Apache 2.0](LICENSE)
 
 ## 🇬🇧 In English
-MotoDash is a free, open-source Android app (Kotlin, Jetpack Compose, minSdk 26) that turns a phone into a CarPlay-style landscape dashboard for motorcycles, cars and bicycles: GPS speedometer, voice-guided OpenStreetMap navigation, fuel/charging/repair stops, weather alerts, music, an in-app phone, a Turkish voice assistant and crash-detecting SOS. No accounts, no API keys, no servers: it only talks to free public map services. The UI has Turkish and English; voice commands are Turkish only. Build with `./gradlew assembleDebug` (JDK 17). Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md).
+RideDeck is a free, open-source Android app (Kotlin, Jetpack Compose, minSdk 26) that turns a phone into a CarPlay-style landscape dashboard for motorcycles, cars and bicycles: GPS speedometer, voice-guided OpenStreetMap navigation, fuel/charging/repair stops, weather alerts, music, an in-app phone, a Turkish voice assistant and crash-detecting SOS. No accounts, no API keys, no servers: it only talks to free public map services. The UI has Turkish and English; voice commands are Turkish only. Build with `./gradlew assembleDebug` (JDK 17). Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md).

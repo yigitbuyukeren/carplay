@@ -11,5 +11,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "carplay"
+rootProject.name = "ridedeck"
 include(":app")

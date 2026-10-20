@@ -48,7 +48,7 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
-        android:theme="@style/Theme.MotoDash">
+        android:theme="@style/Theme.RideDeck">
 
         <activity
             android:name=".MainActivity"
@@ -65,7 +65,7 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-            <!-- Needed to qualify as the phone app: MotoDash can be chosen as the default dialer. -->
+            <!-- Needed to qualify as the phone app: RideDeck can be chosen as the default dialer. -->
             <intent-filter>
                 <action android:name="android.intent.action.DIAL" />
                 <category android:name="android.intent.category.DEFAULT" />

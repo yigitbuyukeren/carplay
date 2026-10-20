@@ -12,11 +12,11 @@ val keystoreProps: Properties? = rootProject.file("keystore.properties").takeIf 
     ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
 
 android {
-    namespace = "dev.ygtlab.carplay"
+    namespace = "com.ridedeck.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.ygtlab.carplay"
+        applicationId = "com.ridedeck.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 3

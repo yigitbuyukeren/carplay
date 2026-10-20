@@ -1,6 +1,6 @@
 # Katkı rehberi
 
-MotoDash'e katkılarını bekliyoruz. Kod, hata bildirimi, fikir ve çeviri hepsi değerli.
+RideDeck'e katkılarını bekliyoruz. Kod, hata bildirimi, fikir ve çeviri hepsi değerli.
 
 ## Başlamak
 1. Depoyu fork'la ve klonla.
