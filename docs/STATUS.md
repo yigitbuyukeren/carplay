@@ -61,7 +61,7 @@ Tarama listesindeki 33 maddenin hepsi ele alındı (numaralar taramadaki sırad�
 ## Sıradaki işler
 1. **Telefonda dene** (üstteki "denenmedi" listesi): önce bir arama, Oynat, kapak kaydırma, klavye ile adres arama, canlı mini harita.
 2. **SOS eşiklerini sahada ayarla**: `CrashDetector.IMPACT_G` (4 g) ve 8 sn hareketsizlik yalnızca sentetik verilerle test edildi. Gidonda yanlış alarm olursa önce eşiği artır. Gerçek SIM ile bir test SMS'i (kendi numarana) gönder.
-3. **README ekran görüntülerini yenile** (özellikle araç seçimi, dik bisiklet ana ekranı, yeni telefon, müzik ve klavye ekranları), Türkçe arayüzle. v0.3.0 yayınlandı; bir sonraki sürümde `versionCode` ve `versionName` artırılır.
+3. Bir sonraki sürümde `versionCode` ve `versionName` artırılır (v0.3.0 yayınlandı); README ekran görüntüleri 2026-10-20'de Türkçe arayüzle yenilendi (araç seçimi, dashboard, rota, navigasyon, benzinlikler, SOS, güvenlik ayarları, dik bisiklet ekranı).
 4. Çevrimdışı harita ve rota (eski #5, şimdilik planlanmıyor): büyük iş, MapLibre çevrimdışı bölgeler + yerel Valhalla/GraphHopper karşılığı gerekir.
 5. Telefonda **araç profilini** dene: arabada şarj istasyonu listesi, bisiklette dik düzen ve durak aramaları, gezinirken araç değiştirme, kaza eşiklerinde eğim şartı (25°) ve iki kat darbe eşiği.
 
@@ -88,3 +88,4 @@ Tarama listesindeki 33 maddenin hepsi ele alındı (numaralar taramadaki sırad�
 - **2026-10-19**: telefon, arama, müzik, klavye, mini harita ve kaldırma turları (ayrıntı yukarıda); tüm işler `main`'e alındı, `feature/obd` dalı kullanımdan kalktı.
 - **2026-10-19 (akşam)**: araç profilleri eklendi (ilk açılışta seçim, dik bisiklet düzeni, araca göre rota, duraklar, eşikler); ardından tüm kod tarandı ve bulunan 33 hata düzeltildi (yeniden rota yarışı ve ses tekrarı, yolculuk mesafesi, kaza algılamada eğim şartı, arama bildirimi, hız şeridi, durak araması, dik ekranlar). Commit geçmişi ortak yazar satırlarından temizlendi (içerik ve yazar aynı), #5 kapatıldı. Tüm belgeler güncellendi.
 - **2026-10-19 (gece)**: sürüm anahtarı oluşturuldu, imzalı R8 release emülatörde denendi (araç seçimi, harita, ayarlar çökmesiz), `v0.3.0` etiketlendi ve yayınlandı.
+- **2026-10-20**: README ekran görüntüleri emülatörde (Türkçe, uydurma "Ev" adresi, sahte GPS ile rota tekrarı) yeniden çekildi; yeni araç seçimi ve dik bisiklet ekranı eklendi.

@@ -7,15 +7,21 @@ Motosiklet, araba ve bisiklet için CarPlay tarzı Android sürüş paneli (laun
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
-| Rota | Navigasyon |
+| İlk açılışta araç seçimi | Rota |
 |---|---|
-| ![Rota](docs/screenshots/route.png) | ![Navigasyon](docs/screenshots/navigation.png) |
-| **Benzinlikler** |
-|---|
-| ![Benzinlikler](docs/screenshots/fuel.png) |
-| **SOS geri sayımı** |
-|---|
-| ![SOS](docs/screenshots/sos.png) |
+| ![Araç seçimi](docs/screenshots/vehicle.png) | ![Rota](docs/screenshots/route.png) |
+
+| Navigasyon | Benzinlikler |
+|---|---|
+| ![Navigasyon](docs/screenshots/navigation.png) | ![Benzinlikler](docs/screenshots/fuel.png) |
+
+| SOS geri sayımı | Güvenlik ayarları |
+|---|---|
+| ![SOS](docs/screenshots/sos.png) | ![Güvenlik ayarları](docs/screenshots/settings-safety.png) |
+
+Bisiklet profilinde telefon dik de durabilir:
+
+<img src="docs/screenshots/bicycle-portrait.png" alt="Dik bisiklet ana ekranı" width="240">
 
 ## Özellikler
 **Araç profilleri**
