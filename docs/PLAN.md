@@ -14,5 +14,6 @@ Bekleyen maddeler. Uygulama, kullanıcı "planı yap" diyene kadar başlamaz; ya
 ## Dashboard (2026-10-20 telefon görüntüsü)
 
 6. Navigasyon kartındaki mavi "Harita ve rota" düğmesi (`NavCard.kt`, `nav_map_and_route`) kaldırılır; kartın tamamı zaten `onOpenMap` ile açılıyor. Rota yokken kartta başlık, Ev/İş/Park kısayolları ve mini harita kalır; boşalan yer harita çizimine verilir. Kartın dokunulabilir olduğu anlaşılsın diye başlığın yanına küçük bir ok (›) konabilir. Kullanılmayan `nav_map_and_route` metni TR ve EN'den silinir.
+7. Hız kartında (`SpeedCard.kt`, `gps_waiting`) konum izni yokken de "GPS bekleniyor…" yazıyor; izin eksikliğini söylemiyor. İzin yokken metin "Konum izni gerekli" olur ve yanında "İzin ver" düğmesi çıkar (izin isteği ya da sistem ayarı); izin varken GPS gerçekten bekleniyorsa eski metin kalır. `resumeTick` ile izin verilince kart kendiliğinden güncellenir. TR ve EN metinleri eklenir.
 
 Telefonda ve kaskla denenmesi gerekenler (kod hazır, doğrulama kullanıcıda; ayrıntı `docs/STATUS.md`): sesle komut tanıma kalitesi, kask mikrofonu, kaskın sesli komut düğmesi ve çift basış tetikleyicisi, "Hey RideDeck", `playFromSearch` ile ada göre çalma, bildirimden mesaja cevap, başka rota ve yolda durak.
