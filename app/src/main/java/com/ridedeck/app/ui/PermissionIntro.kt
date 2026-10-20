@@ -45,7 +45,7 @@ fun PermissionIntro(rows: List<PermissionRow>, onClose: () -> Unit) {
     val portrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     Box(modifier = Modifier.fillMaxSize().background(palette.wallpaper)) {
         Column(
-            modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 32.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxSize().symmetricSafePadding().padding(horizontal = 32.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

@@ -59,7 +59,7 @@ fun VehicleChooser(onChoose: (VehicleProfile) -> Unit) {
     var selected by remember { mutableStateOf<VehicleProfile?>(null) }
     Box(modifier = Modifier.fillMaxSize().background(palette.wallpaper).clickable(enabled = false) {}) {
         Column(
-            modifier = Modifier.align(Alignment.Center).fillMaxWidth().safeDrawingPadding()
+            modifier = Modifier.align(Alignment.Center).fillMaxWidth().symmetricSafePadding()
                 .padding(horizontal = 32.dp, vertical = 12.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
