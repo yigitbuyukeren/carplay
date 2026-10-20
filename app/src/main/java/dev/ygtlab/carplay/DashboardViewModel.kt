@@ -17,6 +17,8 @@ import dev.ygtlab.carplay.data.WeatherAlert
 import dev.ygtlab.carplay.data.WeatherController
 import dev.ygtlab.carplay.data.PlaceKind
 import dev.ygtlab.carplay.data.SavedPlace
+import dev.ygtlab.carplay.data.DashCard
+import dev.ygtlab.carplay.data.DashLayout
 import dev.ygtlab.carplay.data.PinnedApps
 import dev.ygtlab.carplay.data.VoiceAssistant
 import dev.ygtlab.carplay.data.VoiceInput
@@ -168,6 +170,14 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         },
         openMap = { voiceOpenMap.value = true },
     )
+
+    val dashSlots = MutableStateFlow(DashLayout.fromString(Prefs.dashSlots(app)))
+
+    fun setDashSlot(index: Int, card: DashCard) {
+        val next = DashLayout.set(dashSlots.value, index, card)
+        dashSlots.value = next
+        Prefs.setDashSlots(getApplication(), DashLayout.toString(next))
+    }
 
     val pinnedApps = MutableStateFlow(PinnedApps.fromJson(Prefs.pinnedApps(app)))
 

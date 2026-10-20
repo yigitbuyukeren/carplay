@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.data.DashCard
+import dev.ygtlab.carplay.data.DashLayout
 import android.Manifest
 import android.content.Context
 import android.content.res.Configuration
@@ -137,6 +139,8 @@ fun SettingsScreen(
     onClose: () -> Unit,
     vehicle: VehicleProfile = VehicleProfile.MOTORCYCLE,
     onVehicle: (VehicleProfile) -> Unit = {},
+    dashSlots: List<DashCard> = DashLayout.DEFAULT,
+    onDashSlot: (Int, DashCard) -> Unit = { _, _ -> },
     bikeType: BikeType = BikeType.CITY,
     onBikeType: (BikeType) -> Unit = {},
     safetyCard: @Composable () -> Unit = {},
@@ -214,6 +218,18 @@ fun SettingsScreen(
                                         stringResource(R.string.action_open), onClick = onOpenTrips,
                                     )
                                 )
+                            }
+                            listOf(R.string.dash_slot_one to 0, R.string.dash_slot_two to 1).forEach { (title, index) ->
+                                item {
+                                    val order = listOf(DashCard.NAV, DashCard.MEDIA, DashCard.APPS, DashCard.NONE)
+                                    ChoiceRow(
+                                        stringResource(title), stringResource(R.string.dash_slot_desc),
+                                        listOf(
+                                            stringResource(R.string.dash_nav), stringResource(R.string.dash_media),
+                                            stringResource(R.string.dash_apps), stringResource(R.string.dash_none),
+                                        ).mapIndexed { i, label -> label to (dashSlots.getOrNull(index) == order[i]) },
+                                    ) { onDashSlot(index, order[it]) }
+                                }
                             }
                             items(toggles) { t -> ToggleRow(t) }
                             item { ThemeRow(themeMode, onThemeMode) }

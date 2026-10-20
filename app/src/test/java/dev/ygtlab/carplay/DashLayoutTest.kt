@@ -1,0 +1,33 @@
+package dev.ygtlab.carplay
+
+import dev.ygtlab.carplay.data.DashCard
+import dev.ygtlab.carplay.data.DashLayout
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class DashLayoutTest {
+    @Test
+    fun badInputFallsBackToDefault() {
+        assertEquals(DashLayout.DEFAULT, DashLayout.fromString(null))
+        assertEquals(DashLayout.DEFAULT, DashLayout.fromString("junk"))
+        assertEquals(DashLayout.DEFAULT, DashLayout.fromString("NAV"))
+    }
+
+    @Test
+    fun roundTrip() {
+        val slots = listOf(DashCard.APPS, DashCard.NAV)
+        assertEquals(slots, DashLayout.fromString(DashLayout.toString(slots)))
+    }
+
+    @Test
+    fun duplicatesAreDropped() {
+        assertEquals(listOf(DashCard.NAV, DashCard.NONE), DashLayout.fromString("NAV,NAV"))
+    }
+
+    @Test
+    fun settingACardAlreadyInTheOtherSlotSwaps() {
+        assertEquals(listOf(DashCard.MEDIA, DashCard.NAV), DashLayout.set(listOf(DashCard.NAV, DashCard.MEDIA), 0, DashCard.MEDIA))
+        assertEquals(listOf(DashCard.NAV, DashCard.APPS), DashLayout.set(listOf(DashCard.NAV, DashCard.MEDIA), 1, DashCard.APPS))
+        assertEquals(listOf(DashCard.NONE, DashCard.MEDIA), DashLayout.set(listOf(DashCard.NAV, DashCard.MEDIA), 0, DashCard.NONE))
+    }
+}

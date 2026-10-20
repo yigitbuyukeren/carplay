@@ -29,6 +29,7 @@ object Prefs {
     private const val KEY_RAIN_VOICE = "rain_voice"
     private const val KEY_MILES = "units_miles"
     private const val KEY_PINNED_APPS = "pinned_apps"
+    private const val KEY_DASH_SLOTS = "dash_slots"
     private const val KEY_MESSAGE_APPS_SEEN = "message_apps_seen"
     private const val KEY_MESSAGE_APPS_MUTED = "message_apps_muted"
 
@@ -53,6 +54,13 @@ object Prefs {
 
     fun setMessageAppsMuted(context: Context, json: String) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_MESSAGE_APPS_MUTED, json).apply()
+    }
+
+    fun dashSlots(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_DASH_SLOTS, null)
+
+    fun setDashSlots(context: Context, value: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_DASH_SLOTS, value).apply()
     }
 
     fun milesUnit(context: Context): Boolean =

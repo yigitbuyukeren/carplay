@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -248,6 +249,40 @@ private fun AppPicker(pinned: List<String>, onPick: (String) -> Unit) {
             ) {
                 AppIcon(app.pkg, 48)
                 Text(app.label, fontSize = 20.sp, color = palette.text, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/** Dashboard card: the pinned apps in one scrolling row, so a messenger or a video app is one tap away. */
+@Composable
+fun AppsCard(pinned: List<String>, onOpenShelf: () -> Unit, modifier: Modifier = Modifier) {
+    val palette = LocalMotoPalette.current
+    val context = LocalContext.current
+    val pm = context.packageManager
+    val shown = remember(pinned) { pinned.filter { pm.getLaunchIntentForPackage(it) != null } }
+    Box(
+        modifier = modifier.clip(RoundedCornerShape(28.dp)).background(MotoColors.Card),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (shown.isEmpty()) {
+            PillButton(stringResource(R.string.apps_card_empty), MotoColors.Blue, onOpenShelf, singleLine = true)
+        } else {
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                items(shown, key = { it }) { pkg ->
+                    val label = remember(pkg) { runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg) }
+                    Column(
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).pressClickable { context.launchPackage(pkg) }.padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        AppIcon(pkg, 60)
+                        Text(label, fontSize = 14.sp, color = palette.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 84.dp))
+                    }
+                }
             }
         }
     }

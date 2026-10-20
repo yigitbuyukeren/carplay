@@ -258,4 +258,12 @@
     <string name="voice_mic_permission">Sesle komut için mikrofon izni gerekir</string>
     <string name="voice_title">Sesle komut</string>
     <string name="voice_desc">Mikrofon düğmesine basıp \"Kadıköy\'e git\", \"Ali\'yi ara\", \"müziği aç\" gibi söyle. Ses tanıma telefonun kendi servisiyle yapılır; telefona göre ses Google\'a gidebilir.</string>
+    <string name="dash_slot_one">Ana ekran: üst kart</string>
+    <string name="dash_slot_two">Ana ekran: alt kart</string>
+    <string name="dash_slot_desc">Hız göstergesinin yanında hangi kart görünsün.</string>
+    <string name="dash_nav">Harita</string>
+    <string name="dash_media">Müzik</string>
+    <string name="dash_apps">Uygulama</string>
+    <string name="dash_none">Boş</string>
+    <string name="apps_card_empty">Uygulama ekle</string>
 </resources>

@@ -258,4 +258,12 @@
     <string name="voice_mic_permission">Voice commands need the microphone permission</string>
     <string name="voice_title">Voice commands</string>
     <string name="voice_desc">Tap the microphone and say things like \"Go to Kadıköy\", \"Call Ali\" or \"play music\" (commands are Turkish). Recognition uses the phone\'s own service; depending on the phone the audio may go to Google.</string>
+    <string name="dash_slot_one">Dashboard: top card</string>
+    <string name="dash_slot_two">Dashboard: bottom card</string>
+    <string name="dash_slot_desc">Which card sits next to the speed gauge.</string>
+    <string name="dash_nav">Map</string>
+    <string name="dash_media">Music</string>
+    <string name="dash_apps">Apps</string>
+    <string name="dash_none">Empty</string>
+    <string name="apps_card_empty">Add apps</string>
 </resources>

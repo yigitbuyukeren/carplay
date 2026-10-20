@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.data.DashCard
 import dev.ygtlab.carplay.util.Units
 import android.content.Context
 import android.content.Intent
@@ -76,6 +77,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showNowPlaying by remember { mutableStateOf(false) }
     var showPhone by remember { mutableStateOf(false) }
     var showApps by remember { mutableStateOf(false) }
+    val dashSlots by vm.dashSlots.collectAsStateWithLifecycle()
     val voiceUi by vm.voiceAssistant.ui.collectAsStateWithLifecycle()
     val voiceOpenMap by vm.voiceOpenMap.collectAsStateWithLifecycle()
     var pendingSearchFallback by remember { mutableStateOf(false) }
@@ -271,12 +273,26 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             modifier = mod,
                         )
                     }
+                    val appsCard: @Composable (Modifier) -> Unit = { mod ->
+                        AppsCard(pinnedApps, onOpenShelf = { showApps = true }, modifier = mod)
+                    }
+                    // The speed card is fixed; the other two slots show what the rider chose in Settings.
+                    val slotCard: @Composable (DashCard, Modifier) -> Unit = { card, mod ->
+                        when (card) {
+                            DashCard.NAV -> navCard(mod)
+                            DashCard.MEDIA -> mediaCard(mod)
+                            DashCard.APPS -> appsCard(mod)
+                            DashCard.NONE -> {}
+                        }
+                    }
+                    val shownSlots = dashSlots.filter { it != DashCard.NONE }
                     if (portrait) {
-                        // Upright phone: speed on top, the route in the middle, music at the bottom.
+                        // Upright phone: speed on top, the chosen cards below.
                         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             speedCard(Modifier.weight(1.1f).fillMaxWidth())
-                            navCard(Modifier.weight(1.3f).fillMaxWidth())
-                            mediaCard(Modifier.weight(0.9f).fillMaxWidth())
+                            shownSlots.forEach { card ->
+                                slotCard(card, Modifier.weight(when (card) { DashCard.NAV -> 1.3f; DashCard.MEDIA -> 0.9f; else -> 0.6f }).fillMaxWidth())
+                            }
                         }
                     } else {
                         Row(
@@ -284,12 +300,13 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
                             speedCard(Modifier.weight(1f).fillMaxSize())
-                            Column(
-                                modifier = Modifier.weight(1.15f).fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(14.dp),
-                            ) {
-                                navCard(Modifier.weight(1f).fillMaxSize())
-                                mediaCard(Modifier.weight(1f).fillMaxSize())
+                            if (shownSlots.isNotEmpty()) {
+                                Column(
+                                    modifier = Modifier.weight(1.15f).fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                                ) {
+                                    shownSlots.forEach { card -> slotCard(card, Modifier.weight(1f).fillMaxSize()) }
+                                }
                             }
                         }
                     }
@@ -377,6 +394,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     onClose = { showSettings = false },
                     vehicle = profile,
                     onVehicle = vm::setVehicle,
+                    dashSlots = dashSlots,
+                    onDashSlot = vm::setDashSlot,
                     bikeType = routeOptions.bikeType,
                     onBikeType = { vm.nav.setOptions(routeOptions.copy(bikeType = it)) },
                     safetyCard = {
