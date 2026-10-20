@@ -16,7 +16,7 @@ Durum sütunu: **Yapılabilir** = anahtarsız/ücretsiz ilkeye uyuyor. **Kısıt
 | 6 | 3D bina ve zengin harita (Immersive Navigation) | Google Maps'te 3D binalar, yükseltili yollar, arazi | 2D vektör harita, 55° eğim | Yapılmaz |
 | 7 | Şerit bilgisi ve kavşak görünümü | Şerit yönlendirme, kavşak görseli | Dönüş ikonu ve metin | Kısıtlı (Valhalla verisine bağlı) |
 | 8 | Viraj ağırlıklı / manzaralı rota | Calimoto, Kurviger gibi uygulamalarda var; AA/CarPlay'de yok | Yok | Yapılmaz (anahtarsız karşılığı yok) |
-| 9 | Widget ve Live Activity | CarPlay (iOS 26): yığınlanabilir widget, canlı etkinlik | Sabit kartlar, kullanıcı düzenleyemez | Yapılabilir (kart sırası/seçimi) |
+| 9 | Widget ve Live Activity | CarPlay (iOS 26): yığınlanabilir widget, canlı etkinlik | Ayarlanabilir iki kart yuvası (harita, müzik, uygulama kartı, boş); sistem widget'ı denendi ve kaldırıldı | Kısmen yapıldı |
 | 10 | Araç donanımı entegrasyonu | Direksiyon/gidon tuşları, araç mikrofonu, ekranı, klima | Yok | Yapılmaz (gidon kumandası kararlaştırıldı: yapılmayacak) |
 | 11 | Araç verisi (OBD, TPMS, yakıt menzili) | Araç üreticisine bağlı | Çıkarıldı / yapılmayacak | Yapılmaz |
 | 12 | Gösterge paneli (cluster) kontrolü | CarPlay Ultra | Yok | Yapılmaz |

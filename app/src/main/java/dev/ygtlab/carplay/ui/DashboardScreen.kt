@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.data.VoiceScreen
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
@@ -82,7 +83,11 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showApps by remember { mutableStateOf(false) }
     val dashSlots by vm.dashSlots.collectAsStateWithLifecycle()
     val voiceUi by vm.voiceAssistant.ui.collectAsStateWithLifecycle()
-    val voiceOpenMap by vm.voiceOpenMap.collectAsStateWithLifecycle()
+    val voiceScreen by vm.voiceScreen.collectAsStateWithLifecycle()
+    val showVoiceHelp by vm.voiceHelp.collectAsStateWithLifecycle()
+    val voiceRequests by vm.voiceRequests.collectAsStateWithLifecycle()
+    var voiceReplies by remember { mutableStateOf(Prefs.voiceReplies(context)) }
+    var voiceHelmetMic by remember { mutableStateOf(Prefs.voiceHelmetMic(context)) }
     var pendingSearchFallback by remember { mutableStateOf(false) }
     val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) vm.voiceAssistant.listen(pendingSearchFallback)
@@ -177,12 +182,22 @@ fun DashboardScreen(vm: DashboardViewModel) {
         )
     }
 
-    LaunchedEffect(voiceOpenMap) {
-        if (voiceOpenMap) {
-            showMap = true; showApps = false; showPhone = false; showNowPlaying = false; showSettings = false
-            vm.voiceOpenMap.value = false
+    // A voice command asked for a screen.
+    LaunchedEffect(voiceScreen) {
+        val wanted = voiceScreen ?: return@LaunchedEffect
+        showMap = false; showNowPlaying = false; showPhone = false; showApps = false; showSettings = false
+        when (wanted) {
+            VoiceScreen.MAP -> showMap = true
+            VoiceScreen.MUSIC -> showNowPlaying = true
+            VoiceScreen.PHONE -> showPhone = true
+            VoiceScreen.APPS -> showApps = true
+            VoiceScreen.SETTINGS -> showSettings = true
+            VoiceScreen.HOME -> {}
         }
+        vm.voiceScreen.value = null
     }
+    // The helmet's voice button (or the system "assist" gesture) asks to listen.
+    LaunchedEffect(voiceRequests) { if (voiceRequests > 0) startVoice(false) }
 
     BackHandler(enabled = showMap || showNowPlaying || showPhone || showTrips || showApps) {
         showApps = false
@@ -393,6 +408,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     ToggleItem(stringResource(R.string.rain_voice_title), stringResource(R.string.rain_voice_desc), rainVoice, vm::setRainVoice),
                     ToggleItem(stringResource(R.string.thermal_title), stringResource(R.string.thermal_desc), thermalOn, vm::setThermalEnabled),
                     ToggleItem(stringResource(R.string.speed_limit_title), stringResource(R.string.speed_limit_desc), speedLimitOn, vm::setSpeedLimitEnabled),
+                    ToggleItem(stringResource(R.string.voice_replies_title), stringResource(R.string.voice_replies_desc), voiceReplies) { voiceReplies = it; Prefs.setVoiceReplies(context, it) },
+                    ToggleItem(stringResource(R.string.voice_helmet_title), stringResource(R.string.voice_helmet_desc), voiceHelmetMic) { voiceHelmetMic = it; Prefs.setVoiceHelmetMic(context, it) },
                     ToggleItem(stringResource(R.string.units_title), stringResource(R.string.units_desc), Units.miles) { Units.set(context, it) },
                     ToggleItem(stringResource(R.string.record_trips_title), stringResource(R.string.record_trips_desc), recordTrips, vm::setRecordTrips),
                     ToggleItem(stringResource(R.string.overlay_title), stringResource(R.string.overlay_desc), overlayEnabled) { enabled ->
@@ -454,7 +471,11 @@ fun DashboardScreen(vm: DashboardViewModel) {
         // The first-launch question sits above everything but the SOS countdown.
         if (vehicleChosen == null) VehicleChooser(onChoose = vm::setVehicle)
 
-        VoiceOverlay(voiceUi, onCancel = vm.voiceAssistant::cancel)
+        AnimatedVisibility(visible = showVoiceHelp, enter = overlayEnter, exit = overlayExit) {
+            VoiceHelpScreen(onClose = { vm.voiceHelp.value = false })
+        }
+
+        VoiceOverlay(voiceUi, onCancel = vm.voiceAssistant::cancel, onChoose = vm.voiceAssistant::choose, onHelp = { vm.voiceAssistant.cancel(); vm.voiceHelp.value = true })
 
         // Last, so nothing can cover an SOS countdown.
         SosScreen(sosUi, sosContacts.map { it.name }, onCancel = vm.sos::cancel, onDismiss = vm.sos::dismiss)

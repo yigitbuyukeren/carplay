@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
         dev.ygtlab.carplay.util.LegacyCleanup.run(this)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        if (savedInstanceState == null) handleDialIntent(intent)
+        if (savedInstanceState == null) { handleDialIntent(intent); handleVoiceIntent(intent) }
         // A hot phone dims itself (see ThermalGuard); a cool one keeps the system brightness.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -65,6 +65,12 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleDialIntent(intent)
+        handleVoiceIntent(intent)
+    }
+
+    /** The helmet's voice button and the system assist gesture start listening. */
+    private fun handleVoiceIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VOICE_COMMAND || intent?.action == Intent.ACTION_ASSIST) viewModel.requestVoice()
     }
 
     /** Another app's tel: link: the phone screen opens with the number on the keypad. */

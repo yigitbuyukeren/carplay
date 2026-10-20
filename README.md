@@ -33,7 +33,7 @@ Bisiklet profilinde telefon dik de durabilir:
 **Gösterge ve sürüş**
 - GPS hız göstergesi, saat, pil ve telefon sıcaklığı; gündüz/gece teması (ortam ışığına göre otomatik)
 - Yolculuk kaydı: otomatik, geçmiş ekranı
-- Hız kartında rakım ve GPS durumu; büyük, eldivenle basılan tuşlar
+- Hız kartında GPS durumu; büyük, eldivenle basılan tuşlar; ekranlar arasında kısa geçiş animasyonları (ısı koruması açıkken kapanır)
 - Türkçe ve İngilizce arayüz
 
 **Navigasyon**
@@ -47,11 +47,11 @@ Bisiklet profilinde telefon dik de durabilir:
 - Navigasyon sürerken ana ekranda canlı mini harita, sıradaki dönüş, kalan mesafe ve varış saati
 - Arama kutusu için uygulamanın kendi Türkçe klavyesi
 
-**Uygulamalar, widget ve ses**
+**Uygulamalar, kartlar ve ses**
 - Uygulama rafı (dock'taki son karo): mesajlaşma, video veya istediğin uygulamayı sabitle, büyük karolarla tek dokunuşla başlat; ekleme ve sıralama sürerken kilitli; Ayarlar rafın sağ üstündeki dişli düğmesinden açılır
-- Ana ekran kartları ayarlanır (Ayarlar > Sürüş): harita, müzik, uygulama sırası, sistem widget'ı veya boş; widget'ı kendi kurulum ekranıyla birlikte telefonundaki widget listesinden seçersin
+- Ana ekran kartları ayarlanır (Ayarlar > Sürüş): harita, müzik, uygulama kartı (sabitlediğin uygulamalar tek sırada) veya boş
 - Rota kartında "Navigasyon uygulamasında aç" (Google Haritalar, Waze, Yandex Navi derin bağlantıları, yalnızca dururken); rota hâlâ MotoDash'te hesaplanır, canlı trafik isteyen bu uygulamalara geçer
-- Sesle komut: mikrofon düğmesi (navigasyon kartı ve harita arama kutusu) ile "Kadıköy'e git", "eve git", "Ali'yi ara" (3 sn geri sayım, iptal edilebilir), "müziği aç/durdur", "sonraki şarkı", "sesi aç/kıs", "benzinlik", "navigasyonu bitir". Ses tanıma telefonun kendi servisiyle yapılır, telefona göre ses Google'a gidebilir; sürekli dinleme yok
+- Sesle komut (Türkçe, yaklaşık 130 kalıp): mikrofon düğmesi (navigasyon kartı, harita arama kutusu), Bluetooth kaskın sesli komut düğmesi veya sistem "asistan" hareketi dinlemeyi başlatır; bip ve titreşim başlangıcı ve bitişi bildirir. Hedefe git, eve/işe/park yerine git, en yakın benzinlik/kafe/eczane/hastane/ATM, kalan süre ve varış saati, sıradaki dönüş, otoyolsuz/ücretsiz yol, burayı kaydet; "Ali'yi ara" (birden çok Ali varsa "hangisi?" diye sorar, 3 sn geri sayım), son arananı/cevapsızı ara, gelen aramada cevapla/reddet/sessize al/hoparlör; son mesajı oku, "cevap yaz" (ne yazacağını sorar, göndermeden önce sesli onay ister); müzik, ada göre çalma, ses seviyesi yüzdesi; hava, saat, pil, hız, hız sınırı; uygulama aç, gece/gündüz, mil/km. "Ne diyebilirim?" ekranı tüm komutları listeler. Sesli yanıt ve kask mikrofonu Ayarlar > Sürüş'ten kapatılır. Ses tanıma telefonun kendi servisiyle yapılır (çevrimdışı tercih edilir), telefona göre ses Google'a gidebilir; sürekli dinleme ve uyandırma sözcüğü yok
 - Mil ve mph ayarı (Ayarlar > Sürüş): hız, mesafe, hız limiti ve rota sesleri
 - Mesaj uygulamalarını tek tek sessize alma (Ayarlar'da görülen uygulamalar için anahtar)
 
@@ -61,7 +61,7 @@ Bisiklet profilinde telefon dik de durabilir:
 - SOS (varsayılan kapalı): otomatik kaza algılama (sert darbe + hareketsizlik; iki tekerlekte telefonun yönü de değişmiş olmalı, çukur ve kırmızı ışık alarm vermez) veya uzun basmalı düğme; geri sayımdan sonra en fazla 3 kişiye konum linkli **tek** SMS, arama yok
 
 **Telefon ve medya**
-- Uygulama içi telefon: son aramalar, tüm rehber ve tuş takımı (eşleşen kişi önerisi, yapıştır, `0` uzun basınca `+`); sürerken tuş takımı kilitli
+- Uygulama içi telefon: son aramalar, tüm rehber ve tuş takımı (eşleşen kişi önerisi, büyük silme tuşu, `0` uzun basınca `+`; yatay telefonda listede 4 satır görünür); sürerken tuş takımı kilitli
 - MotoDash'i varsayılan telefon uygulaması yaparsan arama ekranı da uygulamanın içinde: sessiz, ses yolu (telefon, hoparlör, Bluetooth), ses seviyesi, görüşme tuş takımı
 - Müzik: yalnızca müzik uygulamalarının oturumu, ilerleme çubuğu, kapağı kaydırarak şarkı geçme, ses tuşları; hiçbir şey çalmıyorken Oynat son müziği başlatır (bildirim erişimi gerekir)
 - Mesajları sesli okuma (yalnızca MotoDash ekrandayken)

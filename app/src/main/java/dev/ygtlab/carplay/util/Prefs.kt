@@ -30,6 +30,8 @@ object Prefs {
     private const val KEY_MILES = "units_miles"
     private const val KEY_PINNED_APPS = "pinned_apps"
     private const val KEY_DASH_SLOTS = "dash_slots"
+    private const val KEY_VOICE_REPLIES = "voice_replies"
+    private const val KEY_VOICE_HELMET_MIC = "voice_helmet_mic"
     private const val KEY_MESSAGE_APPS_SEEN = "message_apps_seen"
     private const val KEY_MESSAGE_APPS_MUTED = "message_apps_muted"
 
@@ -61,6 +63,22 @@ object Prefs {
 
     fun setDashSlots(context: Context, value: String) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_DASH_SLOTS, value).apply()
+    }
+
+    /** Spoken answers from the voice assistant (on by default). */
+    fun voiceReplies(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_VOICE_REPLIES, true)
+
+    fun setVoiceReplies(context: Context, on: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_VOICE_REPLIES, on).apply()
+    }
+
+    /** Listen through a connected Bluetooth helmet microphone (on by default). */
+    fun voiceHelmetMic(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_VOICE_HELMET_MIC, true)
+
+    fun setVoiceHelmetMic(context: Context, on: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_VOICE_HELMET_MIC, on).apply()
     }
 
     fun milesUnit(context: Context): Boolean =

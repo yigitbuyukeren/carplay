@@ -150,6 +150,19 @@ class MediaRepository(private val context: Context) {
         controller?.transportControls?.play()
     }
 
+    /** "Play X": hands the search to the music app; false when no music app has a session to ask. */
+    fun playSearch(query: String): Boolean {
+        val c = controller ?: return false
+        c.transportControls.playFromSearch(query, null)
+        return true
+    }
+
+    /** Music volume as a percentage of the loudest setting. */
+    fun setVolumePercent(percent: Int) {
+        val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audio.setStreamVolume(AudioManager.STREAM_MUSIC, (percent.coerceIn(0, 100) * max / 100f).toInt(), AudioManager.FLAG_SHOW_UI)
+    }
+
     fun pause() {
         controller?.transportControls?.pause()
     }

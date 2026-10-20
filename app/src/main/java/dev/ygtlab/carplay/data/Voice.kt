@@ -11,6 +11,13 @@ import java.util.Locale
 /** Anything that can say a sentence out loud; lets the navigation logic run in plain unit tests. */
 interface Speaker {
     fun speak(text: String)
+
+    /** Says [text], then calls [then] once it has been spoken (at once when there is nothing to say). */
+    fun speakThen(text: String, then: () -> Unit) {
+        speak(text)
+        then()
+    }
+
     fun stop()
     fun shutdown()
 }
@@ -36,13 +43,9 @@ class Voice(context: Context) : Speaker {
             tts.setAudioAttributes(attributes)
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {}
-                override fun onDone(utteranceId: String?) {
-                    audio.abandonAudioFocusRequest(focusRequest)
-                }
+                override fun onDone(utteranceId: String?) = finished(utteranceId)
                 @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) {
-                    audio.abandonAudioFocusRequest(focusRequest)
-                }
+                override fun onError(utteranceId: String?) = finished(utteranceId)
             })
             ready = true
         }
@@ -52,6 +55,24 @@ class Voice(context: Context) : Speaker {
         if (!ready || text.isBlank()) return
         audio.requestAudioFocus(focusRequest)
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "nav")
+    }
+
+    private val thenCallbacks = java.util.concurrent.ConcurrentHashMap<String, () -> Unit>()
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var thenCounter = 0
+
+    override fun speakThen(text: String, then: () -> Unit) {
+        if (!ready || text.isBlank()) { then(); return }
+        val id = "then-${thenCounter++}"
+        thenCallbacks[id] = then
+        audio.requestAudioFocus(focusRequest)
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
+    }
+
+    private fun finished(id: String?) {
+        audio.abandonAudioFocusRequest(focusRequest)
+        val callback = id?.let { thenCallbacks.remove(it) } ?: return
+        mainHandler.post(callback)
     }
 
     override fun stop() {

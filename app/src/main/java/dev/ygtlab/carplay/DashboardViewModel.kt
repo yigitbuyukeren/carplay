@@ -21,7 +21,10 @@ import dev.ygtlab.carplay.data.DashCard
 import dev.ygtlab.carplay.data.DashLayout
 import dev.ygtlab.carplay.data.PinnedApps
 import dev.ygtlab.carplay.data.VoiceAssistant
+import dev.ygtlab.carplay.data.AndroidVoiceActions
+import dev.ygtlab.carplay.data.Speaker
 import dev.ygtlab.carplay.data.VoiceInput
+import dev.ygtlab.carplay.data.VoiceScreen
 import dev.ygtlab.carplay.data.SavedPlaces
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -141,34 +144,58 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         refreshMessageApps()
     }
 
-    /** Set by a voice command that needs the map screen; the dashboard opens it and clears the flag. */
-    val voiceOpenMap = MutableStateFlow(false)
+    /** A voice command asked for this screen; the dashboard opens it and clears the flag. */
+    val voiceScreen = MutableStateFlow<VoiceScreen?>(null)
+    val voiceHelp = MutableStateFlow(false)
 
-    private val voiceInput = VoiceInput(app)
+    /** Counts requests that start listening from outside the screen (the helmet's voice button, "assist"). */
+    val voiceRequests = MutableStateFlow(0)
+
+    fun requestVoice() { voiceRequests.value += 1 }
+
+    /** Names the recogniser should expect: contacts, saved places and pinned apps. */
+    private fun voiceNames(): List<String> {
+        val pm = getApplication<Application>().packageManager
+        val appNames = pinnedApps.value.mapNotNull { pkg -> runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrNull() }
+        return phone.contacts.value.map { it.name } + places.value.map { it.place.name } + appNames
+    }
+
+    private val voiceInput = VoiceInput(app) { voiceNames() }
+
+    /** Spoken answers can be switched off; the text still shows on screen. */
+    private val voiceSpeaker = object : Speaker {
+        override fun speak(text: String) { if (Prefs.voiceReplies(getApplication())) announcer.speak(text) }
+        override fun speakThen(text: String, then: () -> Unit) {
+            if (Prefs.voiceReplies(getApplication())) announcer.speakThen(text, then) else then()
+        }
+        override fun stop() = announcer.stop()
+        override fun shutdown() {}
+    }
 
     val voiceAssistant = VoiceAssistant(
         text = app::getString,
         scope = viewModelScope,
-        listener = object : VoiceAssistant.SpeechListener {
-            override fun available() = voiceInput.available()
-            override fun start(onPartial: (String) -> Unit, onResult: (List<String>) -> Unit) = voiceInput.start(onPartial, onResult)
-            override fun cancel() = voiceInput.cancel()
-        },
-        nav = nav,
-        speaker = announcer,
-        places = { places.value },
-        contacts = { phone.contacts.value },
-        canReadContacts = { phone.canReadContacts() },
-        dial = phone::dial,
-        media = object : VoiceAssistant.MediaControls {
-            override fun play() = if (media.isPlaying) Unit else media.togglePlay()
-            override fun pause() = if (media.isPlaying) media.pause() else Unit
-            override fun next() = media.next()
-            override fun previous() = media.previous()
-            override fun volumeUp() = media.volumeUp()
-            override fun volumeDown() = media.volumeDown()
-        },
-        openMap = { voiceOpenMap.value = true },
+        listener = voiceInput,
+        speaker = voiceSpeaker,
+        actions = AndroidVoiceActions(
+            context = app,
+            nav = nav,
+            routing = RouteRepository(),
+            places = { places.value },
+            savePlace = ::savePlace,
+            location = location.state,
+            phone = phone,
+            call = call,
+            dialNumber = ::dial,
+            media = media,
+            weather = { weather.snapshot.value },
+            battery = { battery.state.value },
+            speedLimit = { speedLimit.limit.value },
+            setThemeMode = theme::setMode,
+            startSosCountdown = { sos.trigger(SosReason.MANUAL) },
+            showScreen = { voiceScreen.value = it },
+            showHelpScreen = { voiceHelp.value = true },
+        ),
     )
 
     val dashSlots = MutableStateFlow(DashLayout.fromString(Prefs.dashSlots(app)))

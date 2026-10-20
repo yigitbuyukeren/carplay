@@ -349,6 +349,15 @@ class NavigationController(
         }
     }
 
+    /** Voice "recalculate": re-plans from here to the same destination. False without a destination or a position. */
+    fun recalculate(): Boolean {
+        val state = _ui.value
+        val dest = state.destination ?: return false
+        val from = here() ?: return false
+        if (state.navigating) reroute(from) else selectPlace(dest)
+        return true
+    }
+
     private fun reroute(from: GeoPoint) {
         val dest = _ui.value.destination ?: return
         _ui.update { it.copy(rerouting = true) }
