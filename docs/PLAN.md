@@ -119,3 +119,28 @@ Araştırmada kesinleşmeyenler gerçek telefonda (A059) ve kullanıcının kask
 - Mesaj uygulamalarının yanıtla eylemi garanti değil (S5).
 - Sürekli mikrofon (uyandırma) pil, ısı ve gizlilik riski; bu yüzden en sona bırakıldı.
 - Kapsam büyük: aşamalara bölündü, her aşama tek başına yayınlanabilir.
+
+## 11. SOS düğmesi basılı tutunca büyüsün (eklendi 2026-10-20, bekliyor)
+
+Şimdi düğme (68 dp kırmızı daire) basılı tutulunca yalnızca beyaz halka doluyor (`SosButton`, `SosUi.kt`), düğme düz duruyor; basılı tuttuğunu daha belirgin hissetmek için büyümeli.
+
+**Plan**
+- Büyüme basılı tutma ilerlemesine bağlanır: 1,00 → ~1,20 ölçek (`graphicsLayer`, yerleşimi kaydırmaz; yanındaki hız kartı kenar boşluğuna 16 dp ile sığar), bırakınca yaylı geri dönüş (`spring`). Basar basmaz küçük bir ani büyüme (0,2 sn içinde 1,06) ile "tuş algılandı" hissi.
+- Kırmızı hafifçe koyulaşıp dışında kırmızı bir halo (gölge) büyür; ilerleme halkası kalır.
+- Dokunsal geri bildirim: yarıda ve üçte ikide hafif titreşim, tetiklenince güçlü titreşim (`HapticFeedback`, izin gerektirmez); "düşük güç / ısı koruması"nda halo animasyonu kapanır, büyüme kalır.
+- Sürekli ilerleme okunurluğu için yazı ("SOS") sabit kalır, yalnızca daire ölçeklenir.
+- Basılı tutma süresi (`HOLD_MS`) değişmez; yanlış basma korumasının gücü aynı kalır. İptal (parmak kalkınca) sıfırlama değişmez.
+- Test: emülatörde basılı tutma ekran görüntüleri (başlangıç, ortası, tetik), telefonda dokunma hissi; `SosButton` mantığı (ilerleme → ölçek eşlemesi) saf bir yardımcıya alınıp birim testi.
+
+## 12. Menüler arası geçişte küçük animasyon (eklendi 2026-10-20, bekliyor)
+
+Şimdi ana ekran, harita, müzik, telefon, uygulama rafı, ayarlar ve yolculuklar `if` zinciriyle anında değişiyor. Küçük, hızlı ve sade geçişler gelsin; sürüşte dikkat dağıtmasın.
+
+**Plan**
+- Ana alan (ana ekran / harita / müzik / telefon): `AnimatedContent` ile 220 ms çapraz solma + hafif yatay kayma (~24 dp) ve hafif ölçek (0,98 → 1). Yön mantığı: dock sırasına göre (harita → müzik → telefon) ileri/geri kayar; ana ekrana dönüş yumuşak solma.
+- Üstten açılan tam ekranlar (ayarlar, uygulama rafı, yolculuklar, widget kalktığı için seçici yok, "Ne diyebilirim?" ekranı): `AnimatedVisibility` ile alttan ~32 dp kayarak ve solarak girer, aynı sürede çıkar. Geri tuşuyla çıkış aynı animasyonun tersi.
+- Dock karosu: basılı iken var olan yaylı sıkışma kalır; seçili ekranın karosu hafifçe parlar (arka plan geçişi 150 ms).
+- Harita (`MapView`) pahalı olduğu için yalnızca solma (kayma/ölçek yok), animasyon sırasında harita ağır yeniden çizilmez; ısı koruması veya düşük güç modunda tüm geçişler kapanır (anında değişir). Sistem "animasyon ölçeği 0" ayarına uyulur (Compose bunu kendiliğinden yapıyor mu telefonda doğrulanır).
+- SOS geri sayımı, arama ekranı ve ilk açılış araç seçimi animasyonsuz kalır (acil/öncelikli, hemen görünmeli).
+- Süre ve eğri tek yerde sabit (`MotoMotion`: 220 ms, `FastOutSlowIn`), ileride kolay ayarlanır.
+- Test: emülatörde ekran kaydı/kare görüntüleri ile her geçiş (ana↔harita↔müzik↔telefon, uygulama rafı, ayarlar, yolculuklar, geri tuşu); kare süresi kontrolü (jank yok); telefonda eldivensiz/eldivenli his kontrolü.
