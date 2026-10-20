@@ -224,4 +224,16 @@
     <string name="units_title">Miles and mph</string>
     <string name="units_desc">Show speed in mph and distance in miles/feet. Route voice prompts use miles too.</string>
     <string name="wind_banner_fmt_mph">Strong wind: %1$d mph</string>
+    <string name="apps_title">Apps</string>
+    <string name="apps_empty">No pinned apps yet. Tap Edit to add some.</string>
+    <string name="apps_edit">Edit</string>
+    <string name="apps_done">Done</string>
+    <string name="apps_add">Add</string>
+    <string name="apps_add_title">Add an app</string>
+    <string name="apps_move_up">Move earlier</string>
+    <string name="apps_move_down">Move later</string>
+    <string name="apps_remove">Remove</string>
+    <string name="apps_locked">Apps cannot be added or edited while riding.</string>
+    <string name="apps_settings">Settings</string>
+    <string name="open_external_nav">Open in a navigation app</string>
 </resources>

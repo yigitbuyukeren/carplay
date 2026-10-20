@@ -28,6 +28,14 @@ object Prefs {
     private const val KEY_WEATHER = "weather_enabled"
     private const val KEY_RAIN_VOICE = "rain_voice"
     private const val KEY_MILES = "units_miles"
+    private const val KEY_PINNED_APPS = "pinned_apps"
+
+    fun pinnedApps(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_PINNED_APPS, null)
+
+    fun setPinnedApps(context: Context, json: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_PINNED_APPS, json).apply()
+    }
 
     fun milesUnit(context: Context): Boolean =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_MILES, false)

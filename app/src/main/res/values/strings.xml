@@ -224,4 +224,16 @@
     <string name="units_title">Mil ve mph</string>
     <string name="units_desc">Hızı mph, mesafeyi mil/fit olarak göster. Rota sesleri de mil kullanır.</string>
     <string name="wind_banner_fmt_mph">Sert rüzgâr: saatte %1$d mil</string>
+    <string name="apps_title">Uygulamalar</string>
+    <string name="apps_empty">Henüz sabitlenmiş uygulama yok. "Düzenle"ye basıp ekle.</string>
+    <string name="apps_edit">Düzenle</string>
+    <string name="apps_done">Bitti</string>
+    <string name="apps_add">Ekle</string>
+    <string name="apps_add_title">Uygulama ekle</string>
+    <string name="apps_move_up">Yukarı taşı</string>
+    <string name="apps_move_down">Aşağı taşı</string>
+    <string name="apps_remove">Kaldır</string>
+    <string name="apps_locked">Sürerken uygulama eklenemez ve düzenlenemez.</string>
+    <string name="apps_settings">Ayarlar</string>
+    <string name="open_external_nav">Navigasyon uygulamasında aç</string>
 </resources>

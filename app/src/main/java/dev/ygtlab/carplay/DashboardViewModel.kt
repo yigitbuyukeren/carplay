@@ -17,6 +17,7 @@ import dev.ygtlab.carplay.data.WeatherAlert
 import dev.ygtlab.carplay.data.WeatherController
 import dev.ygtlab.carplay.data.PlaceKind
 import dev.ygtlab.carplay.data.SavedPlace
+import dev.ygtlab.carplay.data.PinnedApps
 import dev.ygtlab.carplay.data.SavedPlaces
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -113,6 +114,19 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         nav.setProfile(profile)
         if (!Prefs.speedLimitChosen(app)) speedLimitEnabled.value = profile.config.speedLimitDefault
     }
+
+    val pinnedApps = MutableStateFlow(PinnedApps.fromJson(Prefs.pinnedApps(app)))
+
+    private fun updatePinned(list: List<String>) {
+        pinnedApps.value = list
+        Prefs.setPinnedApps(getApplication(), PinnedApps.toJson(list))
+    }
+
+    fun pinApp(pkg: String) = updatePinned(PinnedApps.add(pinnedApps.value, pkg))
+
+    fun unpinApp(pkg: String) = updatePinned(PinnedApps.remove(pinnedApps.value, pkg))
+
+    fun moveApp(pkg: String, delta: Int) = updatePinned(PinnedApps.move(pinnedApps.value, pkg, delta))
 
     val places = MutableStateFlow(SavedPlaces.fromJson(Prefs.savedPlaces(app)))
 

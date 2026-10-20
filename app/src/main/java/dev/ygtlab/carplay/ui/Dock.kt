@@ -17,7 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Navigation
-import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,7 +37,7 @@ fun Dock(
     onNavigation: () -> Unit,
     onMusic: () -> Unit,
     onPhone: () -> Unit,
-    onSettings: () -> Unit,
+    onApps: () -> Unit,
     /** A bar along the bottom for an upright phone; the default is the column down the left side. */
     horizontal: Boolean = false,
 ) {
@@ -54,7 +54,7 @@ fun Dock(
                 DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation)
                 DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic)
                 DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone)
-                DockTile(Icons.Rounded.Settings, MotoColors.Gray, tile, onSettings)
+                DockTile(Icons.Rounded.Apps, MotoColors.Gray, tile, onApps)
                 Box(Modifier.width(statusWidth), contentAlignment = Alignment.Center) { DockStatus(battery) }
             }
         }
@@ -73,7 +73,7 @@ fun Dock(
                 DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation)
                 DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic)
                 DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone)
-                DockTile(Icons.Rounded.Settings, MotoColors.Gray, tile, onSettings)
+                DockTile(Icons.Rounded.Apps, MotoColors.Gray, tile, onApps)
             }
             DockStatus(battery)
         }

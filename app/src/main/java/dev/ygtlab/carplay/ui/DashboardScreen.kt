@@ -75,6 +75,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showMap by remember { mutableStateOf(false) }
     var showNowPlaying by remember { mutableStateOf(false) }
     var showPhone by remember { mutableStateOf(false) }
+    var showApps by remember { mutableStateOf(false) }
+    val pinnedApps by vm.pinnedApps.collectAsStateWithLifecycle()
     val dialRequest by vm.dialRequest.collectAsStateWithLifecycle()
     val recents by vm.phone.recents.collectAsStateWithLifecycle()
     val contacts by vm.phone.contacts.collectAsStateWithLifecycle()
@@ -157,7 +159,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
         )
     }
 
-    BackHandler(enabled = showMap || showNowPlaying || showPhone || showTrips) {
+    BackHandler(enabled = showMap || showNowPlaying || showPhone || showTrips || showApps) {
+        showApps = false
         showTrips = false
         showPhone = false
         showMap = false
@@ -176,10 +179,10 @@ fun DashboardScreen(vm: DashboardViewModel) {
             val dock: @Composable () -> Unit = {
                 Dock(
                     battery = battery,
-                    onNavigation = { showMap = !showMap; showNowPlaying = false; showPhone = false; showSettings = false },
-                    onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showPhone = false; showSettings = false },
-                    onPhone = { vm.dialRequest.value = null; showPhone = !showPhone; showMap = false; showNowPlaying = false; showSettings = false },
-                    onSettings = { showSettings = true },
+                    onNavigation = { showMap = !showMap; showNowPlaying = false; showPhone = false; showSettings = false; showApps = false },
+                    onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showPhone = false; showSettings = false; showApps = false },
+                    onPhone = { vm.dialRequest.value = null; showPhone = !showPhone; showMap = false; showNowPlaying = false; showSettings = false; showApps = false },
+                    onApps = { showApps = !showApps; showMap = false; showNowPlaying = false; showPhone = false; showSettings = false },
                     horizontal = portrait,
                 )
             }
@@ -363,6 +366,16 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             onTest = { vm.sos.trigger(SosReason.TEST) },
                         )
                     },
+                )
+            }
+
+            if (showApps) {
+                AppsScreen(
+                    pinned = pinnedApps,
+                    locked = gps.speedKmh >= PHONE_LOCK_KMH,
+                    onPin = vm::pinApp, onUnpin = vm::unpinApp, onMove = vm::moveApp,
+                    onSettings = { showApps = false; showSettings = true },
+                    onClose = { showApps = false },
                 )
             }
 

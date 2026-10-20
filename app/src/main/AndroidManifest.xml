@@ -22,6 +22,11 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <queries>
+        <!-- The app shelf lists launchable apps so the rider can pin them (no QUERY_ALL_PACKAGES needed). -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.APP_MUSIC" />

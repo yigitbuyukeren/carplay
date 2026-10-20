@@ -1,5 +1,11 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.util.installedNavApps
+import dev.ygtlab.carplay.util.startExternalNav
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import dev.ygtlab.carplay.util.Units
 import dev.ygtlab.carplay.data.SpeedLimitMath
 import dev.ygtlab.carplay.data.Geo
@@ -322,6 +328,7 @@ fun MapScreen(
                 )
                 ui.route != null -> RouteCard(
                     ui, options, onOptions = nav::setOptions,
+                    canOpenExternal = speedKmh < SEARCH_LOCK_KMH,
                     onStart = nav::startNavigation, onCancel = nav::stopNavigation,
                     saved = ui.destination?.let { d -> places.any { Geo.distance(it.place.point, d.point) < SAVED_SPOT_M } } == true,
                     onSave = { ui.destination?.let { saving = it } },
@@ -575,18 +582,46 @@ private fun RouteCard(
     ui: NavUi,
     options: RouteOptions,
     onOptions: (RouteOptions) -> Unit,
+    canOpenExternal: Boolean,
     saved: Boolean,
     onSave: () -> Unit,
     onStart: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val route = ui.route ?: return
+    val context = LocalContext.current
+    val externalApps = remember { context.installedNavApps() }
+    var menuOpen by remember { mutableStateOf(false) }
     val now by rememberNowMs()
     val eta = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now + route.durationS.toLong() * 1000))
     GlassPanel(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (externalApps.isNotEmpty() && canOpenExternal) {
+                    Box(
+                        Modifier.size(68.dp).clickable {
+                            val dest = ui.destination ?: return@clickable
+                            if (externalApps.size == 1) context.startExternalNav(externalApps[0], dest.point.lat, dest.point.lon, options.profile)
+                            else menuOpen = true
+                        },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.OpenInNew, stringResource(R.string.open_external_nav), tint = MotoColors.Gray, modifier = Modifier.size(28.dp))
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            externalApps.forEach { app ->
+                                DropdownMenuItem(
+                                    text = { Text(app.label, fontSize = 20.sp) },
+                                    modifier = Modifier.heightIn(min = 64.dp),
+                                    onClick = {
+                                        menuOpen = false
+                                        ui.destination?.let { context.startExternalNav(app, it.point.lat, it.point.lon, options.profile) }
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
                 Box(Modifier.size(68.dp).clickable(onClick = onSave), contentAlignment = Alignment.Center) {
                     Icon(
                         if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
