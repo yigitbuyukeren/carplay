@@ -64,3 +64,8 @@ Widget barındırma, madde 2'nin 4. parçasıyla aynı iş; burada birlikte tasa
 ## 5. mph / mil birimi (onaylandı 2026-10-20)
 
 **Kararlar**: ayar elle seçilir (km varsayılan, mil seçilebilir), otomatik yok. Dahili hesaplar km/m kalır, yalnızca gösterim çevrilir; güvenlik eşikleri (5 km/sa kilidi, kaza eşikleri) sabit. Valhalla'ya `units=miles`. Kapsam: hız göstergesi ve ölçek (`SpeedCard`), hız şeridi (`overlay_speed_fmt`), `SpeedUtil`, `TripStats`, hız limiti tabelası (birim karışımı dikkat), rüzgâr uyarısı, durak mesafeleri, navigasyon mesafe metinleri ve sesli anonslar. Saf `Units` yardımcısı + testler. Uygulamada yakıt tüketimi/menzil özelliği olmadığı için mil/galon gösterilecek bir yer yok.
+
+
+## Durum (2026-10-20 akşam)
+- 5 (mph/mil): **yapıldı**. 2.1 uygulama rafı, 2.2 harici navigasyona gönder, 2.3 mesaj uygulaması sessize alma: **yapıldı** (müzik uygulaması genelleştirme zaten vardı: `CATEGORY_APP_MUSIC` taraması ve son müzik uygulaması). 4 (park halinde video): uygulama rafından video uygulaması başlatma **yapıldı**, yerel oynatıcı yapılmadı. 1 (sesle komut): komutlar ve arama kutusu dikte yedeği **yapıldı**, kask düğmesi tetikleyici yapılmadı. 3 (widget ve Live Activity): düzenlenebilir kartlar ve sistem widget barındırma **yapıldı**, Live Updates karosu yapılmadı.
+- Müzik kütüphanesi gezinme (madde C) yanıtsız kaldığı ve doğrulanamadığı için **planlanmadı**.
