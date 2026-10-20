@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.BoxWithConstraints
 import android.text.format.DateFormat
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
@@ -219,27 +221,40 @@ private fun ContactsList(contacts: List<Contact>, onDial: (String, String?) -> U
 
 private const val STARRED = "starred"
 
-/** A list with big page up / page down buttons on the right, because flicking a long list is hard with gloves. */
+/** A list row is [ROW_HEIGHT] tall with [ROW_GAP] between rows. */
+private val ROW_HEIGHT = 80.dp
+private val ROW_GAP = 8.dp
+
+/**
+ * A list with big page up / page down buttons on the right, because flicking a long list is hard with gloves.
+ * The viewport is cut to a whole number of rows, so no row is ever sliced in half at the bottom; a page moves
+ * by exactly those rows.
+ */
 @Composable
 private fun PagedList(content: androidx.compose.foundation.lazy.LazyListScope.(LazyListState) -> Unit) {
     val state = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val palette = LocalMotoPalette.current
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            state = state, verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 28.dp),
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-        ) {
-            content(state)
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(if (isNarrowScreen()) 44.dp else 56.dp)) {
-            listOf(Icons.Rounded.KeyboardArrowUp to -1, Icons.Rounded.KeyboardArrowDown to 1).forEach { (icon, dir) ->
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)
-                        .pressClickable { scope.launch { state.animateScrollBy(dir * state.layoutInfo.viewportSize.height * 0.85f) } },
-                    contentAlignment = Alignment.Center,
-                ) { Icon(icon, null, tint = palette.text, modifier = Modifier.size(34.dp)) }
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val pitch = ROW_HEIGHT + ROW_GAP
+        val rows = ((maxHeight + ROW_GAP) / pitch).toInt().coerceAtLeast(1)
+        val viewport = pitch * rows - ROW_GAP
+        val pagePx = with(LocalDensity.current) { (pitch * rows).toPx() }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().height(viewport)) {
+            LazyColumn(
+                state = state, verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            ) {
+                content(state)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(if (isNarrowScreen()) 44.dp else 56.dp)) {
+                listOf(Icons.Rounded.KeyboardArrowUp to -1, Icons.Rounded.KeyboardArrowDown to 1).forEach { (icon, dir) ->
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)
+                            .pressClickable { scope.launch { state.animateScrollBy(dir * pagePx) } },
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(icon, null, tint = palette.text, modifier = Modifier.size(34.dp)) }
+                }
             }
         }
     }
@@ -260,7 +275,7 @@ private fun ContactRow(
     val sub = if (compact) listOfNotNull(subtitle, trailing).joinToString(" · ").ifBlank { null } else subtitle
     Row(
         modifier = Modifier
-            .fillMaxWidth().height(80.dp).clip(RoundedCornerShape(20.dp)).background(palette.card)
+            .fillMaxWidth().height(ROW_HEIGHT).clip(RoundedCornerShape(20.dp)).background(palette.card)
             .clickable(onClick = onClick).padding(horizontal = if (compact) 10.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 14.dp),
