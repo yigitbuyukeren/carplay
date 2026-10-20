@@ -119,7 +119,8 @@ fun NavCard(
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.nav_title), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    // The whole card opens the map; the arrow says so.
+                    Text(stringResource(R.string.nav_title) + "  ›", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     // One tap from the dashboard to a route home or to work.
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                         places.filter { it.kind != PlaceKind.FAVORITE }.forEach { sp ->
@@ -137,7 +138,6 @@ fun NavCard(
                         }
                     }
                 }
-                PillButton(stringResource(R.string.nav_map_and_route), MotoColors.Blue, onOpenMap, Modifier.fillMaxWidth())
             }
         }
     }

@@ -8,15 +8,15 @@ Durum sütunu: **Yapılabilir** = anahtarsız/ücretsiz ilkeye uyuyor. **Kısıt
 
 | # | Eksik özellik | Android Auto / CarPlay'de | RideDeck'te | Durum |
 |---|---|---|---|---|
-| 1 | Sesle komut ve dikte | Gemini / Siri: sesle hedef, arama, mesaj, müzik | Yok. TTS yalnızca çıkış yönünde | Yapılabilir (`SpeechRecognizer`) |
-| 2 | Mesajlara sesle cevap | Okuma ve sesle cevap, WhatsApp/Signal dahil | Bildirimleri sesli okur, cevap veremez | Kısıtlı (bildirim "yanıtla" eylemi) |
+| 1 | Sesle komut ve dikte | Gemini / Siri: sesle hedef, arama, mesaj, müzik | Yapıldı: Türkçe sesli asistan (~130 kalıp, çok turlu diyalog), kask mikrofonu; sahada denenmedi | Yapıldı |
+| 2 | Mesajlara sesle cevap | Okuma ve sesle cevap, WhatsApp/Signal dahil | Okur ve bildirimin "yanıtla" eylemiyle sesli cevap yazar (göndermeden önce onay) | Yapıldı (sahada denenmedi) |
 | 3 | Üçüncü taraf uygulama ekosistemi | Onaylı navigasyon, müzik, mesaj, şarj, park, hava uygulamaları | Yalnızca kendi modülleri; başka uygulama gömülemez | Yapılmaz |
 | 4 | Canlı trafik ve olay bildirimi | Google Maps / Waze: trafik, kaza, polis, yol çalışması | Yok | Yapılmaz (sunucu/veri) |
 | 5 | Çevrimdışı harita ve rota | Google Maps çevrimdışı haritalar | Yok (eski #5, planlanmıyor) | Kısıtlı, büyük iş |
 | 6 | 3D bina ve zengin harita (Immersive Navigation) | Google Maps'te 3D binalar, yükseltili yollar, arazi | 2D vektör harita, 55° eğim | Yapılmaz |
 | 7 | Şerit bilgisi ve kavşak görünümü | Şerit yönlendirme, kavşak görseli | Dönüş ikonu ve metin | Kısıtlı (Valhalla verisine bağlı) |
 | 8 | Viraj ağırlıklı / manzaralı rota | Calimoto, Kurviger gibi uygulamalarda var; AA/CarPlay'de yok | Yok | Yapılmaz (anahtarsız karşılığı yok) |
-| 9 | Widget ve Live Activity | CarPlay (iOS 26): yığınlanabilir widget, canlı etkinlik | Ayarlanabilir iki kart yuvası (harita, müzik, uygulama kartı, boş); sistem widget'ı denendi ve kaldırıldı | Kısmen yapıldı |
+| 9 | Widget ve Live Activity | CarPlay (iOS 26): yığınlanabilir widget, canlı etkinlik | Ayarlanabilir iki kart yuvası (harita, müzik, uygulama kartı, boş); sistem widget'ı denendi ve bilerek kaldırıldı | Yapıldı (widget yapılmayacak) |
 | 10 | Araç donanımı entegrasyonu | Direksiyon/gidon tuşları, araç mikrofonu, ekranı, klima | Yok | Yapılmaz (gidon kumandası kararlaştırıldı: yapılmayacak) |
 | 11 | Araç verisi (OBD, TPMS, yakıt menzili) | Araç üreticisine bağlı | Çıkarıldı / yapılmayacak | Yapılmaz |
 | 12 | Gösterge paneli (cluster) kontrolü | CarPlay Ultra | Yok | Yapılmaz |
@@ -27,13 +27,13 @@ Durum sütunu: **Yapılabilir** = anahtarsız/ücretsiz ilkeye uyuyor. **Kısıt
 | 17 | iOS desteği | iPhone (CarPlay) | Yalnızca Android | Yapılmaz |
 | 18 | Birden çok ekran / çok kullanıcılı | Araç ekranı + telefon aynı anda | Tek ekran | Yapılmaz |
 | 19 | Grup sürüşü, canlı konum paylaşımı | Google Maps / Find My ile | Yok | Yapılmaz (sunucu gerekir) |
-| 20 | mph / mil birimi | Bölgeye göre | Yalnızca km | Yapılabilir |
+| 20 | mph / mil birimi | Bölgeye göre | Ayarlardan mil/mph (hız, mesafe, limit, rota sesleri) | Yapıldı |
 
-## Yapılabilir olanlar, öncelik önerisi
+## Öncelik listesi
 
-1. Sesle komut (#1)
-2. Sesle mesaj cevabı (#2, bildirim eylemiyle)
-3. Düzenlenebilir ana ekran kartları (#9)
-4. mph / mil birimi (#20)
-5. Müzik kütüphanesi gezinme (#14)
-6. Gerçek telefonda saha testi (#16)
+1. Sesle komut (#1): yapıldı
+2. Sesle mesaj cevabı (#2): yapıldı
+3. Düzenlenebilir ana ekran kartları (#9): yapıldı
+4. mph / mil birimi (#20): yapıldı
+5. Müzik kütüphanesi gezinme (#14): bilerek yapılmadı (üçüncü taraf bağlantısı büyük olasılıkla reddedilir, doğrulanamaz)
+6. Gerçek telefonda saha testi (#16): sürüyor, `docs/STATUS.md` "denenmedi" listeleri

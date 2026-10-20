@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -134,7 +135,9 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val icy = weather?.iceRisk == true
     LaunchedEffect(raining) { if (!raining) rainDismissed = false }
     LaunchedEffect(icy) { if (!icy) iceDismissed = false }
-    var showSettings by remember { mutableStateOf(!locationGranted(context)) }
+    // Settings no longer open by themselves; a short permission page follows the vehicle question instead.
+    var showSettings by remember { mutableStateOf(false) }
+    var showPermIntro by rememberSaveable { mutableStateOf(!locationGranted(context)) }
     LaunchedEffect(dialRequest) {
         if (dialRequest != null) { showPhone = true; showMap = false; showNowPlaying = false; showSettings = false; showTrips = false }
     }
@@ -148,6 +151,20 @@ fun DashboardScreen(vm: DashboardViewModel) {
     }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         vm.onResume()
+    }
+    val smsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.onResume() }
+    // The second tap on "Allow" after a refusal goes to the app's system page, where Android no longer asks again.
+    var locationAsked by remember { mutableStateOf(false) }
+    val requestLocation = {
+        if (locationAsked && !locationGranted(context)) {
+            context.startActivity(
+                android.content.Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${context.packageName}"))
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } else {
+            locationAsked = true
+            permissionLauncher.launch(runtimePermissions())
+        }
     }
     val phonebookLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         vm.phone.refresh()
@@ -198,6 +215,21 @@ fun DashboardScreen(vm: DashboardViewModel) {
         ))
     }
 
+    val introRows = remember(resume) {
+        listOf(
+            PermissionRow(context.getString(R.string.perm_location), context.getString(R.string.perm_location_desc), locationGranted(context), requestLocation),
+            PermissionRow(context.getString(R.string.perm_notif), context.getString(R.string.perm_notif_desc), notificationAccessGranted(context)) {
+                context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            },
+            PermissionRow(context.getString(R.string.perm_phone), context.getString(R.string.perm_phone_desc), phoneGranted(context)) {
+                permissionLauncher.launch(runtimePermissions())
+            },
+            PermissionRow(
+                context.getString(R.string.perm_sms), context.getString(R.string.perm_sms_desc), context.hasPermission(Manifest.permission.SEND_SMS),
+            ) { smsLauncher.launch(Manifest.permission.SEND_SMS) },
+        )
+    }
+
     LaunchedEffect(showSettings) { if (showSettings) vm.refreshOfflineVoice() }
 
     // A voice command asked for a screen.
@@ -229,6 +261,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
     // and an SOS countdown cannot be cancelled by accident (only its own button does that).
     BackHandler(enabled = showSettings) { showSettings = false }
     BackHandler(enabled = vehicleChosen == null) {}
+    BackHandler(enabled = vehicleChosen != null && showPermIntro) { showPermIntro = false }
     BackHandler(enabled = sosUi.phase != SosPhase.IDLE) { if (sosUi.phase != SosPhase.COUNTDOWN) vm.sos.dismiss() }
 
     Surface(color = Color.Transparent, modifier = Modifier.fillMaxSize().background(LocalMotoPalette.current.wallpaper)) {
@@ -246,6 +279,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     onApps = { showApps = !showApps; showMap = false; showNowPlaying = false; showPhone = false; showSettings = false },
                     active = when { showMap -> DockTab.NAV; showNowPlaying -> DockTab.MUSIC; showPhone -> DockTab.PHONE; showApps -> DockTab.APPS; else -> DockTab.NONE },
                     horizontal = portrait,
+                    showLogo = true,
                 )
             }
             val content: @Composable (Modifier) -> Unit = { outer ->
@@ -301,7 +335,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     )
                 } else Column(modifier = m) {
                     val speedCard: @Composable (Modifier) -> Unit = { mod ->
-                        SpeedCard(gps, speedLimit, maxKmh = cfg.gaugeMaxKmh, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = mod, onClick = { showTrips = true })
+                        SpeedCard(gps, speedLimit, locationGranted = locationGranted(context), onGrantLocation = requestLocation, maxKmh = cfg.gaugeMaxKmh, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = mod, onClick = { showTrips = true })
                     }
                     val navCard: @Composable (Modifier) -> Unit = { mod ->
                         NavCard(
@@ -497,6 +531,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
 
         // The first-launch question sits above everything but the SOS countdown.
         if (vehicleChosen == null) VehicleChooser(onChoose = vm::setVehicle)
+        else if (showPermIntro) PermissionIntro(introRows, onClose = { showPermIntro = false })
 
         AnimatedVisibility(visible = showVoiceHelp, enter = overlayEnter, exit = overlayExit) {
             VoiceHelpScreen(history = voiceHistory, onClear = vm::clearVoiceHistory, onClose = { vm.voiceHelp.value = false })

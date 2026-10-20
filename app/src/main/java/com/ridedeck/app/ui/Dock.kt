@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.foundation.border
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +32,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import com.ridedeck.app.R
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ridedeck.app.data.BatteryState
@@ -48,6 +51,8 @@ fun Dock(
     active: DockTab = DockTab.NONE,
     /** A bar along the bottom for an upright phone; the default is the column down the left side. */
     horizontal: Boolean = false,
+    /** The small logo above the tiles; left out when the column is too short to keep the tiles glove-sized. */
+    showLogo: Boolean = false,
 ) {
     if (horizontal) {
         // The tiles take what the clock block leaves: 68dp on a normal phone, smaller on a narrow one.
@@ -71,13 +76,22 @@ fun Dock(
     BoxWithConstraints(modifier = Modifier.fillMaxHeight().width(96.dp).padding(vertical = 8.dp)) {
         // Tiles take whatever height the status block leaves, up to a glove-sized 76dp (never below the old 62dp).
         val gap = 8.dp
-        val tile = ((maxHeight - STATUS_HEIGHT - gap * 4) / 4).coerceIn(62.dp, 76.dp)
+        // The logo only goes in when the four 62dp tiles, their gaps, the status block and the logo all fit.
+        val logoSpace = LOGO_SIZE + gap
+        val logo = showLogo && maxHeight >= STATUS_HEIGHT + logoSpace + 62.dp * 4 + gap * 3
+        val tile = ((maxHeight - STATUS_HEIGHT - gap * 4 - (if (logo) logoSpace else 0.dp)) / 4).coerceIn(62.dp, 76.dp)
         Column(
             modifier = Modifier.fillMaxHeight(),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(gap), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (logo) {
+                    Image(
+                        painterResource(R.drawable.ic_logo), null,
+                        modifier = Modifier.size(LOGO_SIZE).clip(RoundedCornerShape(8.dp)),
+                    )
+                }
                 DockTile(Icons.Rounded.Navigation, MotoColors.Green, tile, onNavigation, active == DockTab.NAV)
                 DockTile(Icons.Rounded.MusicNote, MotoColors.Red, tile, onMusic, active == DockTab.MUSIC)
                 DockTile(Icons.Rounded.Call, Color(0xFF34C759), tile, onPhone, active == DockTab.PHONE)
@@ -90,6 +104,7 @@ fun Dock(
 
 /** Height of the clock, battery and temperature block under the tiles. */
 private val STATUS_HEIGHT = 78.dp
+private val LOGO_SIZE = 28.dp
 
 @Composable
 private fun DockTile(icon: ImageVector, color: Color, tile: Dp, onClick: () -> Unit, active: Boolean = false) {

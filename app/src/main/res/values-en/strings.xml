@@ -7,7 +7,6 @@
     <string name="speed_unit">km/h</string>
     <string name="gps_waiting">Waiting for GPS…</string>
     <string name="nav_title">Navigation</string>
-    <string name="nav_map_and_route">Map and route</string>
     <string name="perm_location">Location</string>
     <string name="perm_location_desc">GPS for the speedometer</string>
     <string name="perm_phone">Phone</string>
@@ -355,4 +354,13 @@
     <string name="voice_wake_unavailable">This phone has no offline recognition; \"Hey RideDeck\" will not work (needs Android 13+ and the Turkish pack).</string>
     <string name="voice_history_header">Recent commands</string>
     <string name="voice_history_clear">Clear</string>
+    <string name="vehicle_continue">Continue</string>
+    <string name="perm_intro_title">A few permissions are needed</string>
+    <string name="perm_intro_sub">You can skip this; they all stay in Settings > Setup.</string>
+    <string name="perm_intro_later">Later</string>
+    <string name="perm_intro_done">Done</string>
+    <string name="perm_sms">SMS</string>
+    <string name="perm_sms_desc">To send the emergency message (SOS)</string>
+    <string name="perm_granted">Granted</string>
+    <string name="speed_location_needed">Location permission needed</string>
 </resources>

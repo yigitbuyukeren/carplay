@@ -43,6 +43,9 @@ import com.ridedeck.app.R
 fun SpeedCard(
     gps: GpsUi,
     limit: Int?,
+    /** Without location permission the card says so instead of waiting for a fix that cannot come. */
+    locationGranted: Boolean = true,
+    onGrantLocation: () -> Unit = {},
     modifier: Modifier = Modifier,
     onSos: (() -> Unit)? = null,
     /** Full-scale of the gauge, km/h; depends on the vehicle. */
@@ -83,7 +86,13 @@ fun SpeedCard(
                 color = if (SpeedLimitMath.isOver(gps.speedKmh, limit)) MotoColors.Red else LocalMotoPalette.current.text,
             )
             Text(stringResource(if (Units.miles) R.string.speed_unit_mph else R.string.speed_unit), fontSize = cappedSp(22f), color = LocalMotoPalette.current.muted, fontWeight = FontWeight.Medium)
-            if (!gps.hasFix) {
+            if (!gps.hasFix && !locationGranted) {
+                Text(stringResource(R.string.speed_location_needed), fontSize = cappedSp(16f), color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
+                PillButton(
+                    stringResource(R.string.action_allow), MotoColors.Blue, onGrantLocation,
+                    Modifier.padding(top = 8.dp), minHeight = 56.dp, fontSize = 17.sp, horizontalPadding = 20.dp, singleLine = true,
+                )
+            } else if (!gps.hasFix) {
                 Text(stringResource(R.string.gps_waiting), fontSize = cappedSp(16f), color = MotoColors.Orange, modifier = Modifier.padding(top = 8.dp))
             } else {
                 GpsInfo(gps, Modifier.padding(top = 10.dp))

@@ -20,7 +20,7 @@ RideDeck'e katkılarını bekliyoruz. Kod, hata bildirimi, fikir ve çeviri heps
 - PR'ın CI'dan (derleme ve test) geçmeli.
 
 ## Sürüş için tasarım ilkeleri
-- Motosiklet, araba ve bisiklet için tasarlıyoruz: sürüş sırasında yazı girişi yok. Büyük dokunma hedefleri (en az 56dp), eldivenle kullanılabilir.
+- Motosiklet, araba ve bisiklet için tasarlıyoruz: sürüş sırasında yazı girişi yok. Büyük dokunma hedefleri (64-84dp), eldivenle kullanılabilir.
 - Araca göre değişen her şey (rota türü, eşikler, durak türleri) `ProfileConfig` içinde durur; yeni davranışı koda `if` serpiştirmeden oraya ekle.
 - Yeni ekranlar yatay ve dik çalışmalı (`isNarrowScreen()` ile dar ekranda alt alta diz) ve sistem yazı boyutu büyükken taşmamalı (sabit alanlarda `cappedSp`).
 - Düşük dikkat gerektirir: kısa metin, yüksek kontrast, tek dokunuşla işlem.

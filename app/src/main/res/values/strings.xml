@@ -7,7 +7,6 @@
     <string name="speed_unit">km/sa</string>
     <string name="gps_waiting">GPS bekleniyor…</string>
     <string name="nav_title">Navigasyon</string>
-    <string name="nav_map_and_route">Harita ve rota</string>
     <string name="perm_location">Konum</string>
     <string name="perm_location_desc">Hız göstergesi için GPS</string>
     <string name="perm_phone">Telefon</string>
@@ -355,4 +354,13 @@
     <string name="voice_wake_unavailable">Bu telefonda çevrimdışı tanıma yok; \"Hey RideDeck\" çalışmaz (Android 13+ ve Türkçe paket gerekir).</string>
     <string name="voice_history_header">Son komutlar</string>
     <string name="voice_history_clear">Temizle</string>
+    <string name="vehicle_continue">Devam et</string>
+    <string name="perm_intro_title">Birkaç izin gerekiyor</string>
+    <string name="perm_intro_sub">Şimdi vermesen de olur; hepsi Ayarlar > Kurulum\'da durur.</string>
+    <string name="perm_intro_later">Sonra</string>
+    <string name="perm_intro_done">Tamam</string>
+    <string name="perm_sms">SMS</string>
+    <string name="perm_sms_desc">Acil durum mesajı göndermek için (SOS)</string>
+    <string name="perm_granted">Verildi</string>
+    <string name="speed_location_needed">Konum izni gerekli</string>
 </resources>
