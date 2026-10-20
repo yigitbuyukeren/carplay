@@ -92,6 +92,7 @@ fun NowPlayingScreen(
     state: MediaState,
     media: MediaRepository,
     onGrantAccess: () -> Unit,
+    onMic: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalMotoPalette.current
@@ -151,12 +152,13 @@ fun NowPlayingScreen(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    TrackTitle(state)
+                    Box(Modifier.padding(end = 56.dp)) { TrackTitle(state) }
                     if (state.hasSession) Progress(state, media::seekTo) else Spacer(Modifier.height(1.dp))
                     controls()
                 }
             }
         }
+        MicButton(onMic, Modifier.align(Alignment.TopEnd).padding(14.dp), size = 56.dp)
     }
 }
 

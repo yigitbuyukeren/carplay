@@ -12,6 +12,7 @@ import dev.ygtlab.carplay.data.RecentCall
 import dev.ygtlab.carplay.data.Speaker
 import dev.ygtlab.carplay.data.ThemeMode
 import dev.ygtlab.carplay.data.VoiceActions
+import dev.ygtlab.carplay.data.VoiceHeard
 import dev.ygtlab.carplay.data.VoiceAssistant
 import dev.ygtlab.carplay.data.VoiceScreen
 import kotlinx.coroutines.CoroutineScope
@@ -28,10 +29,12 @@ class VoiceAssistantTest {
     /** Each call to start() answers with the next scripted list of alternatives. */
     private class ScriptedEar(var script: ArrayDeque<List<String>> = ArrayDeque()) : VoiceAssistant.SpeechListener {
         var listens = 0
+        /** The score the recogniser reports for the next result (null: it reports none). */
+        var confidence: Float? = null
         override fun available() = true
-        override fun start(onPartial: (String) -> Unit, onResult: (List<String>) -> Unit) {
+        override fun start(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit) {
             listens++
-            onResult(script.removeFirstOrNull() ?: emptyList())
+            onResult(VoiceHeard(script.removeFirstOrNull() ?: emptyList(), confidence))
         }
         override fun cancel() {}
     }
@@ -57,7 +60,9 @@ class VoiceAssistantTest {
         override fun goSaved(kind: PlaceKind): String? = if (homeSaved) "Ev" else null.also { log += "no:$kind" }
         override fun stopNavigation(): Boolean { log += "stop"; return routing }
         override fun findStops() { log += "stops" }
-        override suspend fun findNearest(term: String): String? { log += "near:$term"; return "Bir $term" }
+        override suspend fun findNearest(term: String, along: Boolean): String? { log += "near:$term:$along"; return "Bir $term" }
+        var alternative = true
+        override suspend fun alternativeRoute(): Boolean { log += "alt"; return alternative }
         override fun navInfo(question: NavQuestion): String? = if (routing) "info:$question" else null
         override fun setAvoid(highways: Boolean?, tolls: Boolean?) { log += "avoid:$highways:$tolls" }
         override fun recalculate(): Boolean = routing
@@ -81,11 +86,13 @@ class VoiceAssistantTest {
         override fun volumeDown() { log += "vol-" }
         override fun volumeSet(percent: Int) { log += "vol=$percent" }
         override fun playSearch(query: String): Boolean { log += "search:$query"; return true }
-        override fun info(question: InfoQuestion): String? = "info:$question"
+        override suspend fun info(question: InfoQuestion): String? { log += "info:$question"; return "info:$question" }
         override fun apps() = listOf(AppRef("WhatsApp", "wa"), AppRef("Gmail", "gm"), AppRef("Chrome", "ch"))
         override fun launchApp(pkg: String): Boolean { log += "launch:$pkg"; return true }
         override fun setTheme(mode: ThemeMode) { log += "theme:$mode" }
         override fun setMiles(miles: Boolean) { log += "miles:$miles" }
+        override fun setBrightness(delta: Int) { log += "bright:$delta" }
+        override fun setWarningVoice(on: Boolean) { log += "warn:$on" }
         override fun startSos() { log += "sos" }
         override fun showHelp() { log += "help" }
     }
@@ -237,7 +244,7 @@ class VoiceAssistantTest {
         assertEquals(listOf("screen:MAP", "nav:kadıköy"), actions.log)
         actions.log.clear()
         say(listOf("en yakın kafe"))
-        assertEquals(listOf("screen:MAP", "near:kafe"), actions.log)
+        assertEquals(listOf("screen:MAP", "near:kafe:false"), actions.log)
     }
 
     @Test
@@ -262,6 +269,54 @@ class VoiceAssistantTest {
         say(listOf("sesi yüzde elli yap"))
         say(listOf("müziği durdur"))
         assertEquals(listOf("search:tarkan", "vol=50", "pause"), actions.log)
+    }
+
+    @Test
+    fun aStopOnTheWayIsLookedForAlongTheRoute() {
+        say(listOf("yolda kafe"))
+        assertEquals(listOf("screen:MAP", "near:kafe:true"), actions.log)
+    }
+
+    @Test
+    fun anotherRouteAndTheQuickOnes() {
+        say(listOf("başka rota"))
+        say(listOf("ekranı kıs"))
+        say(listOf("parlaklığı artır"))
+        say(listOf("sesli uyarıları kapat"))
+        say(listOf("yolculuk özeti"))
+        assertEquals(listOf("alt", "bright:-1", "bright:1", "warn:false", "info:TRIP"), actions.log)
+        actions.log.clear()
+        actions.alternative = false
+        say(listOf("alternatif rota"))
+        assertEquals(listOf("alt"), actions.log)
+    }
+
+    @Test
+    fun aLowScoreAsksBeforeRunning() {
+        ear.confidence = 0.2f
+        say(listOf("müziği aç"), listOf("evet"))
+        assertEquals(listOf("play"), actions.log)
+        actions.log.clear()
+        say(listOf("müziği aç"), listOf("hayır"))
+        assertTrue(actions.log.isEmpty())
+    }
+
+    @Test
+    fun noScoreOrAGoodScoreRunsAtOnce() {
+        ear.confidence = 0f
+        say(listOf("müziği aç"))
+        ear.confidence = 0.9f
+        say(listOf("müziği durdur"))
+        assertEquals(listOf("play", "pause"), actions.log)
+    }
+
+    @Test
+    fun everyCommandIsWrittenToTheHistory() {
+        val seen = mutableListOf<Pair<String, Boolean>>()
+        assistant = VoiceAssistant(text = { id -> "s$id" }, scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined), listener = ear, speaker = mouth, actions = actions, pause = { }, history = { h, ok -> seen += h to ok })
+        say(listOf("müziği aç"))
+        say(listOf("bugün hava çok güzel dostum"))
+        assertEquals(listOf("müziği aç" to true, "bugün hava çok güzel dostum" to false), seen)
     }
 
     @Test

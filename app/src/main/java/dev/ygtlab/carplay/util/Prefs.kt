@@ -31,6 +31,10 @@ object Prefs {
     private const val KEY_PINNED_APPS = "pinned_apps"
     private const val KEY_DASH_SLOTS = "dash_slots"
     private const val KEY_VOICE_REPLIES = "voice_replies"
+    private const val KEY_VOICE_HISTORY = "voice_history"
+    private const val KEY_VOICE_WAKE = "voice_wake"
+    private const val KEY_VOICE_BUTTON = "voice_button"
+    private const val KEY_VOICE_HISTORY_ON = "voice_history_on"
     private const val KEY_VOICE_HELMET_MIC = "voice_helmet_mic"
     private const val KEY_MESSAGE_APPS_SEEN = "message_apps_seen"
     private const val KEY_MESSAGE_APPS_MUTED = "message_apps_muted"
@@ -71,6 +75,37 @@ object Prefs {
 
     fun setVoiceReplies(context: Context, on: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_VOICE_REPLIES, on).apply()
+    }
+
+    /** "Hey MotoDash" while the dashboard is on screen (experimental, off by default). */
+    fun voiceWake(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_VOICE_WAKE, false)
+
+    fun setVoiceWake(context: Context, on: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_VOICE_WAKE, on).apply()
+    }
+
+    /** Double press of a headset's play/pause key starts the voice assistant (off by default). */
+    fun voiceButton(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_VOICE_BUTTON, false)
+
+    fun setVoiceButton(context: Context, on: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_VOICE_BUTTON, on).apply()
+    }
+
+    fun voiceHistory(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_VOICE_HISTORY, null)
+
+    fun setVoiceHistory(context: Context, json: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_VOICE_HISTORY, json).apply()
+    }
+
+    /** Keep the last ten spoken commands as text (on by default; nothing is sent anywhere). */
+    fun voiceHistoryOn(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_VOICE_HISTORY_ON, true)
+
+    fun setVoiceHistoryOn(context: Context, on: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_VOICE_HISTORY_ON, on).apply()
     }
 
     /** Listen through a connected Bluetooth helmet microphone (on by default). */

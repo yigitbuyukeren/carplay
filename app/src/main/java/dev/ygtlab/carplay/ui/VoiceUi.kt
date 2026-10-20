@@ -1,5 +1,6 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.data.VoiceHistoryEntry
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
@@ -89,7 +90,7 @@ fun VoiceOverlay(ui: VoiceUi, onCancel: () -> Unit, onChoose: (Int) -> Unit, onH
 
 /** "What can I say?": the commands by group, with examples. */
 @Composable
-fun VoiceHelpScreen(onClose: () -> Unit) {
+fun VoiceHelpScreen(history: List<VoiceHistoryEntry>, onClear: () -> Unit, onClose: () -> Unit) {
     val palette = LocalMotoPalette.current
     val groups = listOf(
         R.string.voice_help_nav_title to R.string.voice_help_nav,
@@ -109,6 +110,20 @@ fun VoiceHelpScreen(onClose: () -> Unit) {
                 ) { Icon(Icons.Rounded.Close, null, tint = palette.text, modifier = Modifier.size(32.dp)) }
             }
             LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (history.isNotEmpty()) item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.voice_history_header), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MotoColors.Blue, modifier = Modifier.weight(1f))
+                            PillButton(stringResource(R.string.voice_history_clear), palette.cardHigh, onClear, textColor = palette.text, horizontalPadding = 18.dp, minHeight = 56.dp, fontSize = 16.sp, singleLine = true)
+                        }
+                        history.forEach { h ->
+                            Text((if (h.understood) "✓ " else "✗ ") + h.heard, fontSize = 17.sp, color = if (h.understood) palette.text else MotoColors.Orange, maxLines = 2)
+                        }
+                    }
+                }
                 items(groups) { (title, body) ->
                     Column(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MotoColors.Card).padding(16.dp),

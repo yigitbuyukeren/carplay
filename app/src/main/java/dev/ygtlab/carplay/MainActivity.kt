@@ -40,9 +40,14 @@ class MainActivity : ComponentActivity() {
         // A hot phone dims itself (see ThermalGuard); a cool one keeps the system brightness.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                combine(viewModel.thermal.state, viewModel.sos.ui) { thermal, sos ->
-                    // Never leave a dimmed screen during an SOS countdown.
-                    if (sos.phase == SosPhase.COUNTDOWN) 1f else thermal.brightness
+                combine(viewModel.thermal.state, viewModel.sos.ui, viewModel.brightnessChoice) { thermal, sos, chosen ->
+                    // Never leave a dimmed screen during an SOS countdown; a hot phone stays dimmer than the rider asked.
+                    when {
+                        sos.phase == SosPhase.COUNTDOWN -> 1f
+                        chosen == null -> thermal.brightness
+                        thermal.brightness >= 0f -> minOf(thermal.brightness, chosen)
+                        else -> chosen
+                    }
                 }.distinctUntilChanged().collect { brightness ->
                     window.attributes = window.attributes.also { it.screenBrightness = brightness }
                 }

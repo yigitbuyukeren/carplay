@@ -349,6 +349,44 @@ class NavigationController(
         }
     }
 
+    private var alternativeCursor = 0
+
+    /**
+     * Voice "another route": asks the routing service for alternatives from here and switches to the next one.
+     * False when there is no destination, no position or the service offers only the route already shown.
+     */
+    suspend fun useAlternative(): Boolean {
+        val dest = _ui.value.destination ?: return false
+        val from = here() ?: return false
+        val routes = repo.alternatives(from, dest.point, _options.value).getOrNull().orEmpty()
+        if (routes.size < 2) return false
+        alternativeCursor = (alternativeCursor + 1) % routes.size
+        val pick = routes[alternativeCursor]
+        progressIndex = 0
+        offRouteFixes = 0
+        spoken.clear()
+        _ui.update {
+            it.copy(route = pick, rerouting = false, maneuverIndex = 1.coerceAtMost(pick.maneuvers.lastIndex),
+                remainingM = pick.distanceM.toInt(), remainingS = pick.durationS.toInt())
+        }
+        return true
+    }
+
+    /**
+     * Voice "a cafe on the way": looks for [term] near a point about 3 km ahead on the route and adds the first hit
+     * as a stop. Returns its name, or null when not guiding or nothing was found.
+     */
+    suspend fun addStopAhead(term: String): String? {
+        val state = _ui.value
+        val route = state.route ?: return null
+        if (!state.navigating) return null
+        val base = route.cumulative[progressIndex.coerceIn(0, route.shape.lastIndex)]
+        val idx = route.cumulative.indexOfFirst { it >= base + AHEAD_STOP_M }.takeIf { it >= 0 } ?: route.shape.lastIndex
+        val place = repo.search(term, route.shape[idx]).getOrNull()?.firstOrNull() ?: return null
+        detourVia(place)
+        return place.name
+    }
+
     /** Voice "recalculate": re-plans from here to the same destination. False without a destination or a position. */
     fun recalculate(): Boolean {
         val state = _ui.value
@@ -393,6 +431,8 @@ class NavigationController(
     companion object {
         const val MATCH_WINDOW = 80
         const val OFF_ROUTE_M = 60.0
+        /** How far ahead on the route a voice-requested stop is looked for. */
+        const val AHEAD_STOP_M = 3000.0
         const val OFF_ROUTE_FIXES = 4
         const val ARRIVAL_M = 25.0
         const val ALERT_M = 600.0

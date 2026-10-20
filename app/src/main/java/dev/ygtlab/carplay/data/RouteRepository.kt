@@ -71,6 +71,9 @@ interface Routing {
 
     /** The address of a spot picked on the map; null when there is nothing worth naming. */
     suspend fun reverse(point: GeoPoint): Result<Place?> = Result.success(null)
+
+    /** Other routes to the same place (best first), for "another route"; empty when the service has none. */
+    suspend fun alternatives(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<List<Route>> = Result.success(emptyList())
 }
 
 object PlaceNames {
@@ -102,21 +105,42 @@ class RouteRepository(
     override suspend fun route(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<Route> = withContext(Dispatchers.IO) {
         safely("route") {
             val useMiles = miles()
-            val body = JSONObject()
-                .put("locations", JSONArray()
-                    .put(JSONObject().put("lat", from.lat).put("lon", from.lon))
-                    .put(JSONObject().put("lat", to.lat).put("lon", to.lon)))
-                .put("costing", options.profile.config.costing)
-                .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", if (useMiles) "miles" else "kilometers"))
-            options.costingOptions()?.let { body.put("costing_options", it) }
+            val body = requestBody(from, to, options, useMiles, alternates = 0)
             parseTrip(Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString()), if (useMiles) METRES_PER_MILE else 1000.0)
         }
     }
 
+    override suspend fun alternatives(from: GeoPoint, to: GeoPoint, options: RouteOptions): Result<List<Route>> = withContext(Dispatchers.IO) {
+        safely("alternatives") {
+            val useMiles = miles()
+            val body = requestBody(from, to, options, useMiles, alternates = 2)
+            val reply = Http.postJson("https://valhalla1.openstreetmap.de/route", body.toString())
+            val unit = if (useMiles) METRES_PER_MILE else 1000.0
+            val json = JSONObject(reply)
+            val out = mutableListOf(parseTripObject(json.getJSONObject("trip"), unit))
+            json.optJSONArray("alternates")?.let { arr ->
+                for (i in 0 until arr.length()) arr.optJSONObject(i)?.optJSONObject("trip")?.let { out += parseTripObject(it, unit) }
+            }
+            out
+        }
+    }
+
+    private fun requestBody(from: GeoPoint, to: GeoPoint, options: RouteOptions, useMiles: Boolean, alternates: Int): JSONObject {
+        val body = JSONObject()
+            .put("locations", JSONArray()
+                .put(JSONObject().put("lat", from.lat).put("lon", from.lon))
+                .put(JSONObject().put("lat", to.lat).put("lon", to.lon)))
+            .put("costing", options.profile.config.costing)
+            .put("directions_options", JSONObject().put("language", valhallaLanguage()).put("units", if (useMiles) "miles" else "kilometers"))
+        if (alternates > 0) body.put("alternates", alternates)
+        options.costingOptions()?.let { body.put("costing_options", it) }
+        return body
+    }
+
     /** Parses a Valhalla `route` or `trace_route` reply. */
-    private fun parseTrip(reply: String, metresPerUnit: Double): Route {
-        val json = JSONObject(reply)
-        val trip = json.getJSONObject("trip")
+    private fun parseTrip(reply: String, metresPerUnit: Double): Route = parseTripObject(JSONObject(reply).getJSONObject("trip"), metresPerUnit)
+
+    private fun parseTripObject(trip: JSONObject, metresPerUnit: Double): Route {
         val leg = trip.getJSONArray("legs").getJSONObject(0)
         val maneuvers = leg.getJSONArray("maneuvers").let { arr ->
             (0 until arr.length()).map { i ->

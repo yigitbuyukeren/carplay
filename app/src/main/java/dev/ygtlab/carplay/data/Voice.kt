@@ -12,9 +12,12 @@ import java.util.Locale
 interface Speaker {
     fun speak(text: String)
 
-    /** Says [text], then calls [then] once it has been spoken (at once when there is nothing to say). */
+    /** Says [text] after whatever is being said (a turn-by-turn prompt is never cut off by it). */
+    fun speakQueued(text: String) = speak(text)
+
+    /** Says [text] after whatever is being said, then calls [then] (at once when there is nothing to say). */
     fun speakThen(text: String, then: () -> Unit) {
-        speak(text)
+        speakQueued(text)
         then()
     }
 
@@ -44,6 +47,8 @@ class Voice(context: Context) : Speaker {
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {}
                 override fun onDone(utteranceId: String?) = finished(utteranceId)
+                // A navigation prompt may cut a queued sentence off; its follow-up must still run.
+                override fun onStop(utteranceId: String?, interrupted: Boolean) = finished(utteranceId)
                 @Deprecated("Deprecated in Java")
                 override fun onError(utteranceId: String?) = finished(utteranceId)
             })
@@ -61,12 +66,18 @@ class Voice(context: Context) : Speaker {
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var thenCounter = 0
 
+    override fun speakQueued(text: String) {
+        if (!ready || text.isBlank()) return
+        audio.requestAudioFocus(focusRequest)
+        tts.speak(text, TextToSpeech.QUEUE_ADD, null, "queued-${thenCounter++}")
+    }
+
     override fun speakThen(text: String, then: () -> Unit) {
         if (!ready || text.isBlank()) { then(); return }
         val id = "then-${thenCounter++}"
         thenCallbacks[id] = then
         audio.requestAudioFocus(focusRequest)
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
+        tts.speak(text, TextToSpeech.QUEUE_ADD, null, id)
     }
 
     private fun finished(id: String?) {

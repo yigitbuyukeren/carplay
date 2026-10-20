@@ -94,6 +94,7 @@ fun PhoneScreen(
     onSetDialer: () -> Unit,
     onGrantAccess: () -> Unit,
     onDial: (String, String?) -> Unit,
+    onMic: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var tab by remember(initialNumber) { mutableStateOf(if (initialNumber != null) PhoneTab.KEYPAD else PhoneTab.RECENTS) }
@@ -118,6 +119,7 @@ fun PhoneScreen(
                     )
                 }
             }
+            MicButton(onMic, size = TAP)
         }
         if (dialerHint) {
             Row(

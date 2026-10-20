@@ -36,8 +36,8 @@ class VoiceInput(private val context: Context, private val biasing: () -> List<S
 
     override fun available(): Boolean = SpeechRecognizer.isRecognitionAvailable(context)
 
-    /** [onResult] gets the alternatives best first, or an empty list when nothing was understood. */
-    override fun start(onPartial: (String) -> Unit, onResult: (List<String>) -> Unit) {
+    /** [onResult] gets the alternatives best first (none when nothing was understood) and the recogniser's score. */
+    override fun start(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit) {
         cancel()
         val r = SpeechRecognizer.createSpeechRecognizer(context)
         recognizer = r
@@ -50,10 +50,12 @@ class VoiceInput(private val context: Context, private val biasing: () -> List<S
             }
 
             override fun onResults(results: Bundle?) {
-                finish(onResult, results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty())
+                val heard = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+                val score = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)?.firstOrNull()
+                finish(onResult, VoiceHeard(heard, score))
             }
 
-            override fun onError(error: Int) = finish(onResult, emptyList())
+            override fun onError(error: Int) = finish(onResult, VoiceHeard(emptyList()))
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
@@ -77,7 +79,7 @@ class VoiceInput(private val context: Context, private val biasing: () -> List<S
         r.startListening(intent)
     }
 
-    private fun finish(onResult: (List<String>) -> Unit, results: List<String>) {
+    private fun finish(onResult: (VoiceHeard) -> Unit, results: VoiceHeard) {
         release()
         beep(ToneGenerator.TONE_PROP_ACK)
         onResult(results)

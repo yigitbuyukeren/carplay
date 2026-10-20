@@ -34,7 +34,8 @@ interface VoiceActions {
     fun goSaved(kind: PlaceKind): String?
     fun stopNavigation(): Boolean
     fun findStops()
-    suspend fun findNearest(term: String): String?
+    suspend fun findNearest(term: String, along: Boolean): String?
+    suspend fun alternativeRoute(): Boolean
     fun navInfo(question: NavQuestion): String?
     fun setAvoid(highways: Boolean?, tolls: Boolean?)
     fun recalculate(): Boolean
@@ -62,14 +63,19 @@ interface VoiceActions {
     fun volumeSet(percent: Int)
     fun playSearch(query: String): Boolean
 
-    fun info(question: InfoQuestion): String?
+    suspend fun info(question: InfoQuestion): String?
     fun apps(): List<AppRef>
     fun launchApp(pkg: String): Boolean
     fun setTheme(mode: ThemeMode)
+    fun setBrightness(delta: Int)
+    fun setWarningVoice(on: Boolean)
     fun setMiles(miles: Boolean)
     fun startSos()
     fun showHelp()
 }
+
+/** What the recogniser heard: the alternatives best first, and how sure it was (0..1) when it says. */
+data class VoiceHeard(val alternatives: List<String>, val confidence: Float? = null)
 
 /** What the assistant waits for after it asked something. */
 private sealed class Expect {
@@ -91,12 +97,14 @@ class VoiceAssistant(
     private val speaker: Speaker,
     private val actions: VoiceActions,
     private val pause: suspend (Long) -> Unit = { delay(it) },
+    /** Called once per command with what was heard and whether it was understood (for the command history). */
+    private val history: (heard: String, understood: Boolean) -> Unit = { _, _ -> },
 ) {
     /** The speech engine, injectable for tests. */
     interface SpeechListener {
         fun available(): Boolean
-        /** Listens once; [onResult] gets the alternatives best first (empty when nothing was understood). */
-        fun start(onPartial: (String) -> Unit, onResult: (List<String>) -> Unit)
+        /** Listens once; [onResult] gets what was heard (no alternatives when nothing was understood). */
+        fun start(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit)
         fun cancel()
     }
 
@@ -122,7 +130,7 @@ class VoiceAssistant(
         _ui.update { VoiceUi(VoicePhase.LISTENING, choices = it.choices) }
         listener.start(
             onPartial = { partial -> _ui.update { if (it.phase == VoicePhase.LISTENING) it.copy(text = partial) else it } },
-            onResult = { heard -> handle(heard, searchFallback) },
+            onResult = { heard -> handle(heard.alternatives, heard.confidence, searchFallback) },
         )
     }
 
@@ -139,7 +147,7 @@ class VoiceAssistant(
         e.options.getOrNull(index)?.let { (_, action) -> listener.cancel(); expect = Expect.None; action() }
     }
 
-    private fun handle(alternatives: List<String>, searchFallback: Boolean) {
+    private fun handle(alternatives: List<String>, confidence: Float?, searchFallback: Boolean) {
         val e = expect
         if (e !is Expect.None) {
             handleAnswer(e, alternatives)
@@ -151,6 +159,7 @@ class VoiceAssistant(
         }
         // The recogniser lists alternatives best first; the first one that is a real command wins.
         val command = alternatives.map(VoiceParser::parse).firstOrNull { it !is VoiceCommand.Unknown }
+        history(alternatives.first(), command != null)
         if (command == null) {
             if (searchFallback) {
                 actions.openScreen(VoiceScreen.MAP)
@@ -159,6 +168,11 @@ class VoiceAssistant(
             } else {
                 say(text(R.string.voice_unknown) + " " + alternatives.first())
             }
+            return
+        }
+        // A low score (0 means "no score") makes a wrong guess likely: say what was heard and ask.
+        if (confidence != null && confidence > 0f && confidence < LOW_CONFIDENCE && command !is VoiceCommand.Help) {
+            ask(Expect.YesNo(text(R.string.voice_did_you_say) + " " + alternatives.first() + "?") { run(command) })
             return
         }
         run(command)
@@ -247,7 +261,7 @@ class VoiceAssistant(
                 actions.openScreen(VoiceScreen.MAP)
                 _ui.value = VoiceUi(VoicePhase.MESSAGE, text(R.string.voice_searching) + " " + command.label)
                 job = scope.launch {
-                    val place = actions.findNearest(command.term)
+                    val place = actions.findNearest(command.term, command.along)
                     if (place != null) done(command.label + ": " + place) else say(text(R.string.no_results))
                 }
             }
@@ -255,6 +269,10 @@ class VoiceAssistant(
             is VoiceCommand.AvoidHighways -> { actions.setAvoid(command.on, null); done(text(if (command.on) R.string.voice_avoid_highways_on else R.string.voice_avoid_highways_off)) }
             is VoiceCommand.AvoidTolls -> { actions.setAvoid(null, command.on); done(text(if (command.on) R.string.voice_avoid_tolls_on else R.string.voice_avoid_tolls_off)) }
             VoiceCommand.Recalculate -> if (actions.recalculate()) done(text(R.string.voice_recalculated)) else say(text(R.string.voice_no_route))
+            VoiceCommand.AlternativeRoute -> {
+                _ui.value = VoiceUi(VoicePhase.MESSAGE, text(R.string.voice_looking_alternative))
+                job = scope.launch { if (actions.alternativeRoute()) done(text(R.string.voice_alternative_ready)) else say(text(R.string.voice_no_alternative)) }
+            }
             VoiceCommand.SaveFavoriteHere -> saveHere(PlaceKind.FAVORITE)
             VoiceCommand.SetHomeHere -> saveHere(PlaceKind.HOME)
             VoiceCommand.SetWorkHere -> saveHere(PlaceKind.WORK)
@@ -287,10 +305,14 @@ class VoiceAssistant(
             VoiceCommand.VolumeDown -> { actions.volumeDown(); _ui.value = VoiceUi() }
             is VoiceCommand.VolumeSet -> { actions.volumeSet(command.percent); done(text(R.string.voice_volume) + " %" + command.percent) }
 
-            is VoiceCommand.Info -> actions.info(command.question)?.let { speakAndShow(it) } ?: say(text(R.string.voice_no_info))
+            is VoiceCommand.Info -> {
+                job = scope.launch { actions.info(command.question)?.let { speakAndShow(it) } ?: say(text(R.string.voice_no_info)) }
+            }
             is VoiceCommand.OpenApp -> openApp(command.name)
             is VoiceCommand.OpenScreen -> { actions.openScreen(command.screen); _ui.value = VoiceUi() }
             is VoiceCommand.SetTheme -> { actions.setTheme(command.mode); _ui.value = VoiceUi() }
+            is VoiceCommand.Brightness -> { actions.setBrightness(command.delta); _ui.value = VoiceUi() }
+            is VoiceCommand.WarningVoice -> { actions.setWarningVoice(command.on); done(text(if (command.on) R.string.voice_warnings_on else R.string.voice_warnings_off)) }
             is VoiceCommand.SetMiles -> { actions.setMiles(command.miles); done(text(if (command.miles) R.string.voice_miles else R.string.voice_km)) }
 
             VoiceCommand.Help -> { actions.showHelp(); _ui.value = VoiceUi() }
@@ -402,5 +424,7 @@ class VoiceAssistant(
         const val CONFIRM_SECONDS = 3
         const val MESSAGE_MS = 3500L
         const val MAX_CHOICES = 3
+        /** Below this recogniser score a command is confirmed before it runs. */
+        const val LOW_CONFIDENCE = 0.35f
     }
 }

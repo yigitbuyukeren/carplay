@@ -32,6 +32,9 @@ class AndroidVoiceActions(
     private val startSosCountdown: () -> Unit,
     private val showScreen: (VoiceScreen) -> Unit,
     private val showHelpScreen: () -> Unit,
+    private val lastTrip: suspend () -> Trip?,
+    private val changeBrightness: (Int) -> Unit,
+    private val warningVoice: (Boolean) -> Unit,
 ) : VoiceActions {
     private fun t(id: Int, vararg args: Any): String = context.getString(id, *args)
 
@@ -55,8 +58,13 @@ class AndroidVoiceActions(
 
     override fun findStops() = nav.findFuel()
 
-    override suspend fun findNearest(term: String): String? =
-        if (nav.goToFirstMatch(listOf(term))) nav.ui.value.destination?.name else null
+    override suspend fun findNearest(term: String, along: Boolean): String? {
+        // "A cafe on the way" while guiding adds a stop; otherwise it is simply the nearest one.
+        if (along && nav.ui.value.navigating) nav.addStopAhead(term)?.let { return it }
+        return if (nav.goToFirstMatch(listOf(term))) nav.ui.value.destination?.name else null
+    }
+
+    override suspend fun alternativeRoute(): Boolean = nav.useAlternative()
 
     override fun navInfo(question: NavQuestion): String? {
         val s = nav.ui.value
@@ -121,7 +129,7 @@ class AndroidVoiceActions(
     override fun volumeSet(percent: Int) = media.setVolumePercent(percent)
     override fun playSearch(query: String): Boolean = media.playSearch(query)
 
-    override fun info(question: InfoQuestion): String? = when (question) {
+    override suspend fun info(question: InfoQuestion): String? = when (question) {
         InfoQuestion.WEATHER -> weather()?.let { w ->
             val rain = when {
                 w.rainInMin == null -> t(R.string.voice_no_rain)
@@ -140,6 +148,12 @@ class AndroidVoiceActions(
             if (!fresh) null else t(if (Units.miles) R.string.voice_speed_mph_fmt else R.string.voice_speed_kmh_fmt, Units.speed(fix.speedKmh))
         }
         InfoQuestion.SPEED_LIMIT -> speedLimit()?.let { t(if (Units.miles) R.string.voice_limit_mph_fmt else R.string.voice_limit_kmh_fmt, Units.speed(it)) }
+        InfoQuestion.TRIP -> lastTrip()?.let { trip ->
+            val stats = trip.stats
+            val avg = Units.speed(stats.avgKmh)
+            val speed = t(if (Units.miles) R.string.voice_speed_short_mph_fmt else R.string.voice_speed_short_kmh_fmt, avg)
+            t(R.string.voice_trip_fmt, Units.distance(stats.distanceM.toInt()), spokenDuration((trip.durationMs / 1000).toInt()), speed)
+        } ?: t(R.string.voice_no_trip)
         InfoQuestion.NOW_PLAYING -> media.state.value.takeIf { it.hasSession && it.title.isNotBlank() }
             ?.let { if (it.artist.isBlank()) it.title else it.title + ", " + it.artist } ?: t(R.string.voice_nothing_playing)
     }
@@ -156,6 +170,8 @@ class AndroidVoiceActions(
     override fun launchApp(pkg: String): Boolean = context.launchPackage(pkg)
     override fun setTheme(mode: ThemeMode) = setThemeMode(mode)
     override fun setMiles(miles: Boolean) = Units.set(context, miles)
+    override fun setBrightness(delta: Int) = changeBrightness(delta)
+    override fun setWarningVoice(on: Boolean) = warningVoice(on)
     override fun startSos() = startSosCountdown()
     override fun showHelp() = showHelpScreen()
 }

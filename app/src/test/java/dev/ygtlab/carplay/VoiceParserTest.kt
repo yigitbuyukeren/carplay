@@ -57,7 +57,7 @@ class VoiceParserTest {
         expect(VoiceCommand.AvoidHighways(false), "otoyol kullan", "otoyoldan git")
         expect(VoiceCommand.AvoidTolls(true), "ücretsiz yol", "ücretsiz yoldan git", "paralı yolları kullanma", "gişesiz rota", "paralı yoldan gitme")
         expect(VoiceCommand.AvoidTolls(false), "paralı yol kullan", "paralı yoldan git")
-        expect(VoiceCommand.Recalculate, "rotayı yeniden hesapla", "rotayı tekrar hesapla", "yeni rota", "başka yoldan git", "alternatif rota", "başka rota")
+        expect(VoiceCommand.Recalculate, "rotayı yeniden hesapla", "rotayı tekrar hesapla", "yeni rota")
     }
 
     @Test
@@ -78,7 +78,7 @@ class VoiceParserTest {
     @Test
     fun stopsAndNearbyPlaces() {
         expect(VoiceCommand.FindStops, "benzinlik", "en yakın benzinlik", "yolda benzinlik", "yakındaki benzinlik", "benzinlik bul", "benzin lazım", "yakıt lazım", "en yakın şarj istasyonu", "yolda şarj istasyonu", "en yakın tamirci", "şarj", "yakınımdaki benzinlik var mı")
-        expect(VoiceCommand.FindNearest("kafe", "kafe"), "en yakın kafe", "yakında kafe var mı", "kafe bul", "en yakın kahve", "yolda kafe", "kafe göster")
+        expect(VoiceCommand.FindNearest("kafe", "kafe"), "en yakın kafe", "yakında kafe var mı", "kafe bul", "en yakın kahve", "kafe göster")
         expect(VoiceCommand.FindNearest("eczane", "eczane"), "en yakın eczane", "eczane bul", "eczane nerede", "yakında eczane var mı", "eczane lazım")
         expect(VoiceCommand.FindNearest("hastane", "hastane"), "en yakın hastane", "hastane bul", "yakında hastane var mı", "en yakın acil")
         expect(VoiceCommand.FindNearest("atm", "ATM"), "en yakın atm", "atm bul", "en yakın bankamatik", "yakında atm var mı")
@@ -158,6 +158,31 @@ class VoiceParserTest {
         expect(VoiceCommand.OpenScreen(VoiceScreen.APPS), "uygulamaları aç", "uygulama rafını aç")
         expect(VoiceCommand.OpenScreen(VoiceScreen.SETTINGS), "ayarları aç", "ayarlara git")
         expect(VoiceCommand.OpenScreen(VoiceScreen.HOME), "ana ekrana dön", "ana ekran", "ana ekrana git")
+    }
+
+    @Test
+    fun alternativeRouteBrightnessWarningsAndTrip() {
+        expect(VoiceCommand.AlternativeRoute, "başka rota", "alternatif rota", "başka yoldan git", "başka yol var mı", "başka bir rota")
+        expect(VoiceCommand.Recalculate, "rotayı yeniden hesapla", "yeni rota")
+        expect(VoiceCommand.Brightness(-1), "ekranı kıs", "parlaklığı azalt", "ekranı karart")
+        expect(VoiceCommand.Brightness(1), "ekranı aç", "parlaklığı artır", "ekranı aydınlat")
+        expect(VoiceCommand.WarningVoice(false), "sesli uyarıları kapat", "uyarıları sustur")
+        expect(VoiceCommand.WarningVoice(true), "sesli uyarıları aç")
+        expect(VoiceCommand.Info(InfoQuestion.TRIP), "yolculuk özeti", "bugün kaç km", "ne kadar yol yaptım", "son yolculuk")
+    }
+
+    @Test
+    fun stopsOnTheWayAreFlagged() {
+        assertEquals(VoiceCommand.FindNearest("kafe", "kafe", along = true), VoiceParser.parse("yolda kafe"))
+        assertEquals(VoiceCommand.FindNearest("eczane", "eczane", along = true), VoiceParser.parse("rota üzerinde eczane"))
+        assertEquals(VoiceCommand.FindNearest("kafe", "kafe", along = false), VoiceParser.parse("en yakın kafe"))
+    }
+
+    @Test
+    fun openingAppsByName() {
+        expect(VoiceCommand.OpenApp("whatsapp"), "WhatsApp'ı aç", "whatsapp aç", "WhatsApp uygulamasını aç")
+        expect(VoiceCommand.OpenApp("chrome"), "Chrome'u aç", "chrome'u başlat")
+        expect(VoiceCommand.OpenApp("gmail"), "Gmail aç")
     }
 
     @Test

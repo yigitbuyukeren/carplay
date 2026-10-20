@@ -5,7 +5,7 @@ enum class VoiceScreen { HOME, MAP, MUSIC, PHONE, APPS, SETTINGS }
 
 enum class NavQuestion { REMAINING_TIME, REMAINING_DISTANCE, ARRIVAL, NEXT_TURN }
 
-enum class InfoQuestion { WEATHER, TIME, BATTERY, SPEED, SPEED_LIMIT, NOW_PLAYING }
+enum class InfoQuestion { WEATHER, TIME, BATTERY, SPEED, SPEED_LIMIT, NOW_PLAYING, TRIP }
 
 /** What the rider asked for by voice. */
 sealed class VoiceCommand {
@@ -18,11 +18,13 @@ sealed class VoiceCommand {
     object StopNavigation : VoiceCommand()
     object FindStops : VoiceCommand()
     /** "En yakın kafe": [term] is the search word, [label] what to call it aloud. */
-    data class FindNearest(val term: String, val label: String) : VoiceCommand()
+    data class FindNearest(val term: String, val label: String, val along: Boolean = false) : VoiceCommand()
     data class NavInfo(val question: NavQuestion) : VoiceCommand()
     data class AvoidHighways(val on: Boolean) : VoiceCommand()
     data class AvoidTolls(val on: Boolean) : VoiceCommand()
     object Recalculate : VoiceCommand()
+    /** "Başka rota": another route to the same place. */
+    object AlternativeRoute : VoiceCommand()
     object SaveFavoriteHere : VoiceCommand()
     object SetHomeHere : VoiceCommand()
     object SetWorkHere : VoiceCommand()
@@ -62,6 +64,10 @@ sealed class VoiceCommand {
     data class OpenScreen(val screen: VoiceScreen) : VoiceCommand()
     data class SetTheme(val mode: ThemeMode) : VoiceCommand()
     data class SetMiles(val miles: Boolean) : VoiceCommand()
+    /** Screen brightness one step up (+1) or down (-1). */
+    data class Brightness(val delta: Int) : VoiceCommand()
+    /** Spoken weather, speed-limit and similar warnings on or off. */
+    data class WarningVoice(val on: Boolean) : VoiceCommand()
 
     // The assistant itself
     object Help : VoiceCommand()
@@ -161,7 +167,8 @@ object VoiceParser {
         rule("^(?:otoyol kullan|otoyoldan git|otoyolu kullan|otoyolları kullan|otoyolu aç)$", VoiceCommand.AvoidHighways(false)),
         rule("^(?:ücretsiz yol(?:dan git)?|ücretsiz git|paralı yolları kullanma|paralı yol kullanma|paralı yoldan gitme|gişesiz git|gişesiz rota|ücretli yolları kullanma)$", VoiceCommand.AvoidTolls(true)),
         rule("^(?:paralı yol kullan|paralı yoldan git|paralı yolları kullan|ücretli yolları kullan)$", VoiceCommand.AvoidTolls(false)),
-        rule("^(?:rotayı |yolu )?(?:yeniden|tekrar|baştan) hesapla$|^(?:yeni rota|başka rota|başka yoldan git|alternatif rota|başka yol var mı|yeni yol bul)$", VoiceCommand.Recalculate),
+        rule("^(?:rotayı |yolu )?(?:yeniden|tekrar|baştan) hesapla$|^(?:yeni rota)$", VoiceCommand.Recalculate),
+        rule("^(?:başka rota|başka yoldan git|alternatif rota|başka yol var mı|yeni yol bul|başka bir rota|alternatif yol|başka yol)$", VoiceCommand.AlternativeRoute),
         rule("^(?:burayı |burayı bir )?(?:favoriye ekle|favori yap|favorilere ekle|kaydet|favori olarak kaydet)$|^(?:bu konumu kaydet|konumu kaydet)$", VoiceCommand.SaveFavoriteHere),
         rule("^(?:evimi buraya ayarla|burası evim|evim burası|ev adresimi buraya ayarla|evimi buraya kaydet|burayı ev yap)$", VoiceCommand.SetHomeHere),
         rule("^(?:işimi buraya ayarla|burası işim|işim burası|iş adresimi buraya ayarla|işimi buraya kaydet|burayı iş yap)$", VoiceCommand.SetWorkHere),
@@ -177,12 +184,17 @@ object VoiceParser {
             if (m.value == "şarj") VoiceCommand.FindStops else VoiceCommand.Info(InfoQuestion.BATTERY)
         },
         rule("^(?:kaç ile gidiyorum|hızım kaç|hızım ne|hız kaç|ne kadar hızlı gidiyorum|kaç yapıyorum|hızımı söyle|şu an kaç ile gidiyorum)$", VoiceCommand.Info(InfoQuestion.SPEED)),
+        rule("^(?:yolculuk özeti|yolculuk özetini söyle|bu yolculuk nasıl gitti|bugün kaç km|ne kadar yol yaptım|kaç km yaptım|yolculuk istatistiği|son yolculuk|son yolculuk nasıldı)$", VoiceCommand.Info(InfoQuestion.TRIP)),
         rule("^(?:hız sınırı(?: kaç| ne)?|hız limiti(?: kaç| ne)?|limit kaç|burada hız limiti kaç|buranın hız limiti ne|sınır kaç)$", VoiceCommand.Info(InfoQuestion.SPEED_LIMIT)),
 
         // Settings and screens
         rule("^(?:gece modu(?:na geç)?|gece moduna geç|karanlık mod|karanlık moda geç|koyu tema|karanlık tema)$", VoiceCommand.SetTheme(ThemeMode.NIGHT)),
         rule("^(?:gündüz modu(?:na geç)?|aydınlık mod|aydınlık moda geç|açık tema|aydınlık tema)$", VoiceCommand.SetTheme(ThemeMode.DAY)),
         rule("^(?:otomatik tema|tema otomatik|temayı otomatik yap|otomatik mod)$", VoiceCommand.SetTheme(ThemeMode.AUTO)),
+        rule("^(?:ekranı kıs|ekranı karart|parlaklığı azalt|parlaklığı düşür|ekranı biraz kıs)$", VoiceCommand.Brightness(-1)),
+        rule("^(?:ekranı aç|ekranı aydınlat|parlaklığı artır|parlaklığı arttır|parlaklığı yükselt|ekranı biraz aç|ekranı parlat)$", VoiceCommand.Brightness(1)),
+        rule("^(?:sesli uyarıları kapat|uyarıları sustur|sesli uyarılar kapansın|uyarıları sessize al)$", VoiceCommand.WarningVoice(false)),
+        rule("^(?:sesli uyarıları aç|uyarıları aç|sesli uyarılar açılsın)$", VoiceCommand.WarningVoice(true)),
         rule("^(?:mil kullan|mil cinsinden göster|mph kullan|birimi mil yap|mil ve mph|mile geç|mil olsun)$", VoiceCommand.SetMiles(true)),
         rule("^(?:kilometre kullan|km kullan|kilometre cinsinden göster|birimi kilometre yap|kilometreye geç|kilometre olsun|km olsun)$", VoiceCommand.SetMiles(false)),
         rule("^(?:haritayı aç|haritaya git|haritayı göster|harita ekranı|haritaya geç)$", VoiceCommand.OpenScreen(VoiceScreen.MAP)),
@@ -220,7 +232,8 @@ object VoiceParser {
         rule("^(?:yolda|yol üstünde|rota üzerinde|yolumda|rotamda|en yakın|yakındaki|yakınımdaki|yakında|buraya yakın) (?:bir )?($CATEGORY_WORDS)\\w*(?: var mı| nerede| göster| bul| ara)?$|^($CATEGORY_WORDS)\\w*(?: bul| göster| nerede| var mı| lazım)$") { m ->
             val word = (m.groups[1]?.value ?: m.groups[2]?.value).orEmpty()
             val entry = CATEGORIES.entries.firstOrNull { word.startsWith(it.key) }?.value ?: return@rule null
-            VoiceCommand.FindNearest(entry.first, entry.second)
+            val along = Regex("^(?:yolda|yol üstünde|rota üzerinde|yolumda|rotamda) ").containsMatchIn(m.value)
+            VoiceCommand.FindNearest(entry.first, entry.second, along)
         },
     )
 

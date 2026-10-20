@@ -23,6 +23,13 @@ import dev.ygtlab.carplay.data.PinnedApps
 import dev.ygtlab.carplay.data.VoiceAssistant
 import dev.ygtlab.carplay.data.AndroidVoiceActions
 import dev.ygtlab.carplay.data.Speaker
+import dev.ygtlab.carplay.data.OfflineVoice
+import dev.ygtlab.carplay.data.OfflineVoiceCheck
+import dev.ygtlab.carplay.data.VoiceButtonTrigger
+import dev.ygtlab.carplay.data.VoicePhase
+import dev.ygtlab.carplay.data.WakeWord
+import dev.ygtlab.carplay.data.VoiceHistory
+import dev.ygtlab.carplay.data.VoiceHistoryEntry
 import dev.ygtlab.carplay.data.VoiceInput
 import dev.ygtlab.carplay.data.VoiceScreen
 import dev.ygtlab.carplay.data.SavedPlaces
@@ -104,7 +111,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.Eagerly, profileNow)
 
     val nav = NavigationController(
-        app::getString, viewModelScope, location.state, Voice(app),
+        app::getString, viewModelScope, location.state, announcer,
         repo = RouteRepository(miles = { Units.miles }),
         initialOptions = Prefs.routeOptions(app, profileNow),
         onOptionsChanged = { Prefs.setRouteOptions(app, it) },
@@ -164,12 +171,70 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Spoken answers can be switched off; the text still shows on screen. */
     private val voiceSpeaker = object : Speaker {
-        override fun speak(text: String) { if (Prefs.voiceReplies(getApplication())) announcer.speak(text) }
+        override fun speak(text: String) { if (Prefs.voiceReplies(getApplication())) announcer.speakQueued(text) }
+        override fun speakQueued(text: String) = speak(text)
         override fun speakThen(text: String, then: () -> Unit) {
             if (Prefs.voiceReplies(getApplication())) announcer.speakThen(text, then) else then()
         }
         override fun stop() = announcer.stop()
         override fun shutdown() {}
+    }
+
+    val offlineVoice = MutableStateFlow(OfflineVoice.UNKNOWN)
+
+    fun refreshOfflineVoice() = OfflineVoiceCheck.check(getApplication()) { offlineVoice.value = it }
+
+    fun downloadOfflineVoice() {
+        OfflineVoiceCheck.download(getApplication())
+        viewModelScope.launch { delay(6000); refreshOfflineVoice() }
+    }
+
+    private val wake = WakeWord(app) { requestVoice() }
+    val voiceWakeOn = MutableStateFlow(Prefs.voiceWake(app))
+    val voiceButtonOn = MutableStateFlow(Prefs.voiceButton(app))
+    private val voiceButton = VoiceButtonTrigger(app, onDoublePress = { requestVoice() }, onSinglePress = { media.togglePlay() })
+
+    fun setVoiceWake(on: Boolean) {
+        Prefs.setVoiceWake(getApplication(), on)
+        voiceWakeOn.value = on
+        applyVoiceExtras()
+    }
+
+    fun setVoiceButton(on: Boolean) {
+        Prefs.setVoiceButton(getApplication(), on)
+        voiceButtonOn.value = on
+        applyVoiceExtras()
+    }
+
+    /** The wake phrase and the headset key only listen while the dashboard is on screen, the phone is not in a call and has charge. */
+    private fun applyVoiceExtras() {
+        val ctx = getApplication<Application>()
+        val calm = onScreen && call.state.value.phase == CallPhase.IDLE
+        val charged = battery.state.value.let { it.charging || it.percent >= WAKE_MIN_BATTERY }
+        if (calm && voiceWakeOn.value && charged && ctx.hasPermission(Manifest.permission.RECORD_AUDIO)) wake.start() else wake.stop()
+        if (onScreen && voiceButtonOn.value) voiceButton.start() else voiceButton.stop()
+    }
+
+    val voiceHistory = MutableStateFlow(VoiceHistory.fromJson(Prefs.voiceHistory(app)))
+
+    fun clearVoiceHistory() {
+        voiceHistory.value = emptyList()
+        Prefs.setVoiceHistory(getApplication(), VoiceHistory.toJson(emptyList()))
+    }
+
+    private fun recordVoice(heard: String, understood: Boolean) {
+        if (!Prefs.voiceHistoryOn(getApplication())) return
+        val next = VoiceHistory.add(voiceHistory.value, VoiceHistoryEntry(heard, understood, System.currentTimeMillis()))
+        voiceHistory.value = next
+        Prefs.setVoiceHistory(getApplication(), VoiceHistory.toJson(next))
+    }
+
+    /** Screen brightness the rider asked for by voice (0..1); null leaves the system setting. Heat protection still wins. */
+    val brightnessChoice = MutableStateFlow<Float?>(null)
+
+    private fun stepBrightness(delta: Int) {
+        val base = brightnessChoice.value ?: DEFAULT_VOICE_BRIGHTNESS
+        brightnessChoice.value = (base + delta * BRIGHTNESS_STEP).coerceIn(MIN_VOICE_BRIGHTNESS, 1f)
     }
 
     val voiceAssistant = VoiceAssistant(
@@ -195,7 +260,11 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             startSosCountdown = { sos.trigger(SosReason.MANUAL) },
             showScreen = { voiceScreen.value = it },
             showHelpScreen = { voiceHelp.value = true },
+            lastTrip = { trips.trips().firstOrNull() },
+            changeBrightness = ::stepBrightness,
+            warningVoice = ::setRainVoice,
         ),
+        history = ::recordVoice,
     )
 
     val dashSlots = MutableStateFlow(DashLayout.fromString(Prefs.dashSlots(app)))
@@ -204,6 +273,13 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         val next = DashLayout.set(dashSlots.value, index, card)
         dashSlots.value = next
         Prefs.setDashSlots(getApplication(), DashLayout.toString(next))
+    }
+
+    init {
+        // The microphone is the assistant's while it listens or asks; the wake phrase waits.
+        viewModelScope.launch {
+            voiceAssistant.ui.collect { if (it.phase == VoicePhase.IDLE) wake.resume() else wake.pause() }
+        }
     }
 
     val pinnedApps = MutableStateFlow(PinnedApps.fromJson(Prefs.pinnedApps(app)))
@@ -423,6 +499,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         // The strip is a service: after a reboot or a killed process it has to be started again.
         if (Prefs.overlayEnabled(getApplication())) OverlayService.start(getApplication())
         resumeTick.value++
+        applyVoiceExtras()
     }
 
     fun setReadMessagesAloud(enabled: Boolean) {
@@ -439,6 +516,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onPause() {
         onScreen = false
+        wake.stop()
+        voiceButton.stop()
         crashSensor.stop()
         theme.stop()
     }
@@ -455,5 +534,9 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         const val FIX_TIMEOUT_MS = 5000L
         const val FRESH_MESSAGE_MS = 30_000L
         const val RESUME_AFTER_CALL_MS = 1500L
+        const val WAKE_MIN_BATTERY = 30
+        const val DEFAULT_VOICE_BRIGHTNESS = 0.7f
+        const val MIN_VOICE_BRIGHTNESS = 0.1f
+        const val BRIGHTNESS_STEP = 0.2f
     }
 }

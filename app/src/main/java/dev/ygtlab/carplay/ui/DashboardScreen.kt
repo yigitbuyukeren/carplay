@@ -1,5 +1,7 @@
 package dev.ygtlab.carplay.ui
 
+import dev.ygtlab.carplay.data.WakeWord
+import dev.ygtlab.carplay.data.OfflineVoice
 import dev.ygtlab.carplay.data.VoiceScreen
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.AnimatedVisibility
@@ -87,6 +89,11 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val showVoiceHelp by vm.voiceHelp.collectAsStateWithLifecycle()
     val voiceRequests by vm.voiceRequests.collectAsStateWithLifecycle()
     var voiceReplies by remember { mutableStateOf(Prefs.voiceReplies(context)) }
+    var voiceHistoryOn by remember { mutableStateOf(Prefs.voiceHistoryOn(context)) }
+    val voiceHistory by vm.voiceHistory.collectAsStateWithLifecycle()
+    val voiceWake by vm.voiceWakeOn.collectAsStateWithLifecycle()
+    val voiceButton by vm.voiceButtonOn.collectAsStateWithLifecycle()
+    val offlineVoice by vm.offlineVoice.collectAsStateWithLifecycle()
     var voiceHelmetMic by remember { mutableStateOf(Prefs.voiceHelmetMic(context)) }
     var pendingSearchFallback by remember { mutableStateOf(false) }
     val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -150,7 +157,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
     LaunchedEffect(showPhone, resume, callState.phase) { if (showPhone && callState.phase == CallPhase.IDLE) vm.phone.refresh() }
 
     // Re-evaluated whenever the activity resumes (e.g. coming back from a system settings page).
-    val settingItems = remember(resume) {
+    val settingItems = remember(resume, offlineVoice) {
         listOf(
             SettingItem(
                 context.getString(R.string.perm_location),
@@ -179,8 +186,19 @@ fun DashboardScreen(vm: DashboardViewModel) {
             SettingItem(context.getString(R.string.perm_battery), context.getString(R.string.perm_battery_desc), ignoresBatteryOptimization(context), context.getString(R.string.action_open)) {
                 context.openSettingsAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             },
-        )
+            SettingItem(context.getString(R.string.perm_assistant), context.getString(R.string.perm_assistant_desc), isDefaultAssistant(context), context.getString(R.string.action_set)) {
+                context.openSettingsAction(Settings.ACTION_VOICE_INPUT_SETTINGS)
+            },
+        ) + (if (offlineVoice == OfflineVoice.UNKNOWN) emptyList() else listOf(
+            SettingItem(
+                context.getString(R.string.perm_offline_voice),
+                context.getString(if (offlineVoice == OfflineVoice.UNSUPPORTED) R.string.perm_offline_voice_unsupported else R.string.perm_offline_voice_desc),
+                offlineVoice == OfflineVoice.INSTALLED, context.getString(R.string.action_download),
+            ) { vm.downloadOfflineVoice() },
+        ))
     }
+
+    LaunchedEffect(showSettings) { if (showSettings) vm.refreshOfflineVoice() }
 
     // A voice command asked for a screen.
     LaunchedEffect(voiceScreen) {
@@ -255,6 +273,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                                 dialerLauncher.launch(defaultDialerIntent(context))
                             } else vm.dial(number, name)
                         },
+                        onMic = { startVoice(false) },
                         modifier = m,
                     )
                 } else if (target == MotoScreen.MUSIC) {
@@ -262,6 +281,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         state = mediaState,
                         media = vm.media,
                         onGrantAccess = { context.openSettingsAction(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) },
+                        onMic = { startVoice(false) },
                         modifier = m,
                     )
                 } else if (target == MotoScreen.MAP) {
@@ -409,6 +429,13 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     ToggleItem(stringResource(R.string.thermal_title), stringResource(R.string.thermal_desc), thermalOn, vm::setThermalEnabled),
                     ToggleItem(stringResource(R.string.speed_limit_title), stringResource(R.string.speed_limit_desc), speedLimitOn, vm::setSpeedLimitEnabled),
                     ToggleItem(stringResource(R.string.voice_replies_title), stringResource(R.string.voice_replies_desc), voiceReplies) { voiceReplies = it; Prefs.setVoiceReplies(context, it) },
+                    ToggleItem(stringResource(R.string.voice_history_title), stringResource(R.string.voice_history_desc), voiceHistoryOn) { voiceHistoryOn = it; Prefs.setVoiceHistoryOn(context, it); if (!it) vm.clearVoiceHistory() },
+                    ToggleItem(stringResource(R.string.voice_button_title), stringResource(R.string.voice_button_desc), voiceButton, vm::setVoiceButton),
+                    ToggleItem(
+                        stringResource(R.string.voice_wake_title),
+                        stringResource(if (WakeWord.available(context)) R.string.voice_wake_desc else R.string.voice_wake_unavailable),
+                        voiceWake, vm::setVoiceWake,
+                    ),
                     ToggleItem(stringResource(R.string.voice_helmet_title), stringResource(R.string.voice_helmet_desc), voiceHelmetMic) { voiceHelmetMic = it; Prefs.setVoiceHelmetMic(context, it) },
                     ToggleItem(stringResource(R.string.units_title), stringResource(R.string.units_desc), Units.miles) { Units.set(context, it) },
                     ToggleItem(stringResource(R.string.record_trips_title), stringResource(R.string.record_trips_desc), recordTrips, vm::setRecordTrips),
@@ -472,7 +499,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
         if (vehicleChosen == null) VehicleChooser(onChoose = vm::setVehicle)
 
         AnimatedVisibility(visible = showVoiceHelp, enter = overlayEnter, exit = overlayExit) {
-            VoiceHelpScreen(onClose = { vm.voiceHelp.value = false })
+            VoiceHelpScreen(history = voiceHistory, onClear = vm::clearVoiceHistory, onClose = { vm.voiceHelp.value = false })
         }
 
         VoiceOverlay(voiceUi, onCancel = vm.voiceAssistant::cancel, onChoose = vm.voiceAssistant::choose, onHelp = { vm.voiceAssistant.cancel(); vm.voiceHelp.value = true })
