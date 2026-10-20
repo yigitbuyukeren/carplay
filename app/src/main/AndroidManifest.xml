@@ -18,10 +18,14 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
         <!-- The app shelf lists launchable apps so the rider can pin them (no QUERY_ALL_PACKAGES needed). -->
         <intent>
             <action android:name="android.intent.action.MAIN" />

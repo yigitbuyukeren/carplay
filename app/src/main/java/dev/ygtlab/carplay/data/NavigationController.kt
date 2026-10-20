@@ -98,6 +98,23 @@ class NavigationController(
         }
     }
 
+    /**
+     * Voice destination: searches each candidate text in turn and routes to the first hit.
+     * False when none of them finds anything or the search fails.
+     */
+    suspend fun goToFirstMatch(candidates: List<String>): Boolean {
+        for (candidate in candidates) {
+            _ui.update { it.copy(query = candidate, searching = true, results = emptyList(), error = null) }
+            val places = repo.search(candidate, here()).getOrNull()
+            _ui.update { it.copy(searching = false) }
+            val first = places?.firstOrNull() ?: continue
+            selectPlace(first)
+            return true
+        }
+        _ui.update { it.copy(error = text(R.string.no_results)) }
+        return false
+    }
+
     /** A spot picked on the map: routed at once under a generic name, renamed when its address arrives. */
     fun selectPoint(point: GeoPoint) {
         selectPlace(Place(text(R.string.selected_place), "", point))

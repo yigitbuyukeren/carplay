@@ -56,6 +56,7 @@ fun NavCard(
     lowPower: Boolean,
     onOpenMap: () -> Unit,
     onGoTo: (Place) -> Unit,
+    onMic: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(28.dp)
@@ -86,7 +87,10 @@ fun NavCard(
                 )
             )
         }
-        if (weather != null) WeatherChip(weather, Modifier.align(Alignment.TopEnd).padding(12.dp))
+        Row(Modifier.align(Alignment.TopEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (weather != null) WeatherChip(weather)
+            MicButton(onMic)
+        }
         if (guiding) MapCredit(Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 6.dp))
         Column(
             modifier = Modifier.fillMaxSize().padding(14.dp),

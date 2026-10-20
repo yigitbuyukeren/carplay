@@ -238,4 +238,24 @@
     <string name="open_external_nav">Open in a navigation app</string>
     <string name="msg_app_title_fmt">%1$s messages</string>
     <string name="msg_app_desc">Turn off to hide this app\'s messages on the dashboard and stop reading them aloud.</string>
+    <string name="voice_unavailable">Speech recognition is not available on this phone</string>
+    <string name="voice_not_heard">Did not catch that, try again</string>
+    <string name="voice_unknown">Did not understand:</string>
+    <string name="voice_searching">Searching:</string>
+    <string name="voice_no_home">No home address saved</string>
+    <string name="voice_no_work">No work address saved</string>
+    <string name="voice_nav_stopped">Navigation ended</string>
+    <string name="voice_music_play">Playing music</string>
+    <string name="voice_music_pause">Music paused</string>
+    <string name="voice_music_next">Next track</string>
+    <string name="voice_music_previous">Previous track</string>
+    <string name="voice_no_contacts_permission">No contacts permission, grant it on the Phone screen</string>
+    <string name="voice_contact_not_found">Not in contacts:</string>
+    <string name="voice_calling">Calling:</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_cancel">Cancel</string>
+    <string name="voice_mic">Voice command</string>
+    <string name="voice_mic_permission">Voice commands need the microphone permission</string>
+    <string name="voice_title">Voice commands</string>
+    <string name="voice_desc">Tap the microphone and say things like \"Go to Kadıköy\", \"Call Ali\" or \"play music\" (commands are Turkish). Recognition uses the phone\'s own service; depending on the phone the audio may go to Google.</string>
 </resources>

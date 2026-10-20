@@ -18,6 +18,8 @@ import dev.ygtlab.carplay.data.WeatherController
 import dev.ygtlab.carplay.data.PlaceKind
 import dev.ygtlab.carplay.data.SavedPlace
 import dev.ygtlab.carplay.data.PinnedApps
+import dev.ygtlab.carplay.data.VoiceAssistant
+import dev.ygtlab.carplay.data.VoiceInput
 import dev.ygtlab.carplay.data.SavedPlaces
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -136,6 +138,36 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         Prefs.setMessageAppsMuted(getApplication<Application>(), PinnedApps.toJson(if (muted) PinnedApps.add(now, pkg) else PinnedApps.remove(now, pkg)))
         refreshMessageApps()
     }
+
+    /** Set by a voice command that needs the map screen; the dashboard opens it and clears the flag. */
+    val voiceOpenMap = MutableStateFlow(false)
+
+    private val voiceInput = VoiceInput(app)
+
+    val voiceAssistant = VoiceAssistant(
+        text = app::getString,
+        scope = viewModelScope,
+        listener = object : VoiceAssistant.SpeechListener {
+            override fun available() = voiceInput.available()
+            override fun start(onPartial: (String) -> Unit, onResult: (List<String>) -> Unit) = voiceInput.start(onPartial, onResult)
+            override fun cancel() = voiceInput.cancel()
+        },
+        nav = nav,
+        speaker = announcer,
+        places = { places.value },
+        contacts = { phone.contacts.value },
+        canReadContacts = { phone.canReadContacts() },
+        dial = phone::dial,
+        media = object : VoiceAssistant.MediaControls {
+            override fun play() = if (media.isPlaying) Unit else media.togglePlay()
+            override fun pause() = if (media.isPlaying) media.pause() else Unit
+            override fun next() = media.next()
+            override fun previous() = media.previous()
+            override fun volumeUp() = media.volumeUp()
+            override fun volumeDown() = media.volumeDown()
+        },
+        openMap = { voiceOpenMap.value = true },
+    )
 
     val pinnedApps = MutableStateFlow(PinnedApps.fromJson(Prefs.pinnedApps(app)))
 
@@ -375,6 +407,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        voiceAssistant.cancel()
         announcer.shutdown()
         theme.stop()
         nav.shutdown()

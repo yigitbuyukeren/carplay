@@ -238,4 +238,24 @@
     <string name="open_external_nav">Navigasyon uygulamasında aç</string>
     <string name="msg_app_title_fmt">%1$s mesajları</string>
     <string name="msg_app_desc">Kapatırsan bu uygulamanın mesajları ana ekranda görünmez ve okunmaz.</string>
+    <string name="voice_unavailable">Bu telefonda ses tanıma yok</string>
+    <string name="voice_not_heard">Anlayamadım, tekrar dene</string>
+    <string name="voice_unknown">Anlamadım:</string>
+    <string name="voice_searching">Aranıyor:</string>
+    <string name="voice_no_home">Ev adresi kayıtlı değil</string>
+    <string name="voice_no_work">İş adresi kayıtlı değil</string>
+    <string name="voice_nav_stopped">Navigasyon bitti</string>
+    <string name="voice_music_play">Müzik açılıyor</string>
+    <string name="voice_music_pause">Müzik durdu</string>
+    <string name="voice_music_next">Sonraki şarkı</string>
+    <string name="voice_music_previous">Önceki şarkı</string>
+    <string name="voice_no_contacts_permission">Rehber izni yok, Telefon ekranından ver</string>
+    <string name="voice_contact_not_found">Rehberde bulunamadı:</string>
+    <string name="voice_calling">Aranıyor:</string>
+    <string name="voice_listening">Dinliyorum…</string>
+    <string name="voice_cancel">İptal</string>
+    <string name="voice_mic">Sesle komut</string>
+    <string name="voice_mic_permission">Sesle komut için mikrofon izni gerekir</string>
+    <string name="voice_title">Sesle komut</string>
+    <string name="voice_desc">Mikrofon düğmesine basıp \"Kadıköy\'e git\", \"Ali\'yi ara\", \"müziği aç\" gibi söyle. Ses tanıma telefonun kendi servisiyle yapılır; telefona göre ses Google\'a gidebilir.</string>
 </resources>

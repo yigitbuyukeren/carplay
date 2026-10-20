@@ -150,6 +150,10 @@ class MediaRepository(private val context: Context) {
         controller?.transportControls?.play()
     }
 
+    fun pause() {
+        controller?.transportControls?.pause()
+    }
+
     val isPlaying: Boolean get() = controller?.playbackState?.state == PlaybackState.STATE_PLAYING
 
     fun seekTo(ms: Long) {

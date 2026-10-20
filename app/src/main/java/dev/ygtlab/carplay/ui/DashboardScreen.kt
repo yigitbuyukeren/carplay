@@ -76,6 +76,17 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showNowPlaying by remember { mutableStateOf(false) }
     var showPhone by remember { mutableStateOf(false) }
     var showApps by remember { mutableStateOf(false) }
+    val voiceUi by vm.voiceAssistant.ui.collectAsStateWithLifecycle()
+    val voiceOpenMap by vm.voiceOpenMap.collectAsStateWithLifecycle()
+    var pendingSearchFallback by remember { mutableStateOf(false) }
+    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) vm.voiceAssistant.listen(pendingSearchFallback)
+    }
+    fun startVoice(searchFallback: Boolean) {
+        pendingSearchFallback = searchFallback
+        if (context.hasPermission(Manifest.permission.RECORD_AUDIO)) vm.voiceAssistant.listen(searchFallback)
+        else micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    }
     val pinnedApps by vm.pinnedApps.collectAsStateWithLifecycle()
     val messageApps by vm.messageApps.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refreshMessageApps() }
@@ -161,6 +172,13 @@ fun DashboardScreen(vm: DashboardViewModel) {
         )
     }
 
+    LaunchedEffect(voiceOpenMap) {
+        if (voiceOpenMap) {
+            showMap = true; showApps = false; showPhone = false; showNowPlaying = false; showSettings = false
+            vm.voiceOpenMap.value = false
+        }
+    }
+
     BackHandler(enabled = showMap || showNowPlaying || showPhone || showTrips || showApps) {
         showApps = false
         showTrips = false
@@ -227,6 +245,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                         places = places,
                         onSavePlace = vm::savePlace,
                         onRemovePlace = vm::removePlace,
+                        onMic = { startVoice(true) },
                         onClose = { showMap = false },
                         modifier = m,
                     )
@@ -240,6 +259,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                             me = locationState, isDay = isDay, lowPower = lowPower,
                             onOpenMap = { showMap = true },
                             onGoTo = { vm.nav.selectPlace(it); showMap = true },
+                            onMic = { startVoice(false) },
                             modifier = mod)
                     }
                     val mediaCard: @Composable (Modifier) -> Unit = { mod ->
@@ -400,6 +420,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
 
         // The first-launch question sits above everything but the SOS countdown.
         if (vehicleChosen == null) VehicleChooser(onChoose = vm::setVehicle)
+
+        VoiceOverlay(voiceUi, onCancel = vm.voiceAssistant::cancel)
 
         // Last, so nothing can cover an SOS countdown.
         SosScreen(sosUi, sosContacts.map { it.name }, onCancel = vm.sos::cancel, onDismiss = vm.sos::dismiss)
