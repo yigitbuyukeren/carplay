@@ -2,7 +2,7 @@
 
 Her gün sonunda güncellenir (bkz. [WORKFLOW.md](WORKFLOW.md)).
 
-**Son güncelleme:** 2026-10-20
+**Son güncelleme:** 2026-10-22
 
 ## Şu anki durum
 - Her şey `main`'de, açık dal ve açık issue yok. 232 birim testi geçiyor, lint hatasız, release (R8) derleniyor, debug APK ~42 MB. Sürüm `0.3.0` (`versionCode` 3) **2026-10-19'da yayınlandı** (etiket `v0.3.0`, imzalı R8 APK ~24 MB, GitHub release'inde). Sürüm anahtarı yerelde `release.jks` + `keystore.properties` (ikisi de git'e girmez): **yedeğini al**, kaybolursa aynı imzayla güncelleme çıkarılamaz. v0.1.0 debug anahtarıyla imzalıydı, bu yüzden üzerine kurulamaz (önce kaldırmak gerekir).
@@ -10,6 +10,7 @@ Her gün sonunda güncellenir (bkz. [WORKFLOW.md](WORKFLOW.md)).
 - Bu turda eklenen: uygulama içi telefon (Son aramalar, Rehber, tuş takımı), RideDeck'in kendi arama ekranı (varsayılan telefon uygulaması seçilirse), eldivene göre büyütülmüş dokunma hedefleri, müzik ekranı yeniden (sesli, ilerleme çubuğu, kapak kaydırma, yön animasyonları, "Oynat" ile son müziği başlatma), navigasyon kartında canlı mini harita, uygulamaya gömülü Türkçe arama klavyesi, hız kartında rakım ve GPS durumu.
 - Bu turda çıkarılan: OBD, bakım takibi, eğim göstergesi, GPX.
 - **Gerçek cihazda denenmedi / eksik doğrulama:** arama sırasında RideDeck varsayılan telefon uygulamasıyken ses yolu, sessiz, tuş takımı ve ses tuşları; müzik kapalıyken Oynat'ın uygulamayı uyandırması; gerçek SMS gönderimi; kaza algılama eşikleri; gidonda ısınma; canlı mini haritanın pil ve ısı etkisi. Son yapılan kapak animasyonu düzeltmesi telefona yüklendi ama yeniden izlenmedi.
+- README (2026-10-22) profil ve diğer proje README'leriyle aynı tarza geçti: sitenin tasarımında açık/koyu kapak (`docs/screenshots/banner-light.jpg`, `banner-dark.jpg`, profil reposundaki `tools/banners.html?p=ride` ile üretildi), turuncu/siyah rozetler, emojili başlıklar, Türkçe ve İngilizce açılır bölümler. "Öne çıkanlar" altı madde olduğu için iki satırlı üç sütunlu tabloya girdi. İçerik aynen korundu.
 - README ekran görüntüleri (2026-10-20 akşam) yeni logo, logolu araç seçimi ve Devam adımı, dock logosu, rakımsız hız kartı ve kaldırılmış "Harita ve rota" düğmesiyle yenilendi; emülatörde (Türkçe arayüz) çekildi, gerçek telefon verisi yok. Telefon, müzik ve uygulama rafı ekranları henüz README'de görsel olarak yok.
 - Issue'lar: yedisi de kapalı. #5 (çevrimdışı harita ve rota) 2026-10-19'da "planlanmıyor" diye kapatıldı; fikir olarak aşağıda duruyor.
 

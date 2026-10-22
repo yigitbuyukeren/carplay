@@ -1,50 +1,39 @@
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="RideDeck ana ekran" width="100%">
-</p>
+<a href="https://yigitbuyukeren.com/ridedeck/">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/banner-dark.jpg">
+    <img src="docs/screenshots/banner-light.jpg" width="100%" alt="RideDeck: telefonunu gidona tak, CarPlay tarzı sürüş paneline çevir. Kotlin, Jetpack Compose, OpenStreetMap, Apache 2.0.">
+  </picture>
+</a>
 
-<p align="center">
-  <img src="docs/logo.png" alt="RideDeck logosu" width="128">
-</p>
+<div align="center">
 
-<h1 align="center">RideDeck</h1>
+**[⬇️ APK indir](https://github.com/yigitbuyukeren/ridedeck/releases/latest)** &nbsp;·&nbsp; **[🌐 Proje sayfası](https://yigitbuyukeren.com/ridedeck/)** &nbsp;·&nbsp; **[🧭 Özellikler](#-özellikler)** &nbsp;·&nbsp; **[🛠️ Derleme](#️-derleme)** &nbsp;·&nbsp; **[🤝 Katkı](CONTRIBUTING.md)**
 
-<p align="center">
-  <b>Telefonunu gidona tak, CarPlay tarzı sürüş paneline çevir.</b><br>
-  <sub>Motosiklet, araba ve bisiklet için açık kaynak Android launcher · hesap yok, anahtar yok, sunucu yok</sub>
-</p>
+[![Sürüm](https://img.shields.io/github/v/release/yigitbuyukeren/ridedeck?style=flat-square&labelColor=16150F&color=E8480C&label=s%C3%BCr%C3%BCm)](https://github.com/yigitbuyukeren/ridedeck/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/yigitbuyukeren/ridedeck/ci.yml?style=flat-square&labelColor=16150F&color=E8480C&label=CI)](https://github.com/yigitbuyukeren/ridedeck/actions/workflows/ci.yml)
+[![Lisans](https://img.shields.io/badge/lisans-Apache%202.0-E8480C?style=flat-square&labelColor=16150F)](LICENSE)
+![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-E8480C?style=flat-square&labelColor=16150F&logo=android&logoColor=3DDC84)
+![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-E8480C?style=flat-square&labelColor=16150F&logo=kotlin&logoColor=7F52FF)
+![Sunucu yok](https://img.shields.io/badge/hesap%20%C2%B7%20anahtar%20%C2%B7%20sunucu-yok-E8480C?style=flat-square&labelColor=16150F)
 
-<p align="center">
-  <a href="https://github.com/yigitbuyukeren/ridedeck/releases/latest"><img src="https://img.shields.io/github/v/release/yigitbuyukeren/ridedeck?style=for-the-badge&color=7F52FF" alt="Sürüm"></a>
-  <a href="https://github.com/yigitbuyukeren/ridedeck/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/yigitbuyukeren/ridedeck/ci.yml?style=for-the-badge&label=CI" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-Apache%202.0-blue?style=for-the-badge" alt="Lisans"></a>
-  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android 8.0+">
-  <img src="https://img.shields.io/badge/Kotlin-Jetpack_Compose-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin, Jetpack Compose">
-</p>
+🇹🇷 [Türkçe](#-türkçe) &nbsp;·&nbsp; 🇬🇧 [English](#-english)
 
-<p align="center">
-  <a href="https://github.com/yigitbuyukeren/ridedeck/releases/latest"><b>⬇️ APK indir</b></a> ·
-  <a href="#özellikler">Özellikler</a> ·
-  <a href="#derleme">Derleme</a> ·
-  <a href="CONTRIBUTING.md">Katkı</a> ·
-  <a href="#-in-english">English</a>
-</p>
+</div>
 
----
+<details open>
+<summary><h2>🇹🇷 Türkçe</h2></summary>
 
 Telefonu gidona veya torpido üstüne takınca **hız, harita, müzik ve telefon tek ekranda** toplanır. İlk açılışta aracını seçersin (Ayarlar'dan değişir); rota, uyarılar ve düzen ona göre ayarlanır. Tüm arayüz eldivenle kullanılacak büyüklükte, sürerken yazı girişi yoktur.
 
-## Öne çıkanlar
+### ✨ Öne çıkanlar
 
-| | |
-|---|---|
-| 🧭 **Sesli navigasyon** | OpenStreetMap haritası, motosiklet / araba / bisiklet rotası, ara durak, benzinlik ve şarj |
-| 🎙️ **Türkçe sesli asistan** | "Eve git", "Ali'yi ara", "son mesajı oku"; kask mikrofonu desteği |
-| 🆘 **SOS ve kaza algılama** | Sert darbe ve hareketsizlikte geri sayım, sonra konum linkli tek SMS |
-| 🎵 **Müzik ve telefon** | Kapak kaydırma, uygulama içi rehber, tuş takımı ve arama ekranı |
-| 🌦️ **Uyarılar** | Yağmur, buzlanma ve rüzgâr uyarısı; telefon ısınınca ekran kısılır |
-| 🔒 **Gizlilik** | Veriler telefonda kalır; yalnızca ücretsiz genel harita servislerine sorgu gider |
+| 🧭 **Sesli navigasyon** | 🎙️ **Türkçe sesli asistan** | 🆘 **SOS ve kaza algılama** |
+|:---:|:---:|:---:|
+| OpenStreetMap haritası, motosiklet / araba / bisiklet rotası, ara durak, benzinlik ve şarj | "Eve git", "Ali'yi ara", "son mesajı oku"; kask mikrofonu desteği | Sert darbe ve hareketsizlikte geri sayım, sonra konum linkli tek SMS |
+| 🎵 **Müzik ve telefon** | 🌦️ **Uyarılar** | 🔒 **Gizlilik** |
+| Kapak kaydırma, uygulama içi rehber, tuş takımı ve arama ekranı | Yağmur, buzlanma ve rüzgâr uyarısı; telefon ısınınca ekran kısılır | Veriler telefonda kalır; yalnızca ücretsiz genel harita servislerine sorgu gider |
 
-## Ekran görüntüleri
+### 📸 Ekran görüntüleri
 
 | İlk açılışta araç seçimi | Rota |
 |---|---|
@@ -62,12 +51,14 @@ Bisiklet profilinde telefon dik de durabilir:
 
 <img src="docs/screenshots/bicycle-portrait.png" alt="Dik bisiklet ana ekranı" width="240">
 
-## Kurulum
+### 📲 Kurulum
+
 1. [Son sürümün](https://github.com/yigitbuyukeren/ridedeck/releases/latest) APK'sını indir ve kur (bilinmeyen kaynaklardan kuruluma izin ver).
 2. İlk açılışta aracını seç; istersen RideDeck'i ana ekran (HOME) uygulaması yap.
 3. Müzik ve mesaj okuma için Ayarlar > Kurulum'dan bildirim erişimini ver.
 
-## Özellikler
+### 🧭 Özellikler
+
 Ayrıntılar için başlıklara dokun.
 
 <details>
@@ -138,7 +129,8 @@ Ayrıntılar için başlıklara dokun.
 
 </details>
 
-## Derleme
+### 🛠️ Derleme
+
 ```bash
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17
 ./gradlew testDebugUnitTest assembleDebug
@@ -148,15 +140,19 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 Sürüm APK'sı (R8 ile küçültülmüş, ~24 MB): kök dizine `keystore.properties` koy (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`; dosya git'e girmez) ve `./gradlew assembleRelease` çalıştır. Dosya yoksa APK imzasız çıkar.
 
-## Gizlilik ve izinler
+### 🔒 Gizlilik ve izinler
+
 Hesap ve sunucu yok; veriler telefonda kalır. Dışarı giden tek şey, aşağıdaki genel servislere giden sorgulardır: arama metni (Nominatim, yalnızca Ara'ya basınca), rota uç noktaları ve hız limiti için son konum noktaları (Valhalla), yaklaşık konum (hava durumu için 1 km hassasiyetle, Open-Meteo), çevre veya rota boyunca benzinlik sorgusu (Nominatim / Overpass).
 
 SOS yalnızca sen açarsan çalışır ve `SEND_SMS` izni ister; kişiler telefonun kişi seçicisinden eklenir (rehber izni gerekmez). Sesle komut için mikrofon izni ilk kullanımda ekrandaki düğmeyle istenir; ses tanıma Android'in kendi tanıyıcısıyla yapılır. Kaza algılama yalnızca uygulama ekrandayken çalışır; Android arka plandaki sensörleri kısıtlar. Operatörün SMS ücreti uygulanabilir. Bu özellik bir güvenlik garantisi değildir.
 
-## Güvenlik notu
-Bu uygulama sürüş sırasında dikkat dağıtabilir. Telefonu sabitle, ayarları park halindeyken yap ve trafik kurallarına uy. Yazılım garantisiz sunulur (Apache 2.0).
+### ⚠️ Güvenlik notu
 
-## Kullanılan servisler ve atıflar
+> [!WARNING]
+> Bu uygulama sürüş sırasında dikkat dağıtabilir. Telefonu sabitle, ayarları park halindeyken yap ve trafik kurallarına uy. Yazılım garantisiz sunulur (Apache 2.0).
+
+### 🗺️ Kullanılan servisler ve atıflar
+
 - Harita verisi © [OpenStreetMap](https://www.openstreetmap.org/copyright) katkıda bulunanlar (ODbL)
 - Harita karoları: [OpenFreeMap](https://openfreemap.org); harita motoru: [MapLibre Native](https://maplibre.org)
 - Adres arama: [Nominatim](https://nominatim.org) (genel sunucu; kullanım politikasına uygun olarak yalnızca Ara'ya basınca sorgular)
@@ -166,11 +162,27 @@ Bu uygulama sürüş sırasında dikkat dağıtabilir. Telefonu sabitle, ayarlar
 
 Bunlar ücretsiz, garantisiz genel servislerdir. Yoğun veya ticari kullanım için kendi sunucunu kur.
 
-## Katkı
+### 🤝 Katkı
+
 Issue ve PR'lar açık. Başlamak için [CONTRIBUTING.md](CONTRIBUTING.md) dosyasına ve [docs/STATUS.md](docs/STATUS.md) içindeki "Sıradaki işler" listesine bak. Fikirler: yeni dil çevirileri, çevrimdışı harita ve rota (büyük iş), tablet ve katlanabilir ekran düzenleri.
 
-## Lisans
+### 📜 Lisans
+
 [Apache 2.0](LICENSE)
 
-## 🇬🇧 In English
+⭐ İşine yaradıysa yıldız vermeyi unutma!
+
+</details>
+
+<details>
+<summary><h2>🇬🇧 English</h2></summary>
+
+| 🧭 **Voice navigation** | 🎙️ **Turkish voice assistant** | 🆘 **SOS and crash detection** |
+|:---:|:---:|:---:|
+| OpenStreetMap, motorcycle / car / bicycle routing, waypoints, fuel and charging stops | "Go home", "Call Ali", "read the last message"; helmet mic support | Countdown after a hard impact and no movement, then a single SMS with your location |
+| 🎵 **Music and phone** | 🌦️ **Alerts** | 🔒 **Privacy** |
+| Cover swipe, in-app contacts, dial pad and call screen | Rain, ice and wind alerts; the screen dims when the phone overheats | Data stays on the phone; only queries to free public map services leave it |
+
 RideDeck is a free, open-source Android app (Kotlin, Jetpack Compose, minSdk 26) that turns a phone into a CarPlay-style landscape dashboard for motorcycles, cars and bicycles: GPS speedometer, voice-guided OpenStreetMap navigation, fuel/charging/repair stops, weather alerts, music, an in-app phone, a Turkish voice assistant and crash-detecting SOS. No accounts, no API keys, no servers: it only talks to free public map services. The UI has Turkish and English; voice commands are Turkish only. Build with `./gradlew assembleDebug` (JDK 17). Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+</details>
