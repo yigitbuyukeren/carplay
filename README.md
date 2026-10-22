@@ -20,6 +20,8 @@
 
 </div>
 
+<p align="center"><img src="docs/screenshots/demo.gif" width="800" alt="RideDeck demosu: araç seçimi, ana panel, rota, sesli navigasyon, benzinlikler ve SOS geri sayımı ekranları sırayla"></p>
+
 <details open>
 <summary><h2>🇹🇷 Türkçe</h2></summary>
 
