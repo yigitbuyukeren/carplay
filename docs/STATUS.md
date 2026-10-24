@@ -80,7 +80,7 @@ Tarama listesindeki 33 maddenin hepsi ele alındı (numaralar taramadaki sırad�
 - **Araç seçimi ekranı**: üstte logo ve "RideDeck" adı, içerik dikeyde ortalı (sığmazsa kayar), açıklama metni `textSecondary` ile okunur. Karta dokunmak yalnızca seçer (mavi çerçeve); "Devam et" düğmesi seçimden sonra çıkar ve kaydeder (`VehicleChooser`).
 - **İzin ekranı**: araç seçilince Ayarlar artık kendiliğinden açılmaz. Yerine `PermissionIntro` gelir: Konum, Bildirim erişimi, Telefon, SMS satırları ve her biri için "İzin ver"; "Sonra" atlar (konum verilmişse "Tamam"). Atlananlar Ayarlar > Kurulum'da durur. Konum reddedilince ikinci "İzin ver" uygulamanın sistem sayfasını açar.
 - **Dashboard**: navigasyon kartındaki "Harita ve rota" düğmesi kalktı (başlıkta › işareti, kartın tamamı haritayı açar; `nav_map_and_route` metni silindi). Hız kartı konum izni yokken "Konum izni gerekli" + "İzin ver" gösterir, izin varken GPS bekliyorsa eski metin. Sol dock'un üstünde logo (`ic_logo`): dört 62 dp karonun bıraktığı yere göre 28 dp'ye kadar küçülür (A059'da ~20 dp, görüldü), 14 dp'ye bile yer yoksa ve dik ekranda gizlenir.
-- **Belge düzeltmeleri**: EKSIKLER durumları güncellendi, WORKFLOW ve CONTRIBUTING dokunma hedefi 64 dp, README/proje rehberi'deki "uyandırma sözcüğü yok" cümlesi "Hey RideDeck" ile uzlaştırıldı.
+- **Belge düzeltmeleri**: EKSIKLER durumları güncellendi, WORKFLOW ve CONTRIBUTING dokunma hedefi 64 dp, README'deki "uyandırma sözcüğü yok" cümlesi "Hey RideDeck" ile uzlaştırıldı.
 - **Doğrulanmayanlar**: izin ekranındaki "İzin ver" akışının gerçek telefonda sonuna kadar denenmesi (yalnızca ekran görüldü).
 
 ## Sıradaki işler
