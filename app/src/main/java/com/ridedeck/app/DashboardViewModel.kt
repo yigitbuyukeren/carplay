@@ -5,6 +5,14 @@ import com.ridedeck.app.data.AndroidSmsSender
 import com.ridedeck.app.data.AndroidSosAlarm
 import com.ridedeck.app.data.CrashSensor
 import com.ridedeck.app.data.GeoPoint
+import kotlinx.coroutines.Job
+import com.ridedeck.app.data.outlook
+import com.ridedeck.app.data.WeatherRepository
+import com.ridedeck.app.data.VoiceCommand
+import com.ridedeck.app.data.ProactivePrompts
+import com.ridedeck.app.data.ProactiveKind
+import com.ridedeck.app.data.ProactiveInput
+import com.ridedeck.app.data.InfoQuestion
 import com.ridedeck.app.data.Place
 import com.ridedeck.app.data.VehicleProfile
 import com.ridedeck.app.data.SosContact
@@ -62,6 +70,7 @@ import com.ridedeck.app.util.Units
 import com.ridedeck.app.util.simplifyMessage
 import kotlinx.coroutines.flow.Flow
 import com.ridedeck.app.data.NavUi
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -73,10 +82,21 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class GpsUi(val speedKmh: Int = 0, val hasFix: Boolean = false, val accuracyM: Int? = null)
+data class GpsUi(
+    val speedKmh: Int = 0,
+    val hasFix: Boolean = false,
+    val accuracyM: Int? = null,
+    /** For the hidden GPS debug line: age of the last fix, gap since the one before, and the chip's speed error. */
+    val fixAgeMs: Int? = null,
+    val fixIntervalMs: Int? = null,
+    val speedAccuracyMps: Float? = null,
+)
 
 class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val location = LocationRepository(app)
+
+    /** The speed the gauge draws, in km/h, smoothed and projected forward between fixes. */
+    fun displaySpeedKmh(): Double = location.displayKmh()
     val battery = BatteryRepository(app)
     val media = MediaRepository(app)
     val call = CallRepository(app, viewModelScope)
@@ -224,9 +244,27 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun recordVoice(heard: String, understood: Boolean) {
         if (!Prefs.voiceHistoryOn(getApplication())) return
+        if (!understood) {
+            Prefs.setVoiceMisses(getApplication(), VoiceHistory.missesToJson(VoiceHistory.addMiss(VoiceHistory.missesFromJson(Prefs.voiceMisses(getApplication())), heard)))
+        }
         val next = VoiceHistory.add(voiceHistory.value, VoiceHistoryEntry(heard, understood, System.currentTimeMillis()))
         voiceHistory.value = next
         Prefs.setVoiceHistory(getApplication(), VoiceHistory.toJson(next))
+    }
+
+    /** The sentences the assistant did not understand, one per line, for the share sheet (text only, never audio). */
+    fun missedPhrases(): String = VoiceHistory.missesFromJson(Prefs.voiceMisses(getApplication())).joinToString("\n")
+
+    val voiceProactiveOn = MutableStateFlow(Prefs.voiceProactive(app))
+
+    fun setVoiceProactive(on: Boolean) {
+        voiceProactiveOn.value = on
+        Prefs.setVoiceProactive(getApplication(), on)
+    }
+
+    /** Forget the people assigned to "annem", "babam" and the like. */
+    fun clearNicknames() {
+        Prefs.setNicknames(getApplication(), "{}")
     }
 
     /** Screen brightness the rider asked for by voice (0..1); null leaves the system setting. Heat protection still wins. */
@@ -263,9 +301,47 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             lastTrip = { trips.trips().firstOrNull() },
             changeBrightness = ::stepBrightness,
             warningVoice = ::setRainVoice,
+            displaySpeedKmh = { location.displayKmh().roundToInt() },
+            outlook = { day, from, to ->
+                val fix = location.state.value
+                if (fix.fixAtMs == 0L) null else WeatherRepository().outlook(GeoPoint(fix.lat, fix.lon), day, from, to).getOrNull()
+            },
+            proactiveSwitch = ::setVoiceProactive,
         ),
         history = ::recordVoice,
+        continuous = { Prefs.voiceContinuous(getApplication()) },
     )
+
+    // ---- the assistant's own questions (rain, low battery, nearly there, a long ride) --------------
+
+    private val proactivePrompts = ProactivePrompts()
+    private var proactiveJob: Job? = null
+
+    private fun startProactive() {
+        if (proactiveJob?.isActive == true) return
+        proactiveJob = viewModelScope.launch {
+            while (true) {
+                delay(PROACTIVE_TICK_MS)
+                val now = System.currentTimeMillis()
+                val speed = gps.value.speedKmh
+                proactivePrompts.onSpeed(now, speed)
+                if (!voiceProactiveOn.value || !onScreen) continue
+                val route = nav.ui.value
+                val batt = battery.state.value
+                val busy = call.state.value.phase != CallPhase.IDLE || voiceAssistant.ui.value.phase != VoicePhase.IDLE
+                val kind = proactivePrompts.next(
+                    ProactiveInput(now, speed, weather.snapshot.value?.rainInMin, batt.percent, batt.charging, route.navigating, route.remainingM, busy)
+                ) ?: continue
+                val (question, command) = when (kind) {
+                    ProactiveKind.RAIN -> getApplication<Application>().getString(R.string.voice_proactive_rain) to VoiceCommand.Info(InfoQuestion.WEATHER)
+                    ProactiveKind.BATTERY -> getApplication<Application>().getString(R.string.voice_proactive_battery, batt.percent) to VoiceCommand.Brightness(-1)
+                    ProactiveKind.ARRIVAL -> getApplication<Application>().getString(R.string.voice_proactive_arrival) to VoiceCommand.FindNearest("otopark", "otopark")
+                    ProactiveKind.BREAK -> getApplication<Application>().getString(R.string.voice_proactive_break) to VoiceCommand.FindNearest("kafe", "kafe")
+                }
+                voiceAssistant.proactive(question, command)
+            }
+        }
+    }
 
     val dashSlots = MutableStateFlow(DashLayout.fromString(Prefs.dashSlots(app)))
 
@@ -377,7 +453,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     val gps: StateFlow<GpsUi> = combine(location.state, ticker) { loc, now ->
         val fresh = now - loc.fixAtMs < FIX_TIMEOUT_MS
-        GpsUi(if (fresh) loc.speedKmh else 0, fresh, loc.accuracyM)
+        GpsUi(if (fresh) loc.speedKmh else 0, fresh, loc.accuracyM, loc.fixAgeMs, loc.fixIntervalMs, loc.speedAccuracyMps)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, GpsUi())
 
     val thermalEnabled = MutableStateFlow(Prefs.thermalGuard(app))
@@ -490,6 +566,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onResume() {
         onScreen = true
+        startProactive()
         location.start()
         battery.start()
         media.start()
@@ -532,6 +609,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     private companion object {
         const val FIX_TIMEOUT_MS = 5000L
+        const val PROACTIVE_TICK_MS = 20_000L
         const val FRESH_MESSAGE_MS = 30_000L
         const val RESUME_AFTER_CALL_MS = 1500L
         const val WAKE_MIN_BATTERY = 30

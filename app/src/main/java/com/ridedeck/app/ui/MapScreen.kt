@@ -52,6 +52,12 @@ import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -596,14 +602,17 @@ private fun RouteCard(
                 Text(ui.destination?.name.orEmpty(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 if (externalApps.isNotEmpty() && canOpenExternal) {
                     Box(
-                        Modifier.size(68.dp).clickable {
+                        Modifier.size(width = 76.dp, height = 68.dp).clickable {
                             val dest = ui.destination ?: return@clickable
                             if (externalApps.size == 1) context.startExternalNav(externalApps[0], dest.point.lat, dest.point.lon, options.profile)
                             else menuOpen = true
                         },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.AutoMirrored.Rounded.OpenInNew, stringResource(R.string.open_external_nav), tint = MotoColors.Gray, modifier = Modifier.size(28.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.AutoMirrored.Rounded.OpenInNew, stringResource(R.string.open_external_nav), tint = MotoColors.Gray, modifier = Modifier.size(32.dp))
+                            Text(stringResource(R.string.open_external_label), fontSize = 12.sp, color = MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             externalApps.forEach { app ->
                                 DropdownMenuItem(
@@ -618,11 +627,17 @@ private fun RouteCard(
                         }
                     }
                 }
-                Box(Modifier.size(68.dp).clickable(onClick = onSave), contentAlignment = Alignment.Center) {
-                    Icon(
-                        if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
-                        tint = if (saved) MotoColors.Orange else MotoColors.Gray, modifier = Modifier.size(28.dp),
-                    )
+                Box(Modifier.size(width = 76.dp, height = 68.dp).clickable(onClick = onSave), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder, null,
+                            tint = if (saved) MotoColors.Orange else MotoColors.Gray, modifier = Modifier.size(32.dp),
+                        )
+                        Text(
+                            stringResource(if (saved) R.string.save_place_saved else R.string.save_place_label),
+                            fontSize = 12.sp, color = if (saved) MotoColors.Orange else MotoColors.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
             Text(
@@ -647,16 +662,25 @@ private fun RouteCard(
     }
 }
 
-/** A toggle that reads like a button: filled blue when on. At least 56dp tall. */
+/** A toggle that reads like a button: filled blue with a check when on. At least 56dp tall. */
 @Composable
 private fun OptionChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
+    val state = stringResource(if (selected) R.string.state_on else R.string.state_off)
+    Row(
         modifier = modifier.height(68.dp).clip(RoundedCornerShape(28.dp))
             .background(if (selected) MotoColors.Blue else MotoColors.PanelHigh)
             .border(1.dp, if (selected) Color.White else Color(0x26FFFFFF), RoundedCornerShape(28.dp))
+            .semantics { role = Role.Switch; stateDescription = state }
             .clickable(onClick = onClick).padding(horizontal = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) { Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (selected) {
+            Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 @Composable

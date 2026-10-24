@@ -133,6 +133,10 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <receiver
+            android:name=".service.ReminderReceiver"
+            android:exported="false" />
+
         <service
             android:name=".service.OverlayService"
             android:exported="false"

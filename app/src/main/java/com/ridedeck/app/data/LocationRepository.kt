@@ -6,7 +6,9 @@ import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
 import android.os.Looper
+import android.os.SystemClock
 import com.ridedeck.app.util.SpeedUtil
 import com.ridedeck.app.util.hasPermission
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +23,15 @@ data class LocationState(
     val bearing: Float? = null,
     /** Horizontal accuracy radius in metres, when the fix has it. */
     val accuracyM: Int? = null,
+    /** Raw speed in m/s as the chip reports it (speedKmh is this, rounded, with the standstill cut). */
+    val speedMps: Float = 0f,
+    /** The chip's 1-sigma speed error in m/s (API 26+), when it gives one. */
+    val speedAccuracyMps: Float? = null,
+    /** When the fix was measured, on the elapsed-realtime clock. */
+    val elapsedRealtimeMs: Long = 0L,
+    /** How old the fix already was when it reached us, and how long since the previous one (for the hidden GPS debug line). */
+    val fixAgeMs: Int? = null,
+    val fixIntervalMs: Int? = null,
 )
 
 class LocationRepository(private val context: Context) {
@@ -30,11 +41,24 @@ class LocationRepository(private val context: Context) {
 
     private var active = false
 
+    /** Smoothed, extrapolated speed for the screen; the raw speed in [state] stays untouched. */
+    private val speedFilter = SpeedFilter()
+
+    /** The speed to draw right now, in km/h (filtered and projected forward from the last fix). */
+    fun displayKmh(): Double = speedFilter.speedKmh(SystemClock.elapsedRealtime())
+
     // An object, not a lambda: before Android 11 the listener's other callbacks are abstract, and a lambda
     // would crash with AbstractMethodError the first time the GPS is switched off or on.
     private val listener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             val kmh = if (location.hasSpeed()) SpeedUtil.msToKmh(location.speed) else 0
+            val nowReal = SystemClock.elapsedRealtime()
+            val measuredAt = location.elapsedRealtimeNanos / 1_000_000L
+            val speedAcc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && location.hasSpeedAccuracy()) location.speedAccuracyMetersPerSecond else null
+            val previous = _state.value
+            val speedMps = if (location.hasSpeed()) location.speed else 0f
+            // The filter works on the time the chip measured at, so a late delivery does not shift the estimate.
+            speedFilter.onFix(if (measuredAt > 0) measuredAt else nowReal, speedMps, speedAcc)
             _state.value = LocationState(
                 speedKmh = kmh,
                 fixAtMs = System.currentTimeMillis(),
@@ -42,6 +66,11 @@ class LocationRepository(private val context: Context) {
                 lon = location.longitude,
                 bearing = if (location.hasBearing() && kmh > 0) location.bearing else _state.value.bearing,
                 accuracyM = if (location.hasAccuracy()) Math.round(location.accuracy) else null,
+                speedMps = speedMps,
+                speedAccuracyMps = speedAcc,
+                elapsedRealtimeMs = measuredAt,
+                fixAgeMs = if (measuredAt > 0) (nowReal - measuredAt).toInt().coerceAtLeast(0) else null,
+                fixIntervalMs = if (previous.elapsedRealtimeMs > 0 && measuredAt > 0) (measuredAt - previous.elapsedRealtimeMs).toInt() else null,
             )
         }
 

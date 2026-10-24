@@ -37,13 +37,18 @@ class VoiceInput(private val context: Context, private val biasing: () -> List<S
     override fun available(): Boolean = SpeechRecognizer.isRecognitionAvailable(context)
 
     /** [onResult] gets the alternatives best first (none when nothing was understood) and the recogniser's score. */
-    override fun start(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit) {
+    override fun start(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit) = listen(quiet = false, onPartial, onResult)
+
+    /** The follow-up listen after an answer: same recogniser, no beeps and no buzz. */
+    override fun startQuiet(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit) = listen(quiet = true, onPartial, onResult)
+
+    private fun listen(quiet: Boolean, onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit) {
         cancel()
         val r = SpeechRecognizer.createSpeechRecognizer(context)
         recognizer = r
         audio.requestAudioFocus(focusRequest)
         useHelmetMic()
-        beep(ToneGenerator.TONE_PROP_BEEP)
+        if (!quiet) beep(ToneGenerator.TONE_PROP_BEEP)
         r.setRecognitionListener(object : RecognitionListener {
             override fun onPartialResults(partialResults: Bundle?) {
                 partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let(onPartial)
@@ -52,10 +57,10 @@ class VoiceInput(private val context: Context, private val biasing: () -> List<S
             override fun onResults(results: Bundle?) {
                 val heard = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
                 val score = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)?.firstOrNull()
-                finish(onResult, VoiceHeard(heard, score))
+                finish(onResult, VoiceHeard(heard, score), quiet)
             }
 
-            override fun onError(error: Int) = finish(onResult, VoiceHeard(emptyList()))
+            override fun onError(error: Int) = finish(onResult, VoiceHeard(emptyList()), quiet)
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
@@ -79,9 +84,9 @@ class VoiceInput(private val context: Context, private val biasing: () -> List<S
         r.startListening(intent)
     }
 
-    private fun finish(onResult: (VoiceHeard) -> Unit, results: VoiceHeard) {
+    private fun finish(onResult: (VoiceHeard) -> Unit, results: VoiceHeard, quiet: Boolean = false) {
         release()
-        beep(ToneGenerator.TONE_PROP_ACK)
+        if (!quiet) beep(ToneGenerator.TONE_PROP_ACK)
         onResult(results)
     }
 

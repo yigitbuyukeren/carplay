@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import android.Manifest
+import android.widget.Toast
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
@@ -84,6 +85,12 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var showNowPlaying by remember { mutableStateOf(false) }
     var showPhone by remember { mutableStateOf(false) }
     var showApps by remember { mutableStateOf(false) }
+    // The "hold for Settings" caption shows for the first few launches, until the long press has been used.
+    var settingsHint by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        val n = Prefs.settingsHintCount(context)
+        if (n in 0 until 5) { settingsHint = true; Prefs.setSettingsHintCount(context, n + 1) }
+    }
     val dashSlots by vm.dashSlots.collectAsStateWithLifecycle()
     val voiceUi by vm.voiceAssistant.ui.collectAsStateWithLifecycle()
     val voiceScreen by vm.voiceScreen.collectAsStateWithLifecycle()
@@ -93,6 +100,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
     var voiceHistoryOn by remember { mutableStateOf(Prefs.voiceHistoryOn(context)) }
     val voiceHistory by vm.voiceHistory.collectAsStateWithLifecycle()
     val voiceWake by vm.voiceWakeOn.collectAsStateWithLifecycle()
+    val voiceProactive by vm.voiceProactiveOn.collectAsStateWithLifecycle()
+    var voiceContinuous by remember { mutableStateOf(Prefs.voiceContinuous(context)) }
     val voiceButton by vm.voiceButtonOn.collectAsStateWithLifecycle()
     val offlineVoice by vm.offlineVoice.collectAsStateWithLifecycle()
     var voiceHelmetMic by remember { mutableStateOf(Prefs.voiceHelmetMic(context)) }
@@ -206,6 +215,21 @@ fun DashboardScreen(vm: DashboardViewModel) {
             SettingItem(context.getString(R.string.perm_assistant), context.getString(R.string.perm_assistant_desc), isDefaultAssistant(context), context.getString(R.string.action_set)) {
                 context.openSettingsAction(Settings.ACTION_VOICE_INPUT_SETTINGS)
             },
+            SettingItem(context.getString(R.string.perm_sms), context.getString(R.string.perm_sms_desc), context.hasPermission(Manifest.permission.SEND_SMS), context.getString(R.string.action_allow)) {
+                smsLauncher.launch(Manifest.permission.SEND_SMS)
+            },
+            SettingItem(context.getString(R.string.voice_nicknames_title), context.getString(R.string.voice_nicknames_desc), false, context.getString(R.string.voice_nicknames_action)) {
+                vm.clearNicknames()
+                Toast.makeText(context, R.string.voice_nicknames_cleared, Toast.LENGTH_SHORT).show()
+            },
+            SettingItem(context.getString(R.string.voice_misses_title), context.getString(R.string.voice_misses_desc), false, context.getString(R.string.voice_misses_action)) {
+                val text = vm.missedPhrases()
+                if (text.isBlank()) Toast.makeText(context, R.string.voice_misses_empty, Toast.LENGTH_SHORT).show()
+                else context.startActivity(
+                    Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            },
         ) + (if (offlineVoice == OfflineVoice.UNKNOWN) emptyList() else listOf(
             SettingItem(
                 context.getString(R.string.perm_offline_voice),
@@ -277,9 +301,13 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     onMusic = { showNowPlaying = !showNowPlaying; showMap = false; showPhone = false; showSettings = false; showApps = false },
                     onPhone = { vm.dialRequest.value = null; showPhone = !showPhone; showMap = false; showNowPlaying = false; showSettings = false; showApps = false },
                     onApps = { showApps = !showApps; showMap = false; showNowPlaying = false; showPhone = false; showSettings = false },
+                    onSettings = {
+                        Prefs.setSettingsHintCount(context, -1); settingsHint = false
+                        showSettings = true; showMap = false; showNowPlaying = false; showPhone = false; showApps = false
+                    },
+                    settingsHint = settingsHint,
                     active = when { showMap -> DockTab.NAV; showNowPlaying -> DockTab.MUSIC; showPhone -> DockTab.PHONE; showApps -> DockTab.APPS; else -> DockTab.NONE },
                     horizontal = portrait,
-                    showLogo = true,
                 )
             }
             val content: @Composable (Modifier) -> Unit = { outer ->
@@ -335,7 +363,7 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     )
                 } else Column(modifier = m) {
                     val speedCard: @Composable (Modifier) -> Unit = { mod ->
-                        SpeedCard(gps, speedLimit, locationGranted = locationGranted(context), onGrantLocation = requestLocation, maxKmh = cfg.gaugeMaxKmh, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = mod, onClick = { showTrips = true })
+                        SpeedCard(gps, speedLimit, locationGranted = locationGranted(context), onGrantLocation = requestLocation, maxKmh = cfg.gaugeMaxKmh, speedProvider = vm::displaySpeedKmh, lowPower = lowPower, onSos = if (sosButton) ({ vm.sos.trigger(SosReason.MANUAL) }) else null, modifier = mod, onClick = { showTrips = true })
                     }
                     val navCard: @Composable (Modifier) -> Unit = { mod ->
                         NavCard(
@@ -464,6 +492,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     ToggleItem(stringResource(R.string.speed_limit_title), stringResource(R.string.speed_limit_desc), speedLimitOn, vm::setSpeedLimitEnabled),
                     ToggleItem(stringResource(R.string.voice_replies_title), stringResource(R.string.voice_replies_desc), voiceReplies) { voiceReplies = it; Prefs.setVoiceReplies(context, it) },
                     ToggleItem(stringResource(R.string.voice_history_title), stringResource(R.string.voice_history_desc), voiceHistoryOn) { voiceHistoryOn = it; Prefs.setVoiceHistoryOn(context, it); if (!it) vm.clearVoiceHistory() },
+                    ToggleItem(stringResource(R.string.voice_continuous_title), stringResource(R.string.voice_continuous_desc), voiceContinuous) { voiceContinuous = it; Prefs.setVoiceContinuous(context, it) },
+                    ToggleItem(stringResource(R.string.voice_proactive_title), stringResource(R.string.voice_proactive_desc), voiceProactive, vm::setVoiceProactive),
                     ToggleItem(stringResource(R.string.voice_button_title), stringResource(R.string.voice_button_desc), voiceButton, vm::setVoiceButton),
                     ToggleItem(
                         stringResource(R.string.voice_wake_title),

@@ -387,6 +387,24 @@ class NavigationController(
         return place.name
     }
 
+    /** Voice "bir de X'e uğra": searches each candidate near the rider and makes the first hit a stop before the destination. */
+    suspend fun addStopNamed(candidates: List<String>): Place? {
+        if (_ui.value.destination == null) return null
+        for (c in candidates) {
+            val place = repo.search(c, here()).getOrNull()?.firstOrNull() ?: continue
+            detourVia(place)
+            return place
+        }
+        return null
+    }
+
+    /** A saved place (home, work) as a stop before the destination. False without a destination. */
+    fun addStop(place: Place): Boolean {
+        if (_ui.value.destination == null) return false
+        detourVia(place)
+        return true
+    }
+
     /** Voice "recalculate": re-plans from here to the same destination. False without a destination or a position. */
     fun recalculate(): Boolean {
         val state = _ui.value

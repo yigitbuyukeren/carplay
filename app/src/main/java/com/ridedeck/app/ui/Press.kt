@@ -15,7 +15,13 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 
 /** A click that squeezes the element a little while the finger is down, so a tap with gloves still feels answered. */
-fun Modifier.pressClickable(enabled: Boolean = true, onClick: () -> Unit): Modifier = composed {
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.pressClickable(
+    enabled: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
+    onClick: () -> Unit,
+): Modifier = composed {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val scale by animateFloatAsState(
@@ -23,7 +29,10 @@ fun Modifier.pressClickable(enabled: Boolean = true, onClick: () -> Unit): Modif
         spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "press",
     )
-    this.graphicsLayer { scaleX = scale; scaleY = scale }.clickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick)
+    this.graphicsLayer { scaleX = scale; scaleY = scale }.combinedClickable(
+        interactionSource = source, indication = null, enabled = enabled,
+        onClick = onClick, onLongClick = onLongClick, onLongClickLabel = onLongClickLabel,
+    )
 }
 
 /** A key that squeezes while pressed, with an optional long-press action. */

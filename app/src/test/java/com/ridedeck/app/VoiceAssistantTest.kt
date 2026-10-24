@@ -93,6 +93,14 @@ class VoiceAssistantTest {
         override fun setMiles(miles: Boolean) { log += "miles:$miles" }
         override fun setBrightness(delta: Int) { log += "bright:$delta" }
         override fun setWarningVoice(on: Boolean) { log += "warn:$on" }
+        var smsAllowed = true
+        val nicknames = mutableMapOf<String, Contact>()
+        override fun canSendSms() = smsAllowed
+        override fun sendSms(number: String, text: String): Boolean { log += "sms:$number:$text"; return true }
+        override fun nickname(key: String): Contact? = nicknames[key]
+        override fun setNickname(key: String, contact: Contact) { nicknames[key] = contact }
+        override fun setReminder(minutes: Int, what: String?): Boolean { log += "remind:$minutes:$what"; return true }
+        override fun setProactive(on: Boolean) { log += "proactive:$on" }
         override fun startSos() { log += "sos" }
         override fun showHelp() { log += "help" }
     }
@@ -326,5 +334,85 @@ class VoiceAssistantTest {
         say(listOf("müzik ekranını aç"))
         say(listOf("ne diyebilirim"))
         assertEquals(listOf("theme:NIGHT", "miles:true", "screen:MUSIC", "help"), actions.log)
+    }
+
+    @Test
+    fun twoCommandsRunQuickOnesFirstAndACallLast() {
+        say(listOf("Ayşe'yi ara ve müziği kıs"))
+        assertEquals(listOf("vol-", "dial:333"), actions.log)
+    }
+
+    @Test
+    fun twoCallsInOneSentenceAreRefused() {
+        say(listOf("Ayşe'yi ara ve Mehmet'i ara"))
+        assertTrue(actions.log.none { it.startsWith("dial") })
+    }
+
+    @Test
+    fun aNewMessageIsDictatedReadBackAndOnlySentAfterAYes() {
+        say(listOf("Ayşe'ye mesaj at"), listOf("yoldayım"), listOf("hayır"))
+        assertTrue(actions.log.none { it.startsWith("sms") })
+        say(listOf("Ayşe'ye mesaj at"), listOf("yoldayım"), listOf("evet"))
+        assertEquals(listOf("sms:333:yoldayım"), actions.log)
+    }
+
+    @Test
+    fun aMessageNeedsTheSmsPermission() {
+        actions.smsAllowed = false
+        say(listOf("Ayşe'ye mesaj at"))
+        assertTrue(actions.log.isEmpty())
+    }
+
+    @Test
+    fun onuAraMeansTheLastPerson() {
+        say(listOf("Ayşe'yi ara"))
+        say(listOf("onu ara"))
+        assertEquals(listOf("dial:333", "dial:333"), actions.log)
+    }
+
+    @Test
+    fun aSpokenCorrectionChangesThePlace() {
+        say(listOf("Kadıköy'e git"))
+        say(listOf("hayır Kadıköy değil Moda"))
+        assertEquals(listOf("screen:MAP", "nav:kadıköy", "screen:MAP", "nav:moda"), actions.log)
+    }
+
+    @Test
+    fun undoTakesBackTheLastCommand() {
+        say(listOf("sesi kıs"))
+        say(listOf("geri al"))
+        assertEquals(listOf("vol-", "vol+"), actions.log)
+    }
+
+    @Test
+    fun theFirstTimeANicknameIsAskedForThenRemembered() {
+        say(listOf("annemi ara"), listOf("ayşe"))
+        assertEquals(listOf("dial:333"), actions.log)
+        assertEquals("Ayşe", actions.nicknames["annem"]?.name)
+        say(listOf("annemi ara"))
+        assertEquals(listOf("dial:333", "dial:333"), actions.log)
+    }
+
+    @Test
+    fun aReminderIsSet() {
+        say(listOf("yirmi dakika sonra hatırlat"))
+        assertEquals(listOf("remind:20:null"), actions.log)
+    }
+
+    @Test
+    fun theAssistantsOwnQuestionRunsOnYesAndIsSilentOtherwise() {
+        ear.script = ArrayDeque(listOf(listOf("evet")))
+        assertTrue(assistant.proactive("Yağmur geliyor, okuyayım mı?", com.ridedeck.app.data.VoiceCommand.Info(InfoQuestion.WEATHER)))
+        assertEquals(listOf("info:WEATHER"), actions.log)
+        ear.script = ArrayDeque(listOf(listOf("hayır")))
+        assertTrue(assistant.proactive("Pil düşük, ekranı kısayım mı?", com.ridedeck.app.data.VoiceCommand.Brightness(-1)))
+        assertEquals(listOf("info:WEATHER"), actions.log)
+        assertEquals(com.ridedeck.app.data.VoicePhase.IDLE, assistant.ui.value.phase)
+    }
+
+    @Test
+    fun aHalfHeardSentenceAsksWhatWasMeant() {
+        say(listOf("hava çok güzel"), listOf("evet"))
+        assertEquals(listOf("info:WEATHER"), actions.log)
     }
 }

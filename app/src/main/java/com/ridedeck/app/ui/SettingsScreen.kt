@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -187,7 +189,9 @@ fun SettingsScreen(
                 }
             }
             val list: @Composable (Modifier) -> Unit = { modifier ->
-                LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                val listState = rememberLazyListState()
+                Box(modifier) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     when (tab) {
                         SettingsTab.SETUP -> {
                             item {
@@ -240,6 +244,14 @@ fun SettingsScreen(
                         }
                         SettingsTab.SAFETY -> item { safetyCard() }
                     }
+                }
+                // A soft fade at the bottom says there is more below; it is gone when the list fits or ends.
+                if (listState.canScrollForward) {
+                    Box(
+                        Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(40.dp)
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, palette.scrim)))
+                    )
+                }
                 }
             }
             if (portrait) {

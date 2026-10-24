@@ -1,16 +1,20 @@
 package com.ridedeck.app.data
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.telecom.CallAudioState
 import com.ridedeck.app.R
 import com.ridedeck.app.service.MessageBridge
+import com.ridedeck.app.util.Prefs
 import com.ridedeck.app.util.Units
+import com.ridedeck.app.util.hasPermission
 import com.ridedeck.app.util.launchPackage
 import com.ridedeck.app.util.simplifyMessage
 import kotlinx.coroutines.flow.StateFlow
 import java.text.DateFormat
+import java.time.LocalTime
 import java.util.Date
 
 /** [VoiceActions] on the real controllers; each piece is handed in so the view model stays the only wiring point. */
@@ -35,6 +39,12 @@ class AndroidVoiceActions(
     private val lastTrip: suspend () -> Trip?,
     private val changeBrightness: (Int) -> Unit,
     private val warningVoice: (Boolean) -> Unit,
+    /** The smoothed speed the gauge shows, km/h; the spoken answer matches the dial. */
+    private val displaySpeedKmh: (() -> Int)? = null,
+    /** Hourly forecast for day offset 0/1 between two hours, for "yarın / akşam hava nasıl". */
+    private val outlook: (suspend (dayOffset: Int, fromHour: Int, toHour: Int) -> WeatherOutlook?)? = null,
+    /** Turns the assistant's own suggestions on or off (the settings switch follows). */
+    private val proactiveSwitch: ((Boolean) -> Unit)? = null,
 ) : VoiceActions {
     private fun t(id: Int, vararg args: Any): String = context.getString(id, *args)
 
@@ -138,6 +148,8 @@ class AndroidVoiceActions(
             }
             t(R.string.voice_weather_fmt, w.tempC) + ", " + rain
         }
+        InfoQuestion.WEATHER_TOMORROW -> outlookText(R.string.voice_tomorrow_word, 1, 8, 20)
+        InfoQuestion.WEATHER_EVENING -> LocalTime.now().hour.let { h -> if (h >= 22) null else outlookText(R.string.voice_evening_word, 0, maxOf(17, h), 23) }
         InfoQuestion.TIME -> t(R.string.voice_time_fmt, DateFormat.getTimeInstance(DateFormat.SHORT).format(Date()))
         InfoQuestion.BATTERY -> battery().let { b ->
             t(R.string.voice_battery_fmt, b.percent) + if (b.charging) ", " + t(R.string.voice_charging) else ""
@@ -145,7 +157,7 @@ class AndroidVoiceActions(
         InfoQuestion.SPEED -> {
             val fix = location.value
             val fresh = System.currentTimeMillis() - fix.fixAtMs < 5000
-            if (!fresh) null else t(if (Units.miles) R.string.voice_speed_mph_fmt else R.string.voice_speed_kmh_fmt, Units.speed(fix.speedKmh))
+            if (!fresh) null else t(if (Units.miles) R.string.voice_speed_mph_fmt else R.string.voice_speed_kmh_fmt, Units.speed(displaySpeedKmh?.invoke() ?: fix.speedKmh))
         }
         InfoQuestion.SPEED_LIMIT -> speedLimit()?.let { t(if (Units.miles) R.string.voice_limit_mph_fmt else R.string.voice_limit_kmh_fmt, Units.speed(it)) }
         InfoQuestion.TRIP -> lastTrip()?.let { trip ->
@@ -157,6 +169,26 @@ class AndroidVoiceActions(
         InfoQuestion.NOW_PLAYING -> media.state.value.takeIf { it.hasSession && it.title.isNotBlank() }
             ?.let { if (it.artist.isBlank()) it.title else it.title + ", " + it.artist } ?: t(R.string.voice_nothing_playing)
     }
+
+    private suspend fun outlookText(label: Int, dayOffset: Int, from: Int, to: Int): String? =
+        outlook?.invoke(dayOffset, from, to)?.let { o -> t(R.string.voice_outlook_fmt, t(label), o.minC, o.maxC, o.rainPercent) }
+
+    override suspend fun addStop(candidates: List<String>, saved: PlaceKind?): String? {
+        if (saved != null) {
+            val place = places().firstOrNull { it.kind == saved }?.place ?: return null
+            return if (nav.addStop(place)) place.name else null
+        }
+        return nav.addStopNamed(candidates)?.name
+    }
+
+    override fun canSendSms(): Boolean = context.hasPermission(Manifest.permission.SEND_SMS)
+    override fun sendSms(number: String, text: String): Boolean = AndroidSmsSender(context).send(listOf(number), text).isSuccess
+    override fun nickname(key: String): Contact? = Nicknames.fromJson(Prefs.nicknames(context))[key]
+    override fun setNickname(key: String, contact: Contact) {
+        Prefs.setNicknames(context, Nicknames.toJson(Nicknames.fromJson(Prefs.nicknames(context)) + (key to contact)))
+    }
+    override fun setReminder(minutes: Int, what: String?): Boolean = Reminders.schedule(context, minutes, what)
+    override fun setProactive(on: Boolean) { proactiveSwitch?.invoke(on) ?: Prefs.setVoiceProactive(context, on) }
 
     private val launchable: List<AppRef> by lazy {
         val pm = context.packageManager

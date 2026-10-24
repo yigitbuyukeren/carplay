@@ -36,8 +36,53 @@ object Prefs {
     private const val KEY_VOICE_BUTTON = "voice_button"
     private const val KEY_VOICE_HISTORY_ON = "voice_history_on"
     private const val KEY_VOICE_HELMET_MIC = "voice_helmet_mic"
+    private const val KEY_NICKNAMES = "voice_nicknames"
+    private const val KEY_VOICE_PROACTIVE = "voice_proactive"
+    private const val KEY_VOICE_CONTINUOUS = "voice_continuous"
+    private const val KEY_VOICE_MISSES = "voice_misses"
+    private const val KEY_SETTINGS_HINT = "settings_hint_count"
     private const val KEY_MESSAGE_APPS_SEEN = "message_apps_seen"
     private const val KEY_MESSAGE_APPS_MUTED = "message_apps_muted"
+
+    /** How many launches showed the "hold for Settings" hint; -1 once the rider has used the long press. */
+    fun settingsHintCount(context: Context): Int =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getInt(KEY_SETTINGS_HINT, 0)
+
+    fun setSettingsHintCount(context: Context, n: Int) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putInt(KEY_SETTINGS_HINT, n).apply()
+    }
+
+    /** Nickname -> contact (JSON), see `Nicknames`. */
+    fun nicknames(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_NICKNAMES, null)
+
+    fun setNicknames(context: Context, json: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_NICKNAMES, json).apply()
+    }
+
+    /** The assistant may bring things up by itself (rain, low battery, arrival, a break). Off until the rider turns it on. */
+    fun voiceProactive(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_VOICE_PROACTIVE, false)
+
+    fun setVoiceProactive(context: Context, on: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_VOICE_PROACTIVE, on).apply()
+    }
+
+    /** After an answer the assistant listens once more, quietly. */
+    fun voiceContinuous(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(KEY_VOICE_CONTINUOUS, true)
+
+    fun setVoiceContinuous(context: Context, on: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_VOICE_CONTINUOUS, on).apply()
+    }
+
+    /** Sentences that were not understood (text only), newest first, for the export in Settings. */
+    fun voiceMisses(context: Context): String? =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_VOICE_MISSES, null)
+
+    fun setVoiceMisses(context: Context, json: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY_VOICE_MISSES, json).apply()
+    }
 
     fun pinnedApps(context: Context): String? =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_PINNED_APPS, null)

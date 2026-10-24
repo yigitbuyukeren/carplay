@@ -65,7 +65,7 @@ private val NightPalette = MotoPalette(
     strong = Color.White,
     onStrong = Color.Black,
     mediaBase = Color(0xFF0E0E10),
-    scrim = Color(0xF7000000),
+    scrim = Color(0xFF000000),
 )
 
 private val DayPalette = MotoPalette(
@@ -88,7 +88,7 @@ private val DayPalette = MotoPalette(
     strong = Color(0xFF0B0E14),
     onStrong = Color.White,
     mediaBase = Color(0xFFFFFFFF),
-    scrim = Color(0xF7F4F8FF),
+    scrim = Color(0xFFF4F8FF),
 )
 
 val LocalMotoPalette = staticCompositionLocalOf { NightPalette }

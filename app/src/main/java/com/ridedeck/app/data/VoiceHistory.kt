@@ -31,4 +31,25 @@ object VoiceHistory {
             emptyList()
         }
     }
+
+    const val MAX_MISSES = 200
+
+    /** The sentences that were not understood, newest first, no repeats in a row, kept for the export in Settings. */
+    fun addMiss(list: List<String>, heard: String): List<String> {
+        val text = heard.trim()
+        if (text.isEmpty() || list.firstOrNull() == text) return list
+        return (listOf(text) + list).take(MAX_MISSES)
+    }
+
+    fun missesToJson(list: List<String>): String = JSONArray(list).toString()
+
+    fun missesFromJson(json: String?): List<String> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val arr = JSONArray(json)
+            (0 until arr.length()).map { arr.getString(it) }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
 }

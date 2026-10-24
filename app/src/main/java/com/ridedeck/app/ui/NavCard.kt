@@ -87,8 +87,10 @@ fun NavCard(
                 )
             )
         }
-        Row(Modifier.align(Alignment.TopEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (weather != null) WeatherChip(weather)
+        val narrowCard = isNarrowScreen()
+        Row(Modifier.align(Alignment.TopEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            // On a narrow card the weather chip gives way; the 64dp microphone stays.
+            if (weather != null && !narrowCard) WeatherChip(weather)
             MicButton(onMic)
         }
         if (guiding) MapCredit(Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 6.dp))
@@ -97,7 +99,7 @@ fun NavCard(
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             if (guiding && maneuver != null) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = if (weather != null) 90.dp else 0.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = if (weather != null && !narrowCard) 130.dp else 0.dp)) {
                     Icon(maneuverIcon(maneuver.type), null, tint = Color.White, modifier = Modifier.size(52.dp))
                     Column(modifier = Modifier.padding(start = 12.dp)) {
                         Text(formatDistance(nav.distToNextM), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
@@ -147,7 +149,7 @@ fun NavCard(
 private fun WeatherChip(weather: WeatherSnapshot, modifier: Modifier = Modifier) {
     val tint = if (weather.iceRisk) MotoColors.Cyan else Color.White
     Row(
-        modifier = modifier.clip(RoundedCornerShape(16.dp)).background(Color(0x99000000)).padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xCC0B1118)).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(WeatherMath.emoji(weather.code), fontSize = 18.sp)

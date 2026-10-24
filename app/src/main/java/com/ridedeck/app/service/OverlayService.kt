@@ -32,6 +32,7 @@ import com.ridedeck.app.util.hasPermission
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /** Slim speed/clock strip drawn over other apps (e.g. fullscreen Maps). */
 class OverlayService : Service() {
@@ -48,7 +49,7 @@ class OverlayService : Service() {
             // RideDeck already shows the speed itself: the strip is only for when another app is on screen.
             bar?.visibility = if (appInForeground) View.GONE else View.VISIBLE
             val fresh = System.currentTimeMillis() - loc.fixAtMs < 5000
-            speedView.text = getString(R.string.overlay_speed_fmt, if (fresh) UnitMath.speed(loc.speedKmh, Prefs.milesUnit(this@OverlayService)) else 0)
+            speedView.text = getString(R.string.overlay_speed_fmt, if (fresh) UnitMath.speed(location.displayKmh().roundToInt(), Prefs.milesUnit(this@OverlayService)) else 0)
             clockView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
             handler.postDelayed(this, 1000)
         }

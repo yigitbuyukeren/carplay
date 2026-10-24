@@ -72,6 +72,17 @@ interface VoiceActions {
     fun setMiles(miles: Boolean)
     fun startSos()
     fun showHelp()
+
+    // Added later; the defaults keep older fakes working.
+    /** A stop on the way to the current destination (home/work by [saved], otherwise searched); the stop's name, or null. */
+    suspend fun addStop(candidates: List<String>, saved: PlaceKind?): String? = null
+    fun canSendSms(): Boolean = false
+    fun sendSms(number: String, text: String): Boolean = false
+    /** The contact the rider assigned to a nickname key ("annem"), if any. */
+    fun nickname(key: String): Contact? = null
+    fun setNickname(key: String, contact: Contact) {}
+    fun setReminder(minutes: Int, what: String?): Boolean = false
+    fun setProactive(on: Boolean) {}
 }
 
 /** What the recogniser heard: the alternatives best first, and how sure it was (0..1) when it says. */
@@ -99,12 +110,17 @@ class VoiceAssistant(
     private val pause: suspend (Long) -> Unit = { delay(it) },
     /** Called once per command with what was heard and whether it was understood (for the command history). */
     private val history: (heard: String, understood: Boolean) -> Unit = { _, _ -> },
+    /** After an answer, listen once more for a few seconds without beeping (setting; off by default here). */
+    private val continuous: () -> Boolean = { false },
+    private val context: DialogContext = DialogContext(),
 ) {
     /** The speech engine, injectable for tests. */
     interface SpeechListener {
         fun available(): Boolean
         /** Listens once; [onResult] gets what was heard (no alternatives when nothing was understood). */
         fun start(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit)
+        /** The same without the start and end beeps and the buzz (the follow-up listen after an answer). */
+        fun startQuiet(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit) = start(onPartial, onResult)
         fun cancel()
     }
 
@@ -113,13 +129,34 @@ class VoiceAssistant(
     private var job: Job? = null
     private var expect: Expect = Expect.None
     private var attempts = 0
+    private var allowFollowUp = true
+    private var followUpTurn = false
+    private var followUpWatchdog: Job? = null
+    /** The current question was the assistant's own idea: an unanswered one is dropped without a word. */
+    private var proactiveAsk = false
 
     /** [searchFallback]: on the map's search box, an unrecognised phrase is simply searched for. */
     fun listen(searchFallback: Boolean = false) {
         job?.cancel()
+        followUpWatchdog?.cancel()
+        followUpTurn = false
+        proactiveAsk = false
+        allowFollowUp = true
         expect = Expect.None
         attempts = 0
         startListening(searchFallback)
+    }
+
+    /**
+     * The assistant's own question ("Yağmur geliyor, hava durumunu okuyayım mı?"): asked and listened for only when it is
+     * idle; "evet" runs [then]. A silent or negative answer is dropped without a word. False when it is busy.
+     */
+    fun proactive(question: String, then: VoiceCommand): Boolean {
+        if (_ui.value.phase != VoicePhase.IDLE || expect !is Expect.None || !listener.available()) return false
+        allowFollowUp = false
+        proactiveAsk = true
+        ask(Expect.YesNo(question) { proactiveAsk = false; run(then) })
+        return true
     }
 
     private fun startListening(searchFallback: Boolean) {
@@ -136,6 +173,9 @@ class VoiceAssistant(
 
     fun cancel() {
         job?.cancel()
+        followUpWatchdog?.cancel()
+        followUpTurn = false
+        proactiveAsk = false
         listener.cancel()
         expect = Expect.None
         _ui.value = VoiceUi()
@@ -157,14 +197,21 @@ class VoiceAssistant(
             say(text(R.string.voice_not_heard))
             return
         }
-        // The recogniser lists alternatives best first; the first one that is a real command wins.
-        val command = alternatives.map(VoiceParser::parse).firstOrNull { it !is VoiceCommand.Unknown }
+        // What was just talked about ("onu ara", "oraya git", a correction) first; then the recogniser's alternatives, best first.
+        val command = alternatives.firstNotNullOfOrNull { context.resolve(it) }
+            ?: alternatives.map(VoiceParser::parse).firstOrNull { it !is VoiceCommand.Unknown }
         history(alternatives.first(), command != null)
         if (command == null) {
             if (searchFallback) {
                 actions.openScreen(VoiceScreen.MAP)
                 scope.launch { actions.navigateTo(listOf(alternatives.first())) }
                 _ui.value = VoiceUi()
+                return
+            }
+            // Nothing fits, but one harmless command nearly does: ask instead of "anlamadım".
+            val guess = alternatives.firstNotNullOfOrNull { VoiceLoose.suggestion(it) }
+            if (guess != null) {
+                ask(Expect.YesNo(text(guess.askRes)) { run(guess.command) })
             } else {
                 say(text(R.string.voice_unknown) + " " + alternatives.first())
             }
@@ -186,7 +233,10 @@ class VoiceAssistant(
         when (e) {
             is Expect.YesNo -> when {
                 answers.any { it is VoiceAnswer.Yes } -> { expect = Expect.None; e.onYes() }
-                answers.any { it is VoiceAnswer.No || it is VoiceAnswer.Cancel } -> { expect = Expect.None; say(text(R.string.voice_cancelled)) }
+                answers.any { it is VoiceAnswer.No || it is VoiceAnswer.Cancel } -> {
+                    expect = Expect.None
+                    if (proactiveAsk) { proactiveAsk = false; _ui.value = VoiceUi() } else say(text(R.string.voice_cancelled))
+                }
                 else -> askAgain(e.prompt)
             }
             is Expect.Choice -> {
@@ -222,6 +272,7 @@ class VoiceAssistant(
 
     private fun giveUp() {
         expect = Expect.None
+        if (proactiveAsk) { proactiveAsk = false; _ui.value = VoiceUi(); return }
         say(text(R.string.voice_gave_up))
     }
 
@@ -243,13 +294,14 @@ class VoiceAssistant(
     }
 
     private fun run(command: VoiceCommand) {
+        if (command !is VoiceCommand.Chain) context.rememberCommand(command)
         when (command) {
             is VoiceCommand.NavigateTo -> {
                 actions.openScreen(VoiceScreen.MAP)
                 _ui.value = VoiceUi(VoicePhase.MESSAGE, text(R.string.voice_searching) + " " + command.candidates.first())
                 job = scope.launch {
                     val place = actions.navigateTo(command.candidates)
-                    if (place != null) done(text(R.string.voice_route_ready) + " " + place) else say(text(R.string.no_results))
+                    if (place != null) { context.rememberPlace(place); done(text(R.string.voice_route_ready) + " " + place) } else say(text(R.string.no_results))
                 }
             }
             VoiceCommand.GoHome -> goSaved(PlaceKind.HOME, R.string.voice_no_home)
@@ -315,6 +367,16 @@ class VoiceAssistant(
             is VoiceCommand.WarningVoice -> { actions.setWarningVoice(command.on); done(text(if (command.on) R.string.voice_warnings_on else R.string.voice_warnings_off)) }
             is VoiceCommand.SetMiles -> { actions.setMiles(command.miles); done(text(if (command.miles) R.string.voice_miles else R.string.voice_km)) }
 
+            is VoiceCommand.SendSms -> sendSms(command.name)
+            is VoiceCommand.AddStop -> addStop(command)
+            is VoiceCommand.Reminder -> {
+                if (actions.setReminder(command.minutes, command.what)) done(text(R.string.voice_reminder_set) + " " + spokenMinutes(command.minutes))
+                else say(text(R.string.voice_reminder_failed))
+            }
+            is VoiceCommand.Chain -> runChain(command)
+            VoiceCommand.Repeat -> context.lastSpoken?.let { done(it) } ?: say(text(R.string.voice_nothing_to_repeat))
+            VoiceCommand.Undo -> context.lastCommand?.inverse()?.let { run(it) } ?: say(text(R.string.voice_nothing_to_undo))
+            VoiceCommand.StopProactive -> { actions.setProactive(false); done(text(R.string.voice_proactive_off)) }
             VoiceCommand.Help -> { actions.showHelp(); _ui.value = VoiceUi() }
             VoiceCommand.Emergency -> ask(Expect.YesNo(text(R.string.voice_sos_ask)) { actions.startSos(); _ui.value = VoiceUi() })
             is VoiceCommand.Unknown -> say(text(R.string.voice_unknown) + " " + command.heard)
@@ -325,6 +387,7 @@ class VoiceAssistant(
         val name = actions.goSaved(kind)
         if (name == null) { say(text(missing)); return }
         actions.openScreen(VoiceScreen.MAP)
+        context.rememberPlace(name)
         done(text(R.string.voice_route_ready) + " " + name)
     }
 
@@ -335,19 +398,82 @@ class VoiceAssistant(
         }
     }
 
-    private fun callPerson(name: String) {
+    private fun callPerson(name: String) = withContact(name) { confirmCall(it) }
+
+    /**
+     * Finds the person for a heard name and hands them to [then]. A nickname ("annemi") uses the contact the rider
+     * assigned to it; the first time, when no contact is literally called that, the rider is asked who it is.
+     */
+    private fun withContact(name: String, then: (Contact) -> Unit) {
         if (!actions.canReadContacts()) { say(text(R.string.voice_no_contacts_permission)); return }
+        val key = Nicknames.canonical(name)
+        if (key != null) {
+            actions.nickname(key)?.let { then(it); return }
+            if (VoiceParser.matchContact(name, actions.contacts()).isEmpty()) {
+                ask(Expect.Dictation(Nicknames.asking(key) + " " + text(R.string.voice_nick_who)) { heard ->
+                    pickContact(heard) { c -> actions.setNickname(key, c); then(c) }
+                })
+                return
+            }
+        }
+        pickContact(name, then)
+    }
+
+    private fun pickContact(name: String, then: (Contact) -> Unit) {
         val found = VoiceParser.matchContact(name, actions.contacts())
         when {
             found.isEmpty() -> say(text(R.string.voice_contact_not_found) + " " + name)
-            found.size == 1 -> confirmCall(found.first())
+            found.size == 1 -> then(found.first())
             else -> {
                 val top = found.take(MAX_CHOICES)
                 val prompt = text(R.string.voice_which) + " " + top.joinToString(", ") { it.name }
-                ask(Expect.Choice(prompt, top.map { c -> c.name to { confirmCall(c) } }))
+                ask(Expect.Choice(prompt, top.map { c -> c.name to { then(c) } }))
             }
         }
     }
+
+    /** "Ali'ye mesaj at": who, what to write, read it back, send only after a spoken yes. */
+    private fun sendSms(name: String) {
+        if (!actions.canSendSms()) { say(text(R.string.voice_no_sms_permission)); return }
+        withContact(name) { c ->
+            context.rememberContact(c)
+            ask(Expect.Dictation(text(R.string.voice_what_to_write) + " " + c.name) { body ->
+                ask(Expect.YesNo("${c.name}: “$body”. " + text(R.string.voice_send_ask)) {
+                    if (actions.sendSms(c.number, body)) done(text(R.string.voice_sent)) else say(text(R.string.voice_send_failed))
+                })
+            })
+        }
+    }
+
+    private fun addStop(command: VoiceCommand.AddStop) {
+        _ui.value = VoiceUi(VoicePhase.MESSAGE, text(R.string.voice_adding_stop))
+        job = scope.launch {
+            val stop = actions.addStop(command.candidates, command.saved)
+            if (stop != null) { context.rememberPlace(stop); done(text(R.string.voice_stop_added) + " " + stop) } else say(text(R.string.voice_stop_failed))
+        }
+    }
+
+    /** Two commands in one sentence: quick ones first, then the slow ones, a call or message last; two of those are refused. */
+    private fun runChain(chain: VoiceCommand.Chain) {
+        if (chain.first.isCritical() && chain.second.isCritical()) { say(text(R.string.voice_chain_one_critical)); return }
+        val (a, b) = listOf(chain.first, chain.second).sortedBy(::chainWeight)
+        context.rememberCommand(b)
+        run(a)
+        if (chainWeight(a) == 1) {
+            val firstJob = job
+            scope.launch { firstJob?.join(); run(b) }
+        } else run(b)
+    }
+
+    private fun chainWeight(c: VoiceCommand): Int = when {
+        c.isCritical() -> 2
+        c is VoiceCommand.NavigateTo || c is VoiceCommand.FindNearest || c is VoiceCommand.AlternativeRoute || c is VoiceCommand.AddStop ||
+            c is VoiceCommand.Info || c == VoiceCommand.SaveFavoriteHere || c == VoiceCommand.SetHomeHere || c == VoiceCommand.SetWorkHere -> 1
+        else -> 0
+    }
+
+    private fun spokenMinutes(minutes: Int): String =
+        if (minutes % 60 == 0) "${minutes / 60} " + text(R.string.voice_hour_word) else "$minutes " + text(R.string.voice_minute_word)
 
     private fun callFromRecents(match: (RecentCall) -> Boolean) {
         val recent = actions.recents().firstOrNull(match)
@@ -356,6 +482,7 @@ class VoiceAssistant(
     }
 
     private fun confirmCall(contact: Contact) {
+        context.rememberContact(contact)
         val title = text(R.string.voice_calling) + " " + contact.name
         _ui.value = VoiceUi(VoicePhase.CONFIRM, title = title, secondsLeft = CONFIRM_SECONDS)
         speaker.speak(title)
@@ -399,13 +526,40 @@ class VoiceAssistant(
     }
 
     private fun launch(app: AppRef) {
-        if (actions.launchApp(app.pkg)) _ui.value = VoiceUi() else say(text(R.string.voice_app_not_found) + " " + app.label)
+        if (actions.launchApp(app.pkg)) { context.rememberApp(app.label); _ui.value = VoiceUi() } else say(text(R.string.voice_app_not_found) + " " + app.label)
     }
 
-    /** A short result: spoken and shown, then it clears itself. */
+    /** A short result: spoken and shown, then it clears itself. With the follow-up setting on, the rider may add one more command. */
     private fun done(message: String) {
-        speaker.speak(message)
+        context.rememberSpoken(message)
+        if (allowFollowUp && continuous()) {
+            allowFollowUp = false
+            speaker.speakThen(message) { followUp() }
+        } else {
+            speaker.speak(message)
+        }
         say(message, speak = false)
+    }
+
+    /** Listens once more for a few seconds without beeping; silence just closes the card. */
+    private fun followUp() {
+        if (expect !is Expect.None || _ui.value.phase == VoicePhase.CONFIRM || !listener.available()) return
+        followUpTurn = true
+        _ui.value = VoiceUi(VoicePhase.LISTENING)
+        listener.startQuiet(
+            onPartial = { partial -> _ui.update { if (it.phase == VoicePhase.LISTENING) it.copy(text = partial) else it } },
+            onResult = { heard ->
+                if (followUpTurn) {
+                    followUpTurn = false
+                    followUpWatchdog?.cancel()
+                    if (heard.alternatives.isEmpty()) _ui.value = VoiceUi() else handle(heard.alternatives, heard.confidence, false)
+                }
+            },
+        )
+        followUpWatchdog = scope.launch {
+            pause(FOLLOW_UP_MS)
+            if (followUpTurn) { followUpTurn = false; listener.cancel(); _ui.value = VoiceUi() }
+        }
     }
 
     private fun speakAndShow(message: String) = done(message)
@@ -423,6 +577,7 @@ class VoiceAssistant(
     private companion object {
         const val CONFIRM_SECONDS = 3
         const val MESSAGE_MS = 3500L
+        const val FOLLOW_UP_MS = 5000L
         const val MAX_CHOICES = 3
         /** Below this recogniser score a command is confirmed before it runs. */
         const val LOW_CONFIDENCE = 0.35f

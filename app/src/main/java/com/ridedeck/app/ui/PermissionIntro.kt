@@ -51,6 +51,7 @@ fun PermissionIntro(rows: List<PermissionRow>, onClose: () -> Unit) {
         ) {
             Text(stringResource(R.string.perm_intro_title), fontSize = 26.sp, fontWeight = FontWeight.Bold, color = palette.text, textAlign = TextAlign.Center)
             Text(stringResource(R.string.perm_intro_sub), fontSize = 14.sp, color = palette.textSecondary, textAlign = TextAlign.Center)
+            Text(stringResource(R.string.perm_intro_settings_hint), fontSize = 14.sp, color = palette.textSecondary, textAlign = TextAlign.Center)
             // The rows scroll if they must; "Later" stays pinned below so the page can always be left.
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),

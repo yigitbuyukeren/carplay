@@ -46,7 +46,7 @@ fun DockStatus(battery: BatteryState) {
     val tempColor = when {
         battery.tempC >= 45f -> MotoColors.Red
         battery.tempC >= 40f -> MotoColors.Orange
-        else -> LocalMotoPalette.current.muted
+        else -> LocalMotoPalette.current.text.copy(alpha = 0.85f)
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(time, fontSize = cappedSp(26f), fontWeight = FontWeight.Bold, color = LocalMotoPalette.current.text, maxLines = 1, softWrap = false)
@@ -54,11 +54,11 @@ fun DockStatus(battery: BatteryState) {
             Icon(
                 if (battery.charging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryStd,
                 contentDescription = null,
-                tint = if (battery.charging) MotoColors.Green else LocalMotoPalette.current.muted,
-                modifier = Modifier.size(16.dp),
+                tint = if (battery.charging) MotoColors.Green else LocalMotoPalette.current.text.copy(alpha = 0.85f),
+                modifier = Modifier.size(20.dp),
             )
-            Text("%${battery.percent}", fontSize = cappedSp(13f), color = LocalMotoPalette.current.muted, maxLines = 1, softWrap = false)
+            Text("%${battery.percent}", fontSize = cappedSp(17f), color = LocalMotoPalette.current.text.copy(alpha = 0.85f), fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
         }
-        Text("${battery.tempC.toInt()}°C", fontSize = cappedSp(13f), color = tempColor, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+        Text("${battery.tempC.toInt()}°C", fontSize = cappedSp(17f), color = tempColor, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
     }
 }
