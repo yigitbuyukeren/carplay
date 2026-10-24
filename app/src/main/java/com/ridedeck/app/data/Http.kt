@@ -4,6 +4,8 @@ import android.util.Log
 import com.ridedeck.app.BuildConfig
 import java.net.HttpURLConnection
 import java.net.URL
+import java.io.File
+import java.io.FileOutputStream
 
 /**
  * The one HTTP helper for all public, keyless services. Every request identifies the app and
@@ -20,6 +22,34 @@ object Http {
 
     fun postForm(url: String, body: String, connectMs: Int = 10_000, readMs: Int = 30_000): String =
         request(url, body, "application/x-www-form-urlencoded", connectMs, readMs, emptyOn400 = false)
+
+    /** Download a public model archive without routing binary bytes through a text API. */
+    fun download(url: String, target: File, onProgress: (Long, Long) -> Unit = { _, _ -> }) {
+        require(URL(url).protocol == "https") { "Downloads must use HTTPS" }
+        val conn = URL(url).openConnection() as HttpURLConnection
+        try {
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 60_000
+            conn.setRequestProperty("User-Agent", USER_AGENT)
+            if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode}")
+            val total = conn.contentLengthLong
+            var read = 0L
+            conn.inputStream.use { input ->
+                FileOutputStream(target).use { output ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                        read += count
+                        onProgress(read, total)
+                    }
+                }
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
 
     /** [emptyOn400] turns a 400 into "{}": Valhalla uses it for "could not snap to a road", not an outage. */
     private fun request(

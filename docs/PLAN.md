@@ -2,7 +2,7 @@
 
 Bekleyen maddeler. Uygulama, kullanıcı "planı yap" diyene kadar başlamaz; yapılanlar buradan silinir (kayıt için `docs/STATUS.md` ve git geçmişi). Kaynak: [EKSIKLER.md](EKSIKLER.md).
 
-Telefonda ve kaskla denenmesi gerekenler (kod hazır, doğrulama kullanıcıda; ayrıntı `docs/STATUS.md`): sesle komut tanıma kalitesi, kask mikrofonu, kaskın sesli komut düğmesi ve çift basış tetikleyicisi, "Hey RideDeck", `playFromSearch` ile ada göre çalma, bildirimden mesaja cevap, başka rota ve yolda durak. 2026-10-24 turundan: yeni ses akışları ([SES-OLCUM.md](SES-OLCUM.md) rutini), SMS gönderimi, hatırlatıcı bildirimi, önerici asistan, hız süzgeci (araç göstergesiyle karşılaştırma), uzun basışla Ayarlar.
+Telefonda ve kaskla denenmesi gerekenler (kod hazır, doğrulama kullanıcıda; ayrıntı `docs/STATUS.md`): sesle komut tanıma kalitesi, Android/Vosk motor kıyaslaması, Vosk uyandırma sözcüğü ve yanlış uyanma sayacı, kask mikrofonu, kaskın sesli komut düğmesi ve çift basış tetikleyicisi, "Hey RideDeck", `playFromSearch` ile ada göre çalma, bildirimden mesaja cevap, başka rota ve yolda durak. 2026-10-24 turundan: yeni ses akışları ([SES-OLCUM.md](SES-OLCUM.md) rutini), SMS gönderimi, hatırlatıcı bildirimi, önerici asistan, hız süzgeci (araç göstergesiyle karşılaştırma), uzun basışla Ayarlar.
 
 Testler ve lint 2026-10-24 sonunda çalıştırıldı: 276 test ve lint temiz (R8 derlemesi ve emülatör hâlâ yapılmadı).
 
@@ -50,17 +50,7 @@ Aşama 3, yalnızca ölçüm gerekçelendirirse:
 - Telefonda ölçüm: A059'da çipin gerçek fix hızı ve `speedAccuracy`'nin gelip gelmediği; süzgeçli hızın araç göstergesiyle farkı. Plandaki gecikme tablosu ölçümle güncellenir.
 
 ## Sesli asistan: kalan (2026-10-24)
-Aşama 0-1 uygulandı (STATUS). Kalanlar ölçüm ister:
-
-### Aşama 2 - tanıma katmanı ve uyandırma sözcüğü (önce ölçüm)
-Hedef: gürültüde doğruluk ve düşük pille sürekli dinleme.
-1. Çevrimdışı tanıyıcı adayları: **Vosk** (Türkçe modeli var, kelime dağarcığını/gramerini sınırlayabiliyor, küçük model; boyutu ve Türkçe doğruluğu doğrulanmadı) ve **whisper.cpp** (Android'de çalışır, Türkçe iyi olabilir ama CPU'da yavaş, ısınma riski). İkisi de modeli **indirilebilir** tutar; APK ~41 MB kalmalı (`abiFilters` aynı).
-2. Karar bir **kıyaslama** ile: aynı 40 cümle, A059 telefonda, kasklı/rüzgârlı/sessiz; ölçüler: doğru komut oranı, gecikme (konuşma bitişinden sonuç), 5 dakikalık dinlemede pil ve sıcaklık. `SpeechRecognizer` (bugünkü) taban çizgisi.
-3. Seçilen motor `VoiceAssistant.SpeechListener` arayüzünün arkasına gelir; bugünkü `VoiceInput` varsayılan kalır, yeni motor Ayarlar'da seçenek olur. Testler değişmez (arayüz sahte).
-4. **Uyandırma sözcüğü**: sürekli oturum yeniden başlatma yerine küçük, hep açık bir anahtar sözcük dinleyicisi (aynı motorun anahtar sözcük kipi ya da ayrı hafif model). Kurallar bugünküyle aynı: yalnızca ekran açıkken, çağrıda değilken, pil %30 üstündeyken; varsayılan kapalı. Yanlış uyanma sayacı yerelde tutulur ve Ayarlar'da gösterilir.
-5. Kelime dağarcığı sınırlı tanıma: komut kümesi + rehber/yer/uygulama adları (bugünkü `biasing` listesinin karşılığı) gramer olarak verilir; serbest dikte yalnızca mesaj metninde.
-
-Çıkış koşulu: yeni motor, taban çizgisine göre gürültülü kümede belirgin iyi değilse **eklenmez**; bu aşama "ölçtük, gerek yok" diye de bitebilir.
+**Aşama 0-2 kodu tamamlandı** (Aşama 2 uygulama ve kapsam için [STATUS.md](STATUS.md)). Vosk isteğe bağlı/deneysel; Android tanıyıcısı varsayılan. A059'da kıyaslama ve pil/ısı ölçümü yapılmadığından doğruluk ve cihaz performansı **UNVERIFIED**; bu ölçüm artık entegrasyon ön koşulu değil, kalan saha doğrulamasıdır.
 
 ### Aşama 3 - cihaz içi dil modeli (yalnızca yedek ve ancak kapıyı geçerse)
 

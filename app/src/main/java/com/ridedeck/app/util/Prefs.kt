@@ -1,6 +1,7 @@
 package com.ridedeck.app.util
 
 import android.content.Context
+import androidx.core.content.edit
 import com.ridedeck.app.data.BikeType
 import com.ridedeck.app.data.RouteOptions
 import com.ridedeck.app.data.ThemeMode
@@ -40,6 +41,8 @@ object Prefs {
     private const val KEY_VOICE_PROACTIVE = "voice_proactive"
     private const val KEY_VOICE_CONTINUOUS = "voice_continuous"
     private const val KEY_VOICE_MISSES = "voice_misses"
+    private const val KEY_VOICE_ENGINE = "voice_engine"
+    private const val KEY_WAKE_MISSES = "wake_misses"
     private const val KEY_SETTINGS_HINT = "settings_hint_count"
     private const val KEY_MESSAGE_APPS_SEEN = "message_apps_seen"
     private const val KEY_MESSAGE_APPS_MUTED = "message_apps_muted"
@@ -128,6 +131,23 @@ object Prefs {
 
     fun setVoiceWake(context: Context, on: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_VOICE_WAKE, on).apply()
+    }
+
+    fun voiceEngine(context: Context): String =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_VOICE_ENGINE, "system") ?: "system"
+
+    fun setVoiceEngine(context: Context, engine: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit { putString(KEY_VOICE_ENGINE, engine) }
+    }
+
+    fun wakeMisses(context: Context): Int =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getInt(KEY_WAKE_MISSES, 0)
+
+    fun incrementWakeMisses(context: Context): Int {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val next = (prefs.getInt(KEY_WAKE_MISSES, 0) + 1).coerceAtMost(999_999)
+        prefs.edit { putInt(KEY_WAKE_MISSES, next) }
+        return next
     }
 
     /** Double press of a headset's play/pause key starts the voice assistant (off by default). */

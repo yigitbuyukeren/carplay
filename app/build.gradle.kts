@@ -53,6 +53,10 @@ android {
         compose = true
         buildConfig = true
     }
+
+    packaging {
+        jniLibs.useLegacyPackaging = true
+    }
 }
 
 dependencies {
@@ -67,6 +71,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.palette:palette-ktx:1.0.0")
     implementation("org.maplibre.gl:android-sdk:11.13.5")
+    // Optional, downloadable offline speech model. The native library is packaged; the 35 MB model is not.
+    implementation("net.java.dev.jna:jna:5.18.1@aar")
+    implementation("com.alphacephei:vosk-android:0.3.75@aar")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

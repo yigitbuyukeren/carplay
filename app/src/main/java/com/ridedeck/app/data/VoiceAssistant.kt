@@ -119,6 +119,8 @@ class VoiceAssistant(
         fun available(): Boolean
         /** Listens once; [onResult] gets what was heard (no alternatives when nothing was understood). */
         fun start(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit)
+        /** Open transcription only for a user-requested message body, never for command interpretation. */
+        fun startDictation(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit) = start(onPartial, onResult)
         /** The same without the start and end beeps and the buzz (the follow-up listen after an answer). */
         fun startQuiet(onPartial: (String) -> Unit, onResult: (VoiceHeard) -> Unit) = start(onPartial, onResult)
         fun cancel()
@@ -165,9 +167,11 @@ class VoiceAssistant(
             return
         }
         _ui.update { VoiceUi(VoicePhase.LISTENING, choices = it.choices) }
-        listener.start(
-            onPartial = { partial -> _ui.update { if (it.phase == VoicePhase.LISTENING) it.copy(text = partial) else it } },
-            onResult = { heard -> handle(heard.alternatives, heard.confidence, searchFallback) },
+        val onPartial: (String) -> Unit = { partial -> _ui.update { if (it.phase == VoicePhase.LISTENING) it.copy(text = partial) else it } }
+        val onResult: (VoiceHeard) -> Unit = { heard -> handle(heard.alternatives, heard.confidence, searchFallback) }
+        if (expect is Expect.Dictation) listener.startDictation(onPartial, onResult) else listener.start(
+            onPartial = onPartial,
+            onResult = onResult,
         )
     }
 
@@ -194,6 +198,7 @@ class VoiceAssistant(
             return
         }
         if (alternatives.isEmpty()) {
+            history("", false)
             say(text(R.string.voice_not_heard))
             return
         }
