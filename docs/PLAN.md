@@ -4,7 +4,7 @@ Bekleyen maddeler. Uygulama, kullanıcı "planı yap" diyene kadar başlamaz; ya
 
 Telefonda ve kaskla denenmesi gerekenler (kod hazır, doğrulama kullanıcıda; ayrıntı `docs/STATUS.md`): sesle komut tanıma kalitesi, kask mikrofonu, kaskın sesli komut düğmesi ve çift basış tetikleyicisi, "Hey RideDeck", `playFromSearch` ile ada göre çalma, bildirimden mesaja cevap, başka rota ve yolda durak. 2026-10-24 turundan: yeni ses akışları ([SES-OLCUM.md](SES-OLCUM.md) rutini), SMS gönderimi, hatırlatıcı bildirimi, önerici asistan, hız süzgeci (araç göstergesiyle karşılaştırma), uzun basışla Ayarlar.
 
-**Önce yapılacak:** 2026-10-24 turunda testler, lint ve R8 çalıştırılmadı. `./gradlew testDebugUnitTest lintDebug assembleRelease` çalıştırıp kırmızıları düzelt (yeni: `VoiceNaturalTest`, `VoiceDialogTest`, `SpeedFilterTest`, `GaugeScaleTest`, `VoiceAssistantTest`'teki yeni senaryolar).
+Testler ve lint 2026-10-24 sonunda çalıştırıldı: 276 test ve lint temiz (R8 derlemesi ve emülatör hâlâ yapılmadı).
 
 ---
 

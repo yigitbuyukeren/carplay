@@ -87,7 +87,7 @@ object VoiceLoose {
             val hits = r.groups.map { g -> g.any { it in words } }
             when {
                 hits.all { it } -> r to true
-                hits.first() && r.askRes != 0 -> r to false
+                hits.first() && r.askRes != 0 && r.groups.size <= 2 -> r to false
                 else -> null
             }
         }
