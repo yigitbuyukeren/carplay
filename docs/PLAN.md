@@ -15,6 +15,31 @@ Dock logosu kalktı ve kadran, çipler, nav kartı, Ayarlar değişti; eski gör
 - Emülatörde ayrıca bakılacaklar: yatay 360-415 dp ve dik bisiklet düzeni, büyük yazıda kadran sayıları ile büyük rakam çakışması, gündüz/gece temasında mavi navigasyon karosu, Ayarlar altındaki degrade.
 `deploy.sh` ve GitHub'a itmek ayrı, açık istek gerektirir.
 
+## Yer aramasında yazım hatası ve eksik harf (2026-10-24)
+
+### Sorun
+"Taksim'e gidiyorum" yerine "taksm" yazılıp (ya da söylenip) aranınca "sonuç bulunamadı" çıkıyor. Arama (`RouteRepository.search`) metni olduğu gibi Nominatim'e yolluyor; Nominatim yazım hatasına neredeyse hiç tolerans göstermiyor. Aynısı sesle de olur: tanıyıcı "taksim" yerine "taksin" duyar, `goToFirstMatch` adayları sırayla dener ama hepsi yanlış yazımdan türer.
+
+### Yapılacaklar
+1. **Düzeltme adayları (saf mantık, `PlaceQuery`, testli):** aranan metinden aday listesi üret: Türkçe karakter eşlemesi (`taksim` ↔ `takşim`, `i` ↔ `ı`, `o` ↔ `ö`), tek harf eksik/fazla/yer değişmiş (`taksm`, `takism`, `tkasim`), çift harf sadeleştirme. Adaylar kısa metinde sınırlı (en çok ~6), uzun metinde yalnızca Türkçe karakter ve ek ayıklama varyantları.
+2. **Bilinen yerlerle eşleştirme:** önce cihazdaki kaynaklara bak, ağa çıkmadan: kayıtlı yerler (ev, iş, favoriler), son aranan ve gidilen yerler (yeni: son 30 arama, `Prefs`), rehberdeki adresler. Burada `Turkish.similarity`/`bestMatches` (zaten var) eşiği ~0,75 ile kullanılır; "taksm" son aranan "Taksim" ile eşleşir.
+3. **Ağ araması sırası:** (a) metin olduğu gibi, (b) sonuç yoksa en iyi 2-3 aday (her biri ayrı istek; Nominatim politikası gereği art arda değil, 1 sn arayla, yalnızca gönder'e basınca), (c) hâlâ yoksa kullanıcıya "Bunu mu demek istedin: Taksim?" önerisi (tek dokunuşla). Otomatik tahminle rota **başlatılmaz**, önce öneri gösterilir; eşleşme çok güçlüyse (kayıtlı/son aranan yerle ≥0,9) doğrudan sonuç listesine konur.
+4. **Sesle:** `VoiceCommand.NavigateTo` adayları zaten sırayla denenir; `PlaceQuery` adayları bu listeye eklenir. Hâlâ bulunamazsa asistan "Taksim mi demek istedin?" diye sorar (evet/hayır), tanıyıcının diğer alternatifleri de aday olur.
+5. **Boş sonuç ekranı:** "Sonuç bulunamadı" altında şunlar: öneri çipi (varsa), "Son aramalar" listesi, "Harita üzerinde seç" kısayolu. Yazı girişi sürerken kilitli kuralı aynen kalır.
+6. **Bölge ağırlığı:** şu an `viewbox` ±1° ve kısıtlayıcı değil; yazım hatalı aramada önce `bounded=1` ile yakın çevre denenir, olmazsa kaldırılır (uzak şehirdeki alakasız eşleşmeyi azaltır).
+
+### Test
+- `PlaceQueryTest`: adaylar (`taksm`, `takism`, `kadikoy`, `beşiktaş` yazım varyantları), uzun metinde patlamama, aday sayısı sınırı.
+- Eşleştirme testi: kayıtlı/son aranan yerlerle bulanık eşleşme, eşik altında öneri yok.
+- `NavigationControllerTest`: sahte `Routing` ile "ilk metin boş, ikinci aday bulur" ve "hiçbiri bulmaz, öneri çıkar" senaryoları; otomatik rota başlamaması.
+- `VoiceAssistantTest`: bulunamayınca "… mi demek istedin?" sorusu ve evet/hayır.
+- Telefonda: gerçek yazım hataları listesi (taksm, kadıkoy, beşiktş, üsküdr), mobil veride gecikme (istek sayısı arttığı için).
+
+### Riskler
+- Nominatim kullanım politikası: en fazla ~1 istek/sn, arama-yazarken-öneri yok. Aday istekleri seri ve yalnızca gönder'den sonra; son aramalar yereldedir, ağ yükü eklemez.
+- Yanlış yere rota riski: öneri onaysız rotaya dönmez.
+- Son aramalar yerel bir geçmiş tutar; Ayarlar'da silme düğmesi ve kapatma anahtarı (sesli komut geçmişindeki gibi) gerekir.
+
 ## Ayarlara erişim: kalan (2026-10-24)
 İsteğe bağlı: Ayarlar 5 km/sa üstünde kilitlenir (telefon tuş takımıyla aynı kural), kilitliyken kısa bir açıklama gösterir. Konum izni yokken kendiliğinden açılma davranışı aynen kalır. Ayrı karar.
 
