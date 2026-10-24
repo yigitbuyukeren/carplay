@@ -209,23 +209,15 @@ fun MapScreen(
         }
     }
 
-    // My position marker + camera following.
+    // My position marker and the navigation chase camera are drawn per frame (see SmoothFollow).
+    SmoothFollow(map, mapView, styleReady, me, follow = ui.navigating, zoom = 17.0, tilt = 55.0, padTopFraction = 0.45)
+
     LaunchedEffect(styleReady, me.fixAtMs, ui.navigating) {
         val m = map ?: return@LaunchedEffect
         if (!styleReady || me.fixAtMs == 0L) return@LaunchedEffect
-        m.style?.getSourceAs<GeoJsonSource>(SRC_ME)?.setGeoJson(Point.fromLngLat(me.lon, me.lat))
         val target = LatLng(me.lat, me.lon)
         when {
-            ui.navigating -> {
-                val camera = CameraPosition.Builder()
-                    .target(target)
-                    .zoom(17.0)
-                    .tilt(55.0)
-                    .bearing((me.bearing ?: m.cameraPosition.bearing.toFloat()).toDouble())
-                    .padding(0.0, mapView.height * 0.45, 0.0, 0.0)
-                    .build()
-                m.animateCamera(CameraUpdateFactory.newCameraPosition(camera), 900)
-            }
+            ui.navigating -> {}
             !centeredOnce -> {
                 centeredOnce = true
                 m.moveCamera(CameraUpdateFactory.newLatLngZoom(target, 15.0))

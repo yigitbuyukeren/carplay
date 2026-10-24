@@ -106,19 +106,7 @@ fun MiniMap(
         else destSource?.setGeoJson(FeatureCollection.fromFeatures(emptyList<Feature>()))
     }
 
-    LaunchedEffect(styleReady, me.fixAtMs) {
-        val m = map ?: return@LaunchedEffect
-        if (!styleReady || me.fixAtMs == 0L) return@LaunchedEffect
-        m.style?.getSourceAs<GeoJsonSource>(SRC_ME)?.setGeoJson(Point.fromLngLat(me.lon, me.lat))
-        val camera = CameraPosition.Builder()
-            .target(LatLng(me.lat, me.lon))
-            .zoom(16.0)
-            .tilt(50.0)
-            .bearing((me.bearing ?: m.cameraPosition.bearing.toFloat()).toDouble())
-            .padding(0.0, mapView.height * 0.3, 0.0, 0.0)
-            .build()
-        m.animateCamera(CameraUpdateFactory.newCameraPosition(camera), 900)
-    }
+    SmoothFollow(map, mapView, styleReady, me, follow = true, zoom = 16.0, tilt = 50.0, padTopFraction = 0.3)
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
