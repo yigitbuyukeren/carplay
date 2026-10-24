@@ -6,6 +6,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.io.File
 import java.io.FileOutputStream
+import java.io.EOFException
 
 /**
  * The one HTTP helper for all public, keyless services. Every request identifies the app and
@@ -46,6 +47,7 @@ object Http {
                     }
                 }
             }
+            if (total > 0 && read != total) throw EOFException("Incomplete download: received $read of $total bytes")
         } finally {
             conn.disconnect()
         }

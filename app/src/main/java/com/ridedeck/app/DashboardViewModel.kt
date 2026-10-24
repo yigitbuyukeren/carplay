@@ -194,6 +194,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     private val voskModels = VoskModelStore(app)
     val voskModelState = voskModels.state
+    val voskDownloadProgress = voskModels.progress
+    val voskModelError = voskModels.error
     val voiceEngine = MutableStateFlow(Prefs.voiceEngine(app))
     val wakeMisses = MutableStateFlow(Prefs.wakeMisses(app))
     private val voiceInput = SelectableVoiceInput(app, voskModels) { voiceNames() }

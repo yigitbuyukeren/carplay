@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,6 +63,8 @@ data class SettingItem(
     val action: String,
     /** Without it the app does not work at all; only such rows send the settings page to the Setup tab. */
     val required: Boolean = false,
+    val progress: Float? = null,
+    val progressLabel: String? = null,
     val onClick: () -> Unit,
 )
 
@@ -297,6 +300,11 @@ private fun SettingRow(item: SettingItem) {
         Column(modifier = Modifier.weight(1f)) {
             Text(item.title, fontSize = 20.sp, color = LocalMotoPalette.current.text, fontWeight = FontWeight.SemiBold)
             Text(item.description, fontSize = 15.sp, color = LocalMotoPalette.current.muted)
+            item.progress?.let { progress ->
+                if (progress < 0f) LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
+                else LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
+                item.progressLabel?.let { Text(it, fontSize = 13.sp, color = LocalMotoPalette.current.muted) }
+            }
         }
         if (item.granted) {
             Icon(Icons.Rounded.CheckCircle, null, tint = MotoColors.Green, modifier = Modifier.size(36.dp))

@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log
 import org.vosk.Model
 import org.vosk.Recognizer
 import org.vosk.android.RecognitionListener
@@ -29,6 +30,9 @@ import org.json.JSONObject
 import org.json.JSONArray
 
 enum class VoskModelState { MISSING, DOWNLOADING, READY, ERROR }
+data class VoskDownloadProgress(val downloaded: Long = 0, val total: Long = -1) {
+    val fraction: Float? get() = if (total > 0) (downloaded.toFloat() / total).coerceIn(0f, 1f) else null
+}
 
 /** Holds the optional model outside the APK. Vosk's native library is packaged; its 35 MB model is opt-in. */
 class VoskModelStore(context: Context) {
@@ -38,6 +42,10 @@ class VoskModelStore(context: Context) {
     private val installing = File(app.filesDir, "speech/vosk-tr-0.3.installing")
     private val _state = MutableStateFlow(if (valid(root)) VoskModelState.READY else VoskModelState.MISSING)
     val state: StateFlow<VoskModelState> = _state
+    private val _progress = MutableStateFlow(VoskDownloadProgress())
+    val progress: StateFlow<VoskDownloadProgress> = _progress
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
     @Volatile private var cached: Model? = null
 
     fun isReady(): Boolean = valid(root)
@@ -45,10 +53,14 @@ class VoskModelStore(context: Context) {
     suspend fun download() = withContext(Dispatchers.IO) {
         if (isReady()) { _state.value = VoskModelState.READY; return@withContext }
         _state.value = VoskModelState.DOWNLOADING
+        _progress.value = VoskDownloadProgress()
+        _error.value = null
+        var phase = "download"
         try {
             archive.parentFile?.mkdirs()
             archive.delete()
-            Http.download(MODEL_URL, archive)
+            Http.download(MODEL_URL, archive) { downloaded, total -> _progress.value = VoskDownloadProgress(downloaded, total) }
+            phase = "install"
             installing.deleteRecursively()
             installing.mkdirs()
             ZipInputStream(FileInputStream(archive).buffered()).use { zip ->
@@ -71,6 +83,8 @@ class VoskModelStore(context: Context) {
             archive.delete()
             _state.value = VoskModelState.READY
         } catch (e: Exception) {
+            Log.e("RideDeck", "Vosk model $phase failed", e)
+            _error.value = e.message?.takeIf(String::isNotBlank) ?: e.javaClass.simpleName
             archive.delete()
             installing.deleteRecursively()
             _state.value = if (isReady()) VoskModelState.READY else VoskModelState.ERROR
@@ -80,7 +94,8 @@ class VoskModelStore(context: Context) {
 
     @Synchronized fun openModel(): Model? {
         if (!isReady()) return null
-        return cached ?: Model(root.absolutePath).also { cached = it }
+        return cached ?: try { Model(root.absolutePath).also { cached = it } }
+        catch (e: Exception) { Log.e("RideDeck", "Vosk model open failed", e); throw e }
     }
 
     @Synchronized fun delete() {
@@ -92,7 +107,11 @@ class VoskModelStore(context: Context) {
 
     fun refresh() { _state.value = if (isReady()) VoskModelState.READY else VoskModelState.MISSING }
 
-    private fun valid(dir: File): Boolean = File(dir, "am/final.mdl").isFile && File(dir, "conf/model.conf").isFile
+    // The Turkish small model is Vosk's v1 layout (final.mdl + mfcc.conf at the root).
+    // Newer models use the v2 am/ and conf/ directories.
+    private fun valid(dir: File): Boolean =
+        (File(dir, "am/final.mdl").isFile && File(dir, "conf/model.conf").isFile) ||
+            (File(dir, "final.mdl").isFile && File(dir, "mfcc.conf").isFile)
 
     companion object {
         const val MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-tr-0.3.zip"
@@ -165,7 +184,8 @@ class VoskVoiceInput(
                     override fun onTimeout() { finish(latest.takeIf(String::isNotBlank)?.let(::listOf).orEmpty()) }
                 })
                 armNoSpeechTimeout()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("RideDeck", "Vosk recognition failed", e)
                 finish(emptyList())
             }
         }

@@ -360,6 +360,9 @@
     <string name="voice_vosk_downloading_action">Downloading</string>
     <string name="voice_vosk_ready">The model is on the device and available offline. You can delete it here.</string>
     <string name="voice_vosk_error">The model could not be downloaded or opened. You can try again.</string>
+    <string name="voice_vosk_error_detail">Details: %1$s</string>
+    <string name="voice_vosk_progress">%1$.1f / %2$.1f MB</string>
+    <string name="voice_vosk_progress_unknown">%1$.1f MB downloaded</string>
     <string name="voice_engine_system_title">Android recognizer</string>
     <string name="voice_engine_system_desc">Default engine. It can use the phone\'s offline Turkish speech pack.</string>
     <string name="voice_engine_vosk_title">Vosk (experimental)</string>

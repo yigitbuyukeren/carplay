@@ -360,6 +360,9 @@
     <string name="voice_vosk_downloading_action">İndiriliyor</string>
     <string name="voice_vosk_ready">Model cihazda ve çevrimdışı kullanılabilir. İstersen buradan silebilirsin.</string>
     <string name="voice_vosk_error">Model indirilemedi veya açılamadı. Yeniden deneyebilirsin.</string>
+    <string name="voice_vosk_error_detail">Ayrıntı: %1$s</string>
+    <string name="voice_vosk_progress">%1$.1f / %2$.1f MB</string>
+    <string name="voice_vosk_progress_unknown">%1$.1f MB indirildi</string>
     <string name="voice_engine_system_title">Android tanıyıcısı</string>
     <string name="voice_engine_system_desc">Varsayılan motor. Telefonun çevrimdışı Türkçe paketini kullanabilir.</string>
     <string name="voice_engine_vosk_title">Vosk (deneysel)</string>

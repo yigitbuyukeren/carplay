@@ -105,6 +105,8 @@ fun DashboardScreen(vm: DashboardViewModel) {
     val voiceButton by vm.voiceButtonOn.collectAsStateWithLifecycle()
     val offlineVoice by vm.offlineVoice.collectAsStateWithLifecycle()
     val voskModelState by vm.voskModelState.collectAsStateWithLifecycle()
+    val voskDownloadProgress by vm.voskDownloadProgress.collectAsStateWithLifecycle()
+    val voskModelError by vm.voskModelError.collectAsStateWithLifecycle()
     val voiceEngine by vm.voiceEngine.collectAsStateWithLifecycle()
     val wakeMisses by vm.wakeMisses.collectAsStateWithLifecycle()
     var voiceHelmetMic by remember { mutableStateOf(Prefs.voiceHelmetMic(context)) }
@@ -242,13 +244,24 @@ fun DashboardScreen(vm: DashboardViewModel) {
                     com.ridedeck.app.data.VoskModelState.DOWNLOADING -> R.string.voice_vosk_downloading
                     com.ridedeck.app.data.VoskModelState.READY -> R.string.voice_vosk_ready
                     com.ridedeck.app.data.VoskModelState.ERROR -> R.string.voice_vosk_error
-                }),
+                }) + if (voskModelState == com.ridedeck.app.data.VoskModelState.ERROR && !voskModelError.isNullOrBlank())
+                    "\n${context.getString(R.string.voice_vosk_error_detail, voskModelError)}" else "",
                 false,
                 context.getString(when (voskModelState) {
                     com.ridedeck.app.data.VoskModelState.READY -> R.string.action_delete
                     com.ridedeck.app.data.VoskModelState.DOWNLOADING -> R.string.voice_vosk_downloading_action
                     else -> R.string.action_download
                 }),
+                progress = if (voskModelState == com.ridedeck.app.data.VoskModelState.DOWNLOADING)
+                    voskDownloadProgress.fraction ?: -1f else null,
+                progressLabel = if (voskModelState == com.ridedeck.app.data.VoskModelState.DOWNLOADING) {
+                    val mb = 1024f * 1024f
+                    if (voskDownloadProgress.total > 0) context.getString(
+                        R.string.voice_vosk_progress,
+                        voskDownloadProgress.downloaded / mb,
+                        voskDownloadProgress.total / mb,
+                    ) else context.getString(R.string.voice_vosk_progress_unknown, voskDownloadProgress.downloaded / mb)
+                } else null,
             ) {
                 when (voskModelState) {
                     com.ridedeck.app.data.VoskModelState.READY -> vm.deleteVoskModel()
